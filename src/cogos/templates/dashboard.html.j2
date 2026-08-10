@@ -260,6 +260,35 @@
       text-align: center; background: var(--accent); color: #fff; border-radius: 50%;
       font-size: 12px; font-weight: 700; margin-right: 10px;
     }
+    /* pains block */
+    .pains {
+      background: linear-gradient(135deg, #FFFCF6, #F7ECDB);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 22px 24px;
+      margin-bottom: 28px;
+    }
+    .pains-title { font-size: 20px; color: var(--ink); margin: 0 0 14px; }
+    .pains-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .pain-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .pain-emoji { font-size: 26px; margin-bottom: 6px; }
+    .pain-name { font-weight: 700; color: var(--blue); font-size: 14px; margin-bottom: 4px; }
+    .pain-body { color: var(--ink-soft); font-size: 13px; }
+    .pains-answer {
+      margin-top: 14px; padding: 10px 14px;
+      background: rgba(232,154,60,0.12);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      color: var(--accent-deep); font-weight: 600; font-size: 14px;
+    }
   </style>
 </head>
 <body>
@@ -380,7 +409,29 @@
 
   <!-- ============ ABOUT TAB ============ -->
   <div class="about-wrap" id="view-about">
-    <h2 data-i18n="aboutTitle">如果 AI 是硅基生命，它也需要一个「大脑结构」吗？</h2>
+    <div class="pains">
+      <h2 class="pains-title" data-i18n="painsTitle">这些痛点，你经历过吗？</h2>
+      <div class="pains-grid">
+        <div class="pain-card">
+          <div class="pain-emoji">😰</div>
+          <div class="pain-name" data-i18n="pain1Title">想换个 AI Agent，却不敢换</div>
+          <div class="pain-body" data-i18n="pain1Body">换新的 = 全部重来。你被"记忆锁定"在旧 Agent 上了。</div>
+        </div>
+        <div class="pain-card">
+          <div class="pain-emoji">🧠</div>
+          <div class="pain-name" data-i18n="pain2Title">换台电脑，等于失忆</div>
+          <div class="pain-body" data-i18n="pain2Body">新电脑的 Agent 不认识你。换电脑 = 失忆，从头再来。</div>
+        </div>
+        <div class="pain-card">
+          <div class="pain-emoji">🔒</div>
+          <div class="pain-name" data-i18n="pain3Title">Agent 的记忆是"它的"，不是"你的"</div>
+          <div class="pain-body" data-i18n="pain3Body">不用它了，积累就没了——换了管家，管家记得的事不是主人的事。</div>
+        </div>
+      </div>
+      <div class="pains-answer" data-i18n="painsAnswer">CognitiveOS 的答案：把"你的认知"从 Agent 里拿出来，放到你自己手里。</div>
+    </div>
+
+    <h2 class="about-h2" data-i18n="aboutTitle">如果 AI 是硅基生命，它也需要一个「大脑结构」吗？</h2>
     <p class="lead" data-i18n="aboutLead">主人认知哲学的原始文本（来自 ChatGPT 会话，2026-08-10 整理）</p>
 
     <p data-i18n="aboutP1">我不是 AI 行业的研究人员，只是一个普通的 AI 使用者。但在每天和 AI 交流、使用 Agent 的过程中，我发现一个很有意思的问题：现在的 AI 越来越聪明，但它好像还不像「人」。</p>
@@ -451,6 +502,14 @@
         memoryTitle: "Working memory",
         memoryEmpty: "Click a region on the cognitive map to load its working memory.",
         masterSays: "What the master keeps repeating",
+        painsTitle: "Have you felt these pains?",
+        pain1Title: "Want to switch agents, but afraid to",
+        pain1Body: "A new agent means starting from zero. You're locked in by your memory.",
+        pain2Title: "New computer = amnesia",
+        pain2Body: "The new agent doesn't know you. Everything you built stays on the old machine.",
+        pain3Title: "The agent's memory is 'its', not 'yours'",
+        pain3Body: "Stop using it and the accumulation is gone — the butler's memories aren't the master's.",
+        painsAnswer: "CognitiveOS's answer: take YOUR cognition out of the agent, and keep it in your own hands.",
         aboutTitle: "If AI is silicon life, does it need a 'brain structure'?",
         aboutLead: "The master's original vision text (from ChatGPT session, 2026-08-10)",
         aboutP1: "I am not an AI researcher — just a regular AI user. But in daily use, I noticed something interesting: today's AI is smarter, yet it still doesn't feel like a 'person'.",
@@ -490,6 +549,14 @@
         memoryTitle: "工作记忆",
         memoryEmpty: "点击认知地图上的分区，查看对应工作记忆。",
         masterSays: "主人反复强调的",
+        painsTitle: "这些痛点，你经历过吗？",
+        pain1Title: "想换个 AI Agent，却不敢换",
+        pain1Body: "换新的 = 全部重来。你被\"记忆锁定\"在旧 Agent 上了。",
+        pain2Title: "换台电脑，等于失忆",
+        pain2Body: "新电脑的 Agent 不认识你。换电脑 = 失忆，从头再来。",
+        pain3Title: "Agent 的记忆是\"它的\"，不是\"你的\"",
+        pain3Body: "不用它了，积累就没了——换了管家，管家记得的事不是主人的事。",
+        painsAnswer: "CognitiveOS 的答案：把\"你的认知\"从 Agent 里拿出来，放到你自己手里。",
         aboutTitle: "如果 AI 是硅基生命，它也需要一个「大脑结构」吗？",
         aboutLead: "主人认知哲学的原始文本（来自 ChatGPT 会话，2026-08-10 整理）",
         aboutP1: "我不是 AI 行业的研究人员，只是一个普通的 AI 使用者。但在每天和 AI 交流、使用 Agent 的过程中，我发现一个很有意思的问题：现在的 AI 越来越聪明，但它好像还不像「人」。",
