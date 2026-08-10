@@ -117,11 +117,15 @@ def _copytree(src: Path, dst: Path) -> int:
 
 
 def _walk(src: Path):
-    """``os.walk`` without following symlinks."""
+    """``os.walk`` without following symlinks; skip VCS internals."""
     import os
 
     for root, dirs, files in os.walk(src, followlinks=False):
-        dirs[:] = [d for d in dirs if not _is_broken_symlink(Path(root) / d)]
+        dirs[:] = [
+            d
+            for d in dirs
+            if d != ".git" and not _is_broken_symlink(Path(root) / d)
+        ]
         yield root, dirs, files
 
 
