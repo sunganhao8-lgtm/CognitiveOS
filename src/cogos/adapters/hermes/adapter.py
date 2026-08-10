@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
 from pathlib import Path
 
 from ...adapters import Adapter, HarvestResult
 from ...discovery import AgentHandle
+from ...kernel import Result
 from ...paths import Paths
 
 
@@ -86,16 +88,64 @@ class HermesAdapter:
             notes=[f"harvested from {home}"],
         )
 
-    # ---- bootstrap ----------------------------------------------------------
+    # ---- Kernel execution ---------------------------------------------------
 
-    def bootstrap_query(self, paths: Paths) -> str | None:
-        """Hermes exposes its state through files, not an API.
+    def execute(self, task, context) -> Result:
+        """v0.1 execute = shell out to ``hermes chat -q`` with the task intent.
 
-        v0.1 returns None — CognitiveOS synthesises the bootstrap summary
-        from the harvested files itself. A future version could shell out
-        to ``hermes chat -q`` to get a richer, agent-authored summary.
+        Returns the raw text from Hermes as the result output. Timeout is
+        bounded so the kernel never hangs.
         """
-        return None
+        prompt = (
+            f"You are being invoked as the Hermes bootstrap agent of CognitiveOS.\n"
+            f"Task domain: {task.domain}\n"
+            f"Task intent: {task.intent}\n"
+            f"Required memory keys: {', '.join(task.required_memory) or '(none)'}\n"
+            f"Respond in 3-6 lines: what would you do, and what files/knowledge would you consult."
+        )
+        answer = self.bootstrap_query(prompt)
+        status = "success" if answer else "failed"
+        return Result(
+            task_id=task.id,
+            status=status,
+            output=answer or "(no answer from hermes)",
+            artifacts=[],
+        )
+
+    def bootstrap_query(self, prompt: str) -> str | None:
+        """Actually shell out to ``hermes chat -q`` for v0.1.
+
+        Returns the agent's response, or None if Hermes is not on PATH or
+        the call fails. Bounded by a timeout so a misbehaving agent never
+        hangs the kernel.
+        """
+        import shutil as _sh
+
+        if _sh.which("hermes") is None:
+            return None
+
+        try:
+            proc = subprocess.run(
+                [
+                    "hermes", "chat",
+                    "-q", prompt,
+                    "-t", "terminal,file",
+                    "--max-turns", "1",
+                    "-Q",  # quiet: no banner/spinner
+                ],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                encoding="utf-8",
+            )
+        except subprocess.TimeoutExpired:
+            return "(hermes bootstrap_query timed out after 60s)"
+        except Exception as exc:
+            return f"(hermes bootstrap_query failed: {exc!r})"
+
+        if proc.returncode != 0:
+            return f"(hermes returned {proc.returncode}: {(proc.stderr or proc.stdout).strip()[:300]})"
+        return proc.stdout.strip()
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +154,7 @@ class HermesAdapter:
 
 
 def _copytree(src: Path, dst: Path) -> int:
-    """Copy ``src`` tree into ``dst`` skipping symlinks; return file count."""
+    """Copy ``src`` tree into ``dst`` skipping symlinks and VCS dirs; return file count."""
     count = 0
     for root, dirs, files in _walk(src):
         rel = Path(root).relative_to(src)

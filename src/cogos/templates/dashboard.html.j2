@@ -24,34 +24,31 @@
       min-height: 100vh;
     }
     header {
-      padding: 22px 34px 16px;
+      padding: 18px 28px 14px;
       border-bottom: 1px solid var(--line);
       background: linear-gradient(90deg, #FFFFFF 0%, #FBF4EA 55%, #F7ECDB 100%);
       display: flex; justify-content: space-between; align-items: center;
       gap: 20px; flex-wrap: wrap;
     }
-    header h1 { margin: 0; font-size: 24px; letter-spacing: 0.3px; }
+    header h1 { margin: 0; font-size: 22px; letter-spacing: 0.3px; }
     header h1 .en { color: var(--blue); }
     header h1 .zh { color: var(--accent-deep); }
-    header .sub { margin: 4px 0 0; color: var(--ink-soft); font-size: 13px; }
-    .header-right { display: flex; align-items: center; gap: 22px; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
     .lang-switch {
       display: inline-flex; border: 1px solid var(--line); border-radius: 999px;
       overflow: hidden; background: #FFF;
     }
     .lang-switch button {
-      border: 0; background: transparent; padding: 6px 16px; cursor: pointer;
+      border: 0; background: transparent; padding: 6px 14px; cursor: pointer;
       font-size: 13px; color: var(--ink-soft); transition: all 140ms;
     }
     .lang-switch button.active { background: var(--blue); color: #fff; }
-    .stats { display: flex; gap: 18px; font-size: 12px; color: var(--ink-soft); }
-    .stats strong { color: var(--ink); font-size: 20px; display: block; line-height: 1.2; }
 
     main {
       display: grid;
       grid-template-columns: minmax(420px, 1.25fr) minmax(340px, 1fr);
-      gap: 26px;
-      padding: 26px 34px 60px;
+      gap: 22px;
+      padding: 22px 28px 40px;
       max-width: 1500px;
       margin: 0 auto;
     }
@@ -61,56 +58,56 @@
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: 16px;
-      padding: 22px;
+      padding: 18px;
       box-shadow: 0 8px 28px rgba(43,27,18,0.06);
     }
     .map-card h2 {
-      margin: 0 0 4px;
-      font-size: 13px;
+      margin: 0 0 8px;
+      font-size: 12px;
       letter-spacing: 1.2px;
       text-transform: uppercase;
       color: var(--accent-deep);
     }
-    .map-card p.lede { margin: 0 0 12px; color: var(--ink-soft); font-size: 13px; }
     .brain-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; }
     .brain-wrap img.brain { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
     .brain-wrap svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
 
-    .leader { fill: none; stroke-width: 2.2; opacity: 0.75; transition: opacity 140ms, stroke-width 140ms; }
-    .anchor { opacity: 0.9; transition: r 140ms, opacity 140ms; }
+    .leader { fill: none; stroke-width: 2.2; opacity: 0.75; }
+    .anchor { opacity: 0.9; }
     .hit { fill: transparent; cursor: pointer; }
     .callout text { cursor: pointer; }
-    .callout .lbl { font: 700 26px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 5px; }
-    .callout .bname { font: 500 17px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; fill: var(--ink-soft); paint-order: stroke; stroke: #fff; stroke-width: 4px; }
-    .callout:hover .leader { stroke-width: 2.6; opacity: 1; }
+    .callout .lbl { font: 700 24px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 5px; }
+    .callout:hover .leader { stroke-width: 3; opacity: 1; }
     .callout:hover .lbl { fill: var(--accent-deep); }
     .callout.selected .leader { stroke-width: 3; opacity: 1; }
     .callout.selected .lbl { fill: var(--accent-deep); }
-    .callout.selected .bname { fill: var(--blue); }
 
     .detail-card {
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: 16px;
-      padding: 26px 28px;
+      padding: 22px 24px;
       box-shadow: 0 8px 28px rgba(43,27,18,0.06);
       min-height: 100%;
     }
-    .detail-card h3 { margin: 0 0 2px; font-size: 24px; }
-    .detail-card .brain-name { color: var(--ink-soft); font-size: 12px; letter-spacing: 0.8px; text-transform: uppercase; }
-    .detail-card .summary { color: #4A3A2C; margin: 14px 0 18px; font-size: 14px; }
+    .detail-card h3 { margin: 0 0 6px; font-size: 22px; color: var(--blue); }
+    .detail-card .desc { color: #4A3A2C; font-size: 14.5px; margin: 0 0 18px; }
     .detail-card h4 {
-      margin: 20px 0 8px;
+      margin: 14px 0 6px;
       font-size: 11px;
       letter-spacing: 0.8px;
       text-transform: uppercase;
       color: var(--accent-deep);
     }
-    .detail-card ul { padding-left: 20px; margin: 0 0 4px; }
-    .detail-card li { margin: 5px 0; font-size: 13.5px; color: #4A3A2C; }
-    .detail-card .files { display: grid; gap: 7px; }
-    .detail-card .files a {
-      display: flex; justify-content: space-between; gap: 10px;
+    .detail-card ul.memory-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 6px;
+    }
+    .detail-card ul.memory-list li a {
+      display: flex; justify-content: space-between; gap: 8px;
       padding: 9px 12px;
       background: var(--card-2);
       border: 1px solid var(--line);
@@ -120,27 +117,21 @@
       font-size: 13.5px;
       transition: background 130ms, border-color 130ms;
     }
-    .detail-card .files a:hover { background: #F0E4D2; border-color: var(--accent); text-decoration: none; }
-    .detail-card .files .path { font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; font-size: 12px; color: var(--ink-soft); }
-    .detail-empty { color: var(--ink-soft); padding: 40px 10px; text-align: center; font-size: 14px; }
-
-    code { font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; background: var(--card-2); padding: 1px 6px; border-radius: 4px; font-size: 12px; color: var(--blue); }
-    footer { color: var(--ink-soft); font-size: 12px; padding: 14px 34px; border-top: 1px solid var(--line); }
-    footer .attr { margin-top: 4px; font-size: 11px; }
+    .detail-card ul.memory-list li a:hover { background: #F0E4D2; border-color: var(--accent); }
+    .detail-card ul.memory-list li a .path {
+      font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+      font-size: 12px; color: var(--ink-soft);
+    }
+    .detail-card ul.file-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+    .detail-card ul.file-list li { font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; font-size: 12.5px; color: var(--ink-soft); }
+    .detail-empty { color: var(--ink-soft); padding: 36px 10px; text-align: center; font-size: 14px; }
+    footer { color: var(--ink-soft); font-size: 12px; padding: 12px 28px; border-top: 1px solid var(--line); }
   </style>
 </head>
 <body>
   <header>
-    <div>
-      <h1><span class="en">CognitiveOS</span> <span class="zh">认知地图</span></h1>
-      <p class="sub" data-i18n="subtitle">Click a callout to see a region's responsibilities, files, and status.</p>
-    </div>
+    <h1><span class="en">CognitiveOS</span> <span class="zh">认知地图</span></h1>
     <div class="header-right">
-      <div class="stats">
-        <div><strong>{{ agents | length }}</strong><span data-i18n="statAgents">agents</span></div>
-        <div><strong>{{ total_files }}</strong><span data-i18n="statFiles">source files</span></div>
-        <div><strong>{{ wiki_pages | length }}</strong><span data-i18n="statWiki">wiki pages</span></div>
-      </div>
       <div class="lang-switch">
         <button id="lang-en" class="active" onclick="setLang('en')">EN</button>
         <button id="lang-zh" onclick="setLang('zh')">中文</button>
@@ -150,12 +141,10 @@
 
   <main>
     <section class="map-card">
-      <h2 data-i18n="mapTitle">Cognitive Map</h2>
-      <p class="lede" data-i18n="mapLede">Every region is a real CognitiveOS subsystem — not a metaphor.</p>
+      <h2>Cognitive Map</h2>
       <div class="brain-wrap">
         <img class="brain" src="assets/brain-source.svg" alt="Brain illustration (CC0, Wikimedia Commons)" />
         <svg class="overlay" viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <!-- Leader lines + labels are rendered for each region below -->
           {% for r in regions %}
           <g class="callout" data-region="{{ r.key }}">
             {% if r.lx < 200 %}
@@ -168,26 +157,14 @@
             <circle class="anchor" cx="{{ r.ax }}" cy="{{ r.ay }}" r="14" fill="{{ r.color }}" />
             <circle class="hit" cx="{{ r.ax }}" cy="{{ r.ay }}" r="44" />
             {% if r.lx < 200 %}
-            <g class="lblg" transform="translate({{ r.lx }}, {{ r.ly - 8 }})">
-              <text class="lbl" text-anchor="end" y="0">{{ r.label_en }}</text>
-              <text class="lbl zh-label" text-anchor="end" y="0" display="none">{{ r.label_zh }}</text>
-              <text class="bname" text-anchor="end" y="17">{{ r.brain_en }}</text>
-              <text class="bname zh-label" text-anchor="end" y="17" display="none">{{ r.brain_zh }}</text>
-            </g>
+            <text class="lbl" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
+            <text class="lbl zh-label" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
             {% elif r.lx > 800 %}
-            <g class="lblg" transform="translate({{ r.lx }}, {{ r.ly - 8 }})">
-              <text class="lbl" text-anchor="start" y="0">{{ r.label_en }}</text>
-              <text class="lbl zh-label" text-anchor="start" y="0" display="none">{{ r.label_zh }}</text>
-              <text class="bname" text-anchor="start" y="17">{{ r.brain_en }}</text>
-              <text class="bname zh-label" text-anchor="start" y="17" display="none">{{ r.brain_zh }}</text>
-            </g>
+            <text class="lbl" text-anchor="start" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
+            <text class="lbl zh-label" text-anchor="start" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
             {% else %}
-            <g class="lblg" transform="translate({{ r.lx }}, {{ r.ly - 8 }})">
-              <text class="lbl" text-anchor="middle" y="0">{{ r.label_en }}</text>
-              <text class="lbl zh-label" text-anchor="middle" y="0" display="none">{{ r.label_zh }}</text>
-              <text class="bname" text-anchor="middle" y="17">{{ r.brain_en }}</text>
-              <text class="bname zh-label" text-anchor="middle" y="17" display="none">{{ r.brain_zh }}</text>
-            </g>
+            <text class="lbl" text-anchor="middle" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
+            <text class="lbl zh-label" text-anchor="middle" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
             {% endif %}
           </g>
           {% endfor %}
@@ -196,54 +173,26 @@
     </section>
 
     <section class="detail-card" id="detail">
-      <div class="detail-empty" data-i18n="emptyHint">← Click a callout to see what it does and where it lives.</div>
+      <div class="detail-empty">← Click a callout.</div>
     </section>
   </main>
 
-  <footer>
-    <span data-i18n="footer1">Knowledge root:</span> <code>{{ knowledge_root }}</code> ·
-    <span data-i18n="footer2">generated</span> {{ dashboard_generated_at }} ·
-    <span data-i18n="footer3">regenerated by</span> <code>cogos bootstrap</code>
-    <div class="attr">Brain artwork: <em>Human-brain-vector.svg</em>, CC0 (Wikimedia Commons) · Local-first · No network required</div>
-  </footer>
+  <footer>CognitiveOS · local-first · regenerated by <code>cogos bootstrap</code> · brain artwork: Human-brain-vector.svg (CC0, Wikimedia Commons)</footer>
 
   <script>
     const REGIONS = {{ regions_json | safe }};
 
-    const I18N = {
-      en: {
-        subtitle: "Click a callout to see a region's responsibilities, files, and status.",
-        statAgents: "agents", statFiles: "source files", statWiki: "wiki pages",
-        mapTitle: "Cognitive Map",
-        mapLede: "Every region is a real CognitiveOS subsystem — not a metaphor.",
-        emptyHint: "← Click a callout to see what it does and where it lives.",
-        responsibilities: "Responsibilities",
-        whereLives: "Where it lives in the repo",
-        filesLabel: "files",
-        footer1: "Knowledge root:", footer2: "generated", footer3: "regenerated by",
-      },
-      zh: {
-        subtitle: "点击任意引线标签，查看该区域负责什么、对应哪些文件。",
-        statAgents: "个 Agent", statFiles: "个源文件", statWiki: "个 wiki 页面",
-        mapTitle: "认知地图",
-        mapLede: "每个区域都对应 CognitiveOS 的真实子系统，不是隐喻。",
-        emptyHint: "← 点击引线标签，查看该区域负责什么、对应哪些文件。",
-        responsibilities: "职责",
-        whereLives: "对应文件",
-        filesLabel: "文件",
-        footer1: "知识根目录:", footer2: "生成于", footer3: "由以下命令重新生成",
-      },
-    };
+    function detectLang() {
+      const nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
+      return nav.startsWith('zh') ? 'zh' : 'en';
+    }
 
-    let lang = 'en';
+    let lang = detectLang();
     let activeKey = null;
     const detail = document.getElementById('detail');
 
-    function mdEm(text) {
-      return text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-    }
-
-    function t(key) { return (I18N[lang] && I18N[lang][key]) || I18N.en[key] || key; }
+    function t(lang, en, zh) { return lang === 'zh' ? zh : en; }
+    function fileUrl(p) { return './' + p; }
 
     function setLang(next) {
       lang = next;
@@ -251,19 +200,12 @@
       document.getElementById('lang-en').classList.toggle('active', next === 'en');
       document.getElementById('lang-zh').classList.toggle('active', next === 'zh');
 
-      document.querySelectorAll('[data-i18n]').forEach(el => {
-        const k = el.getAttribute('data-i18n');
-        if (I18N[lang][k] !== undefined) el.textContent = t(k);
-      });
-
       document.querySelectorAll('.callout').forEach(g => {
         const r = REGIONS.find(x => x.key === g.dataset.region);
         if (!r) return;
-        const zh = lang === 'zh';
+        const zh = next === 'zh';
         g.querySelectorAll('.lbl')[0].setAttribute('display', zh ? 'none' : 'inline');
         g.querySelectorAll('.lbl')[1].setAttribute('display', zh ? 'inline' : 'none');
-        g.querySelectorAll('.bname')[0].setAttribute('display', zh ? 'none' : 'inline');
-        g.querySelectorAll('.bname')[1].setAttribute('display', zh ? 'inline' : 'none');
       });
 
       if (activeKey) render(activeKey);
@@ -273,21 +215,19 @@
       const r = REGIONS.find(x => x.key === key);
       if (!r) return;
       activeKey = key;
-      const label = lang === 'zh' ? r.label_zh : r.label_en;
-      const brain = lang === 'zh' ? r.brain_zh : r.brain_en;
-      const summary = lang === 'zh' ? r.summary_zh : r.summary_en;
-      const resp = lang === 'zh' ? r.responsibilities_zh : r.responsibilities_en;
-      const fileRows = r.files.map(([l, p]) =>
-        `<a href="./${p}"><span>${l}</span><span class="path">${p}</span></a>`).join('');
-      const respItems = resp.map(x => `<li>${x}</li>`).join('');
+      const desc = t(lang, r.desc_en, r.desc_zh);
+      const fileItems = r.files.map(([l, p]) => `<li>${p}</li>`).join('');
+      const memItems = r.memory.map(m => {
+        const title = t(lang, m.title_en, m.title_zh);
+        return `<li><a href="${fileUrl(m.path)}"><span>${title}</span><span class="path">${m.path}</span></a></li>`;
+      }).join('');
       detail.innerHTML = `
-        <div class="brain-name" style="color:${r.color}">${brain}</div>
-        <h3>${label}</h3>
-        <p class="summary">${mdEm(summary)}</p>
-        <h4>${t('responsibilities')}</h4>
-        <ul>${respItems}</ul>
-        <h4>${t('whereLives')}</h4>
-        <div class="files">${fileRows}</div>
+        <h3 style="color:${r.color}">${t(lang, r.label_en, r.label_zh)}</h3>
+        <p class="desc">${desc}</p>
+        <h4>${lang === 'zh' ? '设计文件' : 'Design files'}</h4>
+        <ul class="file-list">${fileItems}</ul>
+        <h4>${lang === 'zh' ? '该分区记住的东西' : 'What this region remembers'}</h4>
+        <ul class="memory-list">${memItems}</ul>
       `;
       document.querySelectorAll('.callout').forEach(g => g.classList.toggle('selected', g.dataset.region === key));
     }
@@ -302,7 +242,8 @@
       g.setAttribute('role', 'button');
     });
 
-    // Default selection shows the map is interactive.
+    // Apply detected language immediately on load.
+    if (lang === 'zh') setLang('zh');
     render('prefrontal');
   </script>
 </body>
