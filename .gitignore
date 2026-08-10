@@ -11,3 +11,8 @@ knowledge/
 dashboard/
 .cogos/
 index.html
+
+# Persona training artefacts — local, never committed
+user/persona/samples/
+user/persona/drivel.jsonl
+user/persona/model.md
