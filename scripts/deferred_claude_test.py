@@ -9,6 +9,10 @@ on it:
    stays quiet) and exit 0.
 2. If Claude Code responds, run the adapter's execute() and print the
    result so the cron job delivers it.
+
+IMPORTANT: this script is COPIED into HERMES_HOME/scripts/ for cron
+execution, so it must NOT rely on __file__-relative paths. The project
+root is hard-coded below.
 """
 
 from __future__ import annotations
@@ -16,8 +20,10 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT / "src"))
+# Hard-coded because this script runs from HERMES_HOME/scripts/ where
+# __file__-relative resolution would point at the wrong place.
+PROJECT_ROOT = Path(r"D:\GitHub_Project\CognitiveOS")
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from cogos.discovery import discover
 from cogos.adapters import load_adapter
@@ -29,7 +35,7 @@ QUOTA_HINTS = ("quota", "limit", "exhausted", "429", "rate limit", "billing", "c
 
 
 def main() -> int:
-    paths = Paths.default()
+    paths = Paths(root=PROJECT_ROOT)
     handles = discover(paths)
     claude = next((h for h in handles if h.agent_id == "claude_code"), None)
     if claude is None:
@@ -47,7 +53,6 @@ def main() -> int:
     if result.status != "success" or any(h in out for h in QUOTA_HINTS):
         # Quota still exhausted (or Claude still broken) — stay silent.
         # The cron job will try again next tick.
-        print("")  # no-op: cron no_agent mode delivers nothing
         return 0
 
     print("Claude Code adapter test PASSED — quota refreshed, adapter working.")

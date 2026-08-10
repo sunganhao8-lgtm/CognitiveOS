@@ -111,10 +111,10 @@ class ClaudeCodeAdapter:
         try:
             proc = subprocess.run(
                 cmd,
-                capture_output=True, text=True, timeout=180, encoding="utf-8",
+                capture_output=True, text=True, timeout=30, encoding="utf-8",
             )
         except subprocess.TimeoutExpired:
-            return "(claude timeout after 180s)"
+            return "(claude timeout after 30s)"
         except Exception as exc:
             return f"(claude error: {exc!r})"
         if proc.returncode != 0:
