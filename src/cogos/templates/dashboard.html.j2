@@ -3,143 +3,251 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CognitiveOS Dashboard</title>
+  <title>CognitiveOS — Cognitive Map</title>
   <style>
     :root {
-      --bg: #0f1115;
-      --panel: #161922;
-      --panel-2: #1d2230;
+      --bg: #0b0d12;
+      --panel: #141823;
+      --panel-2: #1b2030;
       --border: #2a3142;
       --text: #e6e8ee;
       --muted: #8b91a3;
       --accent: #6aa9ff;
-      --accent-2: #b78cff;
-      --good: #4ade80;
-      --warn: #fbbf24;
     }
     * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
     body {
-      margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
+      line-height: 1.55;
+      min-height: 100vh;
     }
     header {
-      padding: 28px 36px;
+      padding: 24px 32px 16px;
       border-bottom: 1px solid var(--border);
       background: linear-gradient(135deg, var(--panel), var(--panel-2));
+      display: flex; justify-content: space-between; align-items: flex-end;
+      gap: 16px; flex-wrap: wrap;
     }
-    header h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: 0.2px; }
-    header p  { margin: 0; color: var(--muted); font-size: 13px; }
-    main { padding: 24px 36px 60px; display: grid; gap: 20px; }
-    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-    .card {
+    header h1 { margin: 0; font-size: 22px; letter-spacing: 0.2px; }
+    header h1 span { color: var(--accent); }
+    header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .stats { display: flex; gap: 18px; font-size: 12px; color: var(--muted); }
+    .stats strong { color: var(--text); font-size: 18px; display: block; }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(360px, 1.1fr) minmax(320px, 1fr);
+      gap: 24px;
+      padding: 24px 32px 60px;
+    }
+    @media (max-width: 880px) { main { grid-template-columns: 1fr; } }
+
+    .map-card {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 18px;
+      border-radius: 14px;
+      padding: 20px;
     }
-    .card h2 {
-      margin: 0 0 10px;
+    .map-card h2 {
+      margin: 0 0 4px;
       font-size: 14px;
-      letter-spacing: 0.4px;
+      letter-spacing: 0.5px;
       text-transform: uppercase;
       color: var(--muted);
     }
-    .stat { font-size: 30px; font-weight: 600; }
-    .stat small { display: block; font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 4px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
-    th { color: var(--muted); font-weight: 500; }
-    code {
-      font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", monospace;
-      background: var(--panel-2);
-      padding: 1px 6px;
-      border-radius: 4px;
-      font-size: 12px;
+    .map-card p.lede { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+    svg.brain { width: 100%; height: auto; display: block; }
+
+    .region-shape {
+      cursor: pointer;
+      stroke: rgba(255,255,255,0.18);
+      stroke-width: 1.5;
+      transition: filter 120ms, transform 120ms;
+      transform-origin: center;
     }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; }
-    .pill.ok { background: rgba(74, 222, 128, 0.15); color: var(--good); }
-    .pill.empty { background: rgba(251, 191, 36, 0.15); color: var(--warn); }
-    footer { color: var(--muted); font-size: 12px; padding: 12px 36px; border-top: 1px solid var(--border); }
+    .region-shape:hover { filter: brightness(1.25); }
+    .region-shape.is-active { filter: brightness(1.4); }
+    .region-label {
+      font: 600 12px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      fill: rgba(255,255,255,0.92);
+      pointer-events: none;
+      paint-order: stroke;
+      stroke: rgba(0,0,0,0.45);
+      stroke-width: 3;
+    }
+    .region-sub {
+      font: 500 10px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      fill: rgba(255,255,255,0.7);
+      pointer-events: none;
+      paint-order: stroke;
+      stroke: rgba(0,0,0,0.45);
+      stroke-width: 3;
+    }
+
+    .detail-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 24px;
+      min-height: 100%;
+    }
+    .detail-card h3 { margin: 0 0 6px; font-size: 20px; }
+    .detail-card .brain-name { color: var(--muted); font-size: 12px; letter-spacing: 0.6px; text-transform: uppercase; }
+    .detail-card .summary { color: #c9cdd6; margin: 14px 0 18px; }
+    .detail-card h4 {
+      margin: 18px 0 8px;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .detail-card ul { padding-left: 20px; margin: 0 0 4px; }
+    .detail-card li { margin: 4px 0; font-size: 13px; }
+    .detail-card .files { display: grid; gap: 6px; }
+    .detail-card .files a {
+      display: flex; justify-content: space-between; gap: 8px;
+      padding: 8px 10px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 13px;
+      transition: background 120ms;
+    }
+    .detail-card .files a:hover { background: #232a3b; text-decoration: none; }
+    .detail-card .files .path { font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
+    .detail-empty { color: var(--muted); padding: 30px 0; text-align: center; font-size: 13px; }
+
+    code { font-family: ui-monospace, "JetBrains Mono", monospace; background: var(--panel-2); padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+    footer { color: var(--muted); font-size: 12px; padding: 12px 32px; border-top: 1px solid var(--border); }
   </style>
 </head>
 <body>
   <header>
-    <h1>CognitiveOS <span style="color: var(--accent)">Dashboard</span></h1>
-    <p>Local cognitive runtime · knowledge root: <code>{{ knowledge_root }}</code></p>
+    <div>
+      <h1>CognitiveOS <span>Cognitive Map</span></h1>
+      <p>Click a region to see its responsibilities, source files, and status.</p>
+    </div>
+    <div class="stats">
+      <div><strong>{{ agents | length }}</strong>agents</div>
+      <div><strong>{{ total_files }}</strong>source files</div>
+      <div><strong>{{ wiki_pages | length }}</strong>wiki pages</div>
+    </div>
   </header>
+
   <main>
-    <section class="grid">
-      <div class="card">
-        <h2>Agents</h2>
-        <div class="stat">{{ agents | length }} <small>discovered on this machine</small></div>
-      </div>
-      <div class="card">
-        <h2>Files harvested</h2>
-        <div class="stat">
-          {{ agents | sum(attribute='file_count') }}
-          <small>copied into knowledge/sources/</small>
-        </div>
-      </div>
-      <div class="card">
-        <h2>Wiki pages</h2>
-        <div class="stat">{{ wiki_pages | length }} <small>under knowledge/wiki/</small></div>
-      </div>
-      <div class="card">
-        <h2>Bootstrap</h2>
-        <div class="stat">
-          <span class="pill {{ 'ok' if agents else 'empty' }}">
-            {{ 'available' if agents else 'no agents found' }}
-          </span>
-          <small>generated {{ dashboard_generated_at }}</small>
-        </div>
-      </div>
+    <section class="map-card">
+      <h2>Cognitive Map</h2>
+      <p class="lede">Every region below is a real CognitiveOS subsystem — not a metaphor for its own sake.</p>
+      <svg class="brain" viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cognitive map">
+        <defs>
+          <radialGradient id="brainFill" cx="50%" cy="40%" r="65%">
+            <stop offset="0%" stop-color="#1b2030" />
+            <stop offset="100%" stop-color="#0b0d12" />
+          </radialGradient>
+          <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="6" />
+          </filter>
+        </defs>
+
+        <!-- brain silhouette -->
+        <ellipse cx="400" cy="320" rx="320" ry="220" fill="url(#brainFill)" stroke="#2a3142" stroke-width="2" />
+        <!-- central sulcus-like divider -->
+        <path d="M 400 110 C 380 200, 380 240, 400 320 S 420 440, 400 530" stroke="#2a3142" stroke-width="1.5" fill="none" opacity="0.7" />
+
+        <!-- REGIONS: positions hand-tuned so the SVG reads as a brain -->
+        <g class="region" data-region="prefrontal">
+          <ellipse class="region-shape" cx="400" cy="160" rx="150" ry="55" fill="#6aa9ff" />
+          <text class="region-label" x="400" y="155" text-anchor="middle">Router</text>
+          <text class="region-sub"   x="400" y="172" text-anchor="middle">Prefrontal Cortex</text>
+        </g>
+
+        <g class="region" data-region="thalamus">
+          <ellipse class="region-shape" cx="240" cy="270" rx="100" ry="60" fill="#fbbf24" />
+          <text class="region-label" x="240" y="265" text-anchor="middle">Bootstrap</text>
+          <text class="region-sub"   x="240" y="282" text-anchor="middle">Thalamus</text>
+        </g>
+
+        <g class="region" data-region="hippocampus">
+          <ellipse class="region-shape" cx="560" cy="270" rx="100" ry="60" fill="#4ade80" />
+          <text class="region-label" x="560" y="265" text-anchor="middle">Sources</text>
+          <text class="region-sub"   x="560" y="282" text-anchor="middle">Hippocampus</text>
+        </g>
+
+        <g class="region" data-region="cortex">
+          <ellipse class="region-shape" cx="290" cy="420" rx="120" ry="65" fill="#b78cff" />
+          <text class="region-label" x="290" y="415" text-anchor="middle">Knowledge</text>
+          <text class="region-sub"   x="290" y="432" text-anchor="middle">Cortex</text>
+        </g>
+
+        <g class="region" data-region="reflection">
+          <ellipse class="region-shape" cx="510" cy="420" rx="120" ry="65" fill="#f472b6" />
+          <text class="region-label" x="510" y="415" text-anchor="middle">Reflection</text>
+          <text class="region-sub"   x="510" y="432" text-anchor="middle">Sleep Loop</text>
+        </g>
+
+        <g class="region" data-region="corpus">
+          <rect class="region-shape" x="350" y="300" width="100" height="40" rx="10" fill="#22d3ee" />
+          <text class="region-label" x="400" y="324" text-anchor="middle">Protocol</text>
+        </g>
+
+        <g class="region" data-region="brainstem">
+          <path class="region-shape" d="M 380 510 Q 400 560 420 510 L 410 540 Q 400 555 390 540 Z" fill="#94a3b8" />
+          <text class="region-label" x="400" y="530" text-anchor="middle" style="font-size:10px">Runtime</text>
+        </g>
+      </svg>
     </section>
 
-    <section class="card">
-      <h2>Agents in this run</h2>
-      {% if agents %}
-      <table>
-        <thead>
-          <tr><th>Agent</th><th>Files</th><th>Source paths</th></tr>
-        </thead>
-        <tbody>
-          {% for a in agents %}
-          <tr>
-            <td><code>{{ a.agent_id }}</code></td>
-            <td>{{ a.file_count }}</td>
-            <td>
-              {% for f in a.files[:5] %}<code>{{ f }}</code>{% if not loop.last %} · {% endif %}{% endfor %}
-              {% if a.files | length > 5 %}<small> · +{{ a.files | length - 5 }} more</small>{% endif %}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p>No agents were discovered. Install one (e.g. Hermes) and re-run <code>cogos bootstrap</code>.</p>
-      {% endif %}
-    </section>
-
-    <section class="card">
-      <h2>Wiki</h2>
-      {% if wiki_pages %}
-      <ul>
-        {% for p in wiki_pages %}
-        <li><a href="../knowledge/wiki/{{ p }}"><code>{{ p }}</code></a></li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p>No wiki pages yet.</p>
-      {% endif %}
+    <section class="detail-card" id="detail">
+      <div class="detail-empty">
+        ← Click a region on the cognitive map to see what it does and where it lives.
+      </div>
     </section>
   </main>
+
   <footer>
-    CognitiveOS · local-first · this file is regenerated by <code>cogos bootstrap</code>.
+    Knowledge root: <code>{{ knowledge_root }}</code> · generated {{ dashboard_generated_at }} · regenerated by <code>cogos bootstrap</code>.
   </footer>
+
+  <script>
+    const REGIONS = {{ regions_json | safe }};
+    const detail = document.getElementById('detail');
+
+    function render(regionKey) {
+      const r = REGIONS.find(x => x.key === regionKey);
+      if (!r) return;
+      const fileRows = r.files.map(([label, path]) => {
+        const href = path.startsWith('http') ? path : ('./' + path);
+        return `<a href="${href}"><span>${label}</span><span class="path">${path}</span></a>`;
+      }).join('');
+      const respItems = r.responsibilities.map(x => `<li>${x}</li>`).join('');
+      detail.innerHTML = `
+        <div class="brain-name">${r.brain_name}</div>
+        <h3 style="color:${r.color}">${r.label}</h3>
+        <p class="summary">${r.summary}</p>
+        <h4>Responsibilities</h4>
+        <ul>${respItems}</ul>
+        <h4>Where it lives in the repo</h4>
+        <div class="files">${fileRows}</div>
+      `;
+      document.querySelectorAll('.region-shape').forEach(el => el.classList.remove('is-active'));
+      const active = document.querySelector(`.region[data-region="${regionKey}"] .region-shape`);
+      if (active) active.classList.add('is-active');
+    }
+
+    document.querySelectorAll('.region').forEach(g => {
+      g.addEventListener('click', () => render(g.dataset.region));
+      g.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); render(g.dataset.region); }
+      });
+      g.setAttribute('tabindex', '0');
+      g.setAttribute('role', 'button');
+      g.setAttribute('aria-label', g.dataset.region);
+    });
+
+    // Open with router highlighted so the user sees the map is interactive.
+    render('prefrontal');
+  </script>
 </body>
 </html>

@@ -44,11 +44,16 @@ class Paths:
 
     @property
     def dashboard(self) -> Path:
+        # Legacy folder — kept only so old scripts that wrote here still work.
+        # New dashboards go to ``index.html`` at the project root.
         return self.root / "dashboard"
 
     @property
     def dashboard_index(self) -> Path:
-        return self.dashboard / "index.html"
+        # The single source of truth for the CognitiveOS UI lives at the
+        # project root so that ``file://`` links into ``knowledge/`` work
+        # without extra path arithmetic.
+        return self.root / "index.html"
 
     @property
     def cache(self) -> Path:
@@ -67,7 +72,7 @@ class Paths:
             self.sources,
             self.normalized,
             self.wiki,
-            self.dashboard,
+            # dashboard/ is no longer required — index.html lives at the root.
             self.cache,
         ):
             p.mkdir(parents=True, exist_ok=True)
