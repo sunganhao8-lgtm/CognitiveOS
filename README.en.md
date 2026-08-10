@@ -4,7 +4,7 @@ A Cognitive Runtime Layer for AI Agents.
 
 [中文](README.md) | [English](README.en.md)
 
-> **Differentiation in three words: cross-agent, cross-device, plain text.** Claude Code / Workbuddy / Qoder all look alike at the agent-engineering layer (LLM + context window + tool calls). CognitiveOS does NOT compete there. It extracts *your preferences, projects, and red lines* out of any agent, into your own hands — `git diff`-friendly, survives a new laptop, survives a switch to a different agent.
+> **The real differentiation**: CognitiveOS builds an Agent's *cognition of its master*, and separates that cognition from the Agent. "Cross-agent / cross-device / plain text" is the natural by-product of that separation (any import/export would do it). What's NOT replaceable is **actively observing the Agent's behaviour toward the master, distilling repeated feedback into structured rules, and updating the master profile over time** — the Agent cannot do this for itself (it cannot see itself).
 
 ## Have you felt these pains?
 
