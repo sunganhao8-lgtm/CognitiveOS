@@ -18,7 +18,8 @@ from .paths import Paths
 from .user import UserLayer
 from .portability import export_user, import_user
 from .brief import render_brief
-from .verify import DEFAULT_RULES, load_rules, seed_default_rules, run_one, record
+from .verify import GENERATED_RULES, load_rules, seed_generated_rules, run_one, record
+from .agent_memories import extract_all as ingest_agent_memories
 from .persona_fit import (
     build_persona_block,
     load_qa_pairs,
@@ -70,6 +71,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p_verify = sub.add_parser("verify", help="Run reproduction tests: throw iron rules at the current agent and report breaches")
     p_verify.add_argument("--seed", type=int, default=None, help="Optional seed for reproducibility")
+
+    p_ingest = sub.add_parser("ingest", help="Extract conversation memories from other agents (Codex / Claude Code) into user/conversations/")
+    p_ingest.add_argument("--limit", type=int, default=None, help="Max pairs per source")
 
     args = parser.parse_args(argv)
     paths = Paths(root=(args.root or Path.cwd()).resolve())
@@ -214,8 +218,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "verify":
         import time as _time
         user = UserLayer(root=paths.root / "user")
-        seeded = seed_default_rules(user)
+        seeded = seed_generated_rules(user)
         rules = load_rules(user)
+        if not rules:
+            print("No rules under user/rules/. Create one as user/rules/R001.json and re-run.")
+            return 4
         print(f"Running {len(rules)} reproduction probe(s)...\n")
         results: list[dict] = []
         passes = 0
@@ -236,6 +243,16 @@ def main(argv: list[str] | None = None) -> int:
         total = len(rules)
         print(f"summary: {passes}/{total} rules held")
         return 0 if passes == total else 3
+
+    if args.cmd == "ingest":
+        user = UserLayer(root=paths.root / "user")
+        result = ingest_agent_memories(user, limit_per_source=args.limit)
+        if not result:
+            print("No conversation memories found in other agents.")
+        else:
+            for source, count in result.items():
+                print(f"{source}: extracted {count} QA pairs -> user/conversations/")
+        return 0
 
     parser.error(f"unknown command: {args.cmd}")
     return 2

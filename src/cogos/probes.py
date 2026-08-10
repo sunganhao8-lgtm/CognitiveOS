@@ -8,6 +8,8 @@ locate an agent, the rest belongs in an Adapter.
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
 from pathlib import Path
 
 from cogos.discovery import AgentHandle, Probe
@@ -71,7 +73,72 @@ def probe_hermes(paths: Paths) -> list[AgentHandle]:
     ]
 
 
-PROBES: list[Probe] = [probe_hermes]
+def probe_claude_code(paths: Paths) -> list[AgentHandle]:
+    """Look for Claude Code under ~/.claude (its config/home dir)."""
+    import os
+
+    # Claude Code keeps its state under ~/.claude
+    home = Path(os.path.expanduser("~")) / ".claude"
+    if not home.exists():
+        return []
+
+    version = None
+    if shutil.which("claude") is not None:
+        try:
+            proc = subprocess.run(
+                ["claude", "--version"], capture_output=True, text=True, timeout=10, encoding="utf-8"
+            )
+            version = proc.stdout.strip() if proc.returncode == 0 else None
+        except Exception:
+            version = None
+
+    return [
+        AgentHandle(
+            agent_id="claude_code",
+            display_name="Claude Code",
+            version=version,
+            paths={
+                "home": home,
+                "config": home / "settings.json",
+            },
+            notes=["safe subset only: CLAUDE.md + settings.json"],
+        )
+    ]
+
+
+def probe_codex(paths: Paths) -> list[AgentHandle]:
+    """Look for Codex under ~/.codex (its config/home dir)."""
+    import os
+
+    home = Path(os.path.expanduser("~")) / ".codex"
+    if not home.exists():
+        return []
+
+    version = None
+    if shutil.which("codex") is not None:
+        try:
+            proc = subprocess.run(
+                ["codex", "--version"], capture_output=True, text=True, timeout=10, encoding="utf-8"
+            )
+            version = proc.stdout.strip() if proc.returncode == 0 else None
+        except Exception:
+            version = None
+
+    return [
+        AgentHandle(
+            agent_id="codex",
+            display_name="Codex (OpenAI)",
+            version=version,
+            paths={
+                "home": home,
+                "config": home / "config.toml",
+            },
+            notes=["safe subset only: config.toml"],
+        )
+    ]
+
+
+PROBES: list[Probe] = [probe_hermes, probe_claude_code, probe_codex]
 
 
 def all_probes() -> list[Probe]:

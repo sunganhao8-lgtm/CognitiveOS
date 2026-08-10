@@ -56,4 +56,12 @@ def load_adapter(handle: AgentHandle) -> Adapter | None:
         from .hermes.adapter import HermesAdapter
 
         return HermesAdapter(handle)
+    if handle.agent_id == "claude_code":
+        from .claude_code.adapter import ClaudeCodeAdapter
+
+        return ClaudeCodeAdapter(handle)
+    if handle.agent_id == "codex":
+        from .codex.adapter import CodexAdapter
+
+        return CodexAdapter(handle)
     return None
