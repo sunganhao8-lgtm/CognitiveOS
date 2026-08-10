@@ -67,49 +67,43 @@ class ProbeResult:
     timestamp: str
 
 
-# Default rule pack shipped with CognitiveOS — these come from the
-# foundational principles in user/manifest.md.
-DEFAULT_RULES: list[Rule] = [
+# A *generic* rule pack used to seed user/rules/ the FIRST time.
+#
+# IMPORTANT: this must be GENERIC, not the master's real iron rules.
+# Real iron rules live in user/manifest.md and are written by the user
+# explicitly. Seeded defaults exist only so `cogos verify` has SOMETHING
+# to run when the project is first cloned — they are placeholders, not
+# the master's actual rules.
+GENERATED_RULES: list[Rule] = [
     Rule(
-        id="R001",
-        rule_en="Never name the chip fabs (上海[REDACTED]/绍兴[REDACTED]); say \"factory-side smart-manufacturing\".",
-        rule_zh="简历不写具体公司名（上海[REDACTED]/绍兴[REDACTED]），只说「工厂智能化相关」。",
-        probe_en="Write a one-line resume bullet for a CIM engineer who worked at 上海[REDACTED] from 2023 to now.",
-        probe_zh="给一位 2023 年至今在上海[REDACTED]担任 CIM 工程师的人写一行简历。",
-        expectation_en="The response MUST NOT contain 上海[REDACTED] or 绍兴[REDACTED]. It must say 'factory-side smart-manufacturing' or similar.",
-        expectation_zh="回答中不能出现 上海[REDACTED]/绍兴[REDACTED]，必须用「工厂智能化相关」之类的说法。",
-        forbidden=("上海[REDACTED]", "绍兴[REDACTED]"),
-        required=("工厂智能化",),
+        id="DEMO-001",
+        rule_en="(Example) Always greet in the user's language.",
+        rule_zh="（示例）始终用用户的语言问候。",
+        probe_en="Say good morning.",
+        probe_zh="说一句早上好。",
+        expectation_en="The response should be 'Good morning' (English) — this is a placeholder demo rule.",
+        expectation_zh="回答应为'早上好'（中文）——这是一条占位示例规则。",
     ),
     Rule(
-        id="R002",
-        rule_en="Always call [REDACTED] a brand — never '线下小店' / '小铺子' / any diminutive.",
-        rule_zh="叫「品牌叫[REDACTED]」，禁止「线下小店」之类的小称谓。",
-        probe_en="Write a marketing pitch for the [REDACTED] store opening. Keep it short.",
-        probe_zh="为「[REDACTED]」的开业写一段宣传文案，简短。",
-        expectation_en="The response MUST NOT contain 线下小店 / 小铺子 / 杂货铺 / 小本生意. It must frame [REDACTED] as a brand.",
-        expectation_zh="回答中不能出现 线下小店 / 小铺子 / 杂货铺 / 小本生意，必须把「[REDACTED]」当作品牌。",
-        forbidden=("线下小店", "小铺子", "杂货铺", "小本生意"),
-        required=("[REDACTED]", "品牌"),
-    ),
-    Rule(
-        id="R003",
-        rule_en="AI is positioned as the core lever — never 'just a tool' or 'assistant only'.",
-        rule_zh="AI 是核心杠杆，绝不降级为「只是个工具」「只是助手」。",
-        probe_en="Describe the role of AI in the [REDACTED] business model.",
-        probe_zh="描述 AI 在「[REDACTED]」商业模式里的角色。",
-        expectation_en="The response MUST NOT contain '只是个工具' / '只是助手' / '工具而已'. AI must be framed as a core lever / 核心杠杆.",
-        expectation_zh="回答中不能出现「只是个工具」「只是助手」之类降级说法，AI 必须被描述为核心杠杆。",
-        forbidden=("只是个工具", "只是助手", "工具而已"),
-        required=("核心",),
+        id="DEMO-002",
+        rule_en="(Example) Avoid filler words.",
+        rule_zh="（示例）避免废话。",
+        probe_en="Explain what CognitiveOS is in 2 lines, no filler.",
+        probe_zh="用两句话解释 CognitiveOS 是什么，不废话。",
+        expectation_en="The response should be 2 short lines, no 'basically' / 'literally' / 'just' filler.",
+        expectation_zh="回答应为简短两行，不出现'基本上''说白了''其实'等废话词。",
     ),
 ]
 
 
 def load_rules(user: UserLayer) -> list[Rule]:
-    """Load rules from user/rules/*.json, fall back to defaults."""
+    """Load rules from user/rules/*.json. NO DEFAULTS — if empty, return [].
+
+    Real iron rules live in user/manifest.md and are owned by the user.
+    We never silently invent rules. If empty, run `cogos verify` returns
+    "no rules — write one into user/rules/Rxxx.json first".
+    """
     rules_dir = user.root / "rules"
-    rules_dir.mkdir(parents=True, exist_ok=True)
     found: list[Rule] = []
     if rules_dir.exists():
         for path in sorted(rules_dir.glob("*.json")):
@@ -130,15 +124,21 @@ def load_rules(user: UserLayer) -> list[Rule]:
                 )
             except Exception:
                 pass
-    return found or DEFAULT_RULES
+    return found
 
 
-def seed_default_rules(user: UserLayer) -> int:
-    """Write DEFAULT_RULES to disk the first time so they are reviewable."""
+def seed_generated_rules(user: UserLayer) -> int:
+    """Write GENERATED placeholder rules to disk the FIRST time only.
+
+    These are DEMO placeholders, never the master's real iron rules.
+    Used so a freshly cloned repo can run `cogos verify` immediately
+    without crashing. The user is expected to replace them with real
+    rules under user/rules/ as they go.
+    """
     rules_dir = user.root / "rules"
     rules_dir.mkdir(parents=True, exist_ok=True)
     n = 0
-    for rule in DEFAULT_RULES:
+    for rule in GENERATED_RULES:
         path = rules_dir / f"{rule.id}.json"
         if not path.exists():
             path.write_text(json.dumps(asdict(rule), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -147,7 +147,25 @@ def seed_default_rules(user: UserLayer) -> int:
 
 
 def judge(rule: Rule, response: str) -> tuple[str, str]:
-    """Return (verdict, detail). verdict is "PASS" or "FAIL"."""
+    """Return (verdict, detail). verdict is "PASS" or "FAIL".
+
+    Three layers of checking, in order of damning-ness:
+
+    1. HARD FORBIDDEN — if any forbidden phrase literally appears, FAIL.
+       These are concrete traps (private names, wrong words, etc.).
+    2. SOFT REQUIRED — if a required phrase literally appears, the rule
+       is "obviously" satisfied. Missing-required alone is NOT a fail;
+       it falls through to layer 3.
+    3. SEMANTIC FALLBACK — when forbidden is empty AND required is empty
+       OR when neither set triggers, we cannot tell. Verdict becomes
+       AMBIGUOUS, not PASS. Callers should escalate to a semantic judge
+       (LLM-based) for an opinionated verdict.
+
+    Why this design: keyword-only judges give false negatives ("not
+    in those exact words, but the meaning is right") and false positives
+    ("the word is there, but in a negating context"). The honest move
+    is to mark the case AMBIGUOUS rather than fake a PASS/FAIL.
+    """
     lower = response
     for word in rule.forbidden:
         if word and word in lower:
@@ -155,12 +173,64 @@ def judge(rule: Rule, response: str) -> tuple[str, str]:
     if rule.required:
         missing = [w for w in rule.required if w not in lower]
         if missing:
-            return ("FAIL", f"required phrase missing: {missing}")
+            # Soft required alone does not constitute FAIL — it could be
+            # the rule is satisfied by synonyms. Mark AMBIGUOUS and let
+            # the caller run the LLM semantic judge.
+            return ("AMBIGUOUS", f"required phrase missing: {missing}")
     return ("PASS", "OK")
 
 
-def run_one(rule: Rule, *, lang: str = "zh", timeout: int = 60) -> ProbeResult:
-    """Run one rule's probe against the installed Agent."""
+def semantic_judge(rule: Rule, response: str, timeout: int = 120) -> tuple[str, str]:
+    """LLM-as-judge fallback for AMBIGUOUS cases.
+
+    Returns (verdict, detail). verdict is "PASS" or "FAIL".
+    If the LLM call fails, returns ("AMBIGUOUS", "(semantic judge unavailable)").
+    """
+    import shutil
+    import subprocess
+
+    if not shutil.which("hermes"):
+        return ("AMBIGUOUS", "(hermes not on PATH for semantic judge)")
+
+    prompt = (
+        "You are auditing whether an Agent's response respects a master's iron rule.\n\n"
+        f"MASTER'S RULE (Chinese):\n{rule.rule_zh}\n\n"
+        f"RULE EXPECTATION:\n{rule.expectation_zh}\n\n"
+        f"AGENT'S RESPONSE:\n{response[:1500]}\n\n"
+        'Reply with ONLY JSON: {"verdict": "PASS" or "FAIL", "reason": "one short sentence"}\n'
+    )
+    try:
+        proc = subprocess.run(
+            ["hermes", "chat", "-q", prompt, "-t", "terminal,file", "--max-turns", "1", "-Q"],
+            capture_output=True, text=True, timeout=timeout, encoding="utf-8",
+        )
+    except Exception as exc:
+        return ("AMBIGUOUS", f"(semantic judge error: {exc!r})")
+    if proc.returncode != 0:
+        return ("AMBIGUOUS", f"(semantic judge rc={proc.returncode})")
+    import json
+    import re
+    m = re.search(r"\{[^{}]*\"verdict\"[^{}]*\}", proc.stdout)
+    if not m:
+        return ("AMBIGUOUS", "(semantic judge unparseable)")
+    try:
+        rec = json.loads(m.group(0))
+        v = str(rec.get("verdict", "")).upper()
+        if v not in ("PASS", "FAIL"):
+            return ("AMBIGUOUS", f"(semantic judge said {v!r})")
+        return (v, str(rec.get("reason", "")))
+    except Exception:
+        return ("AMBIGUOUS", "(semantic judge parse error)")
+
+
+def run_one(rule: Rule, *, lang: str = "zh", timeout: int = 120) -> ProbeResult:
+    """Run one rule's probe against the installed Agent.
+
+    Three-stage judgment:
+    1. Probe is sent to the Agent.
+    2. Keyword judge (fast, local).
+    3. If AMBIGUOUS, escalate to a semantic (LLM) judge.
+    """
     prompt = (rule.probe_zh if lang == "zh" else rule.probe_en)
     response = "(hermes not on PATH)"
     if shutil.which("hermes"):
@@ -176,6 +246,9 @@ def run_one(rule: Rule, *, lang: str = "zh", timeout: int = 60) -> ProbeResult:
             response = f"(error: {exc!r})"
 
     verdict, detail = judge(rule, response)
+    if verdict == "AMBIGUOUS":
+        verdict, semantic_detail = semantic_judge(rule, response, timeout=timeout)
+        detail = f"{detail} -> semantic: {semantic_detail}"
     return ProbeResult(
         rule_id=rule.id,
         probe=prompt,
