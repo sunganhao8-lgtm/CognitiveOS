@@ -14,6 +14,8 @@ from pathlib import Path
 from . import __version__
 from .bootstrap import run as bootstrap_run
 from .paths import Paths
+from .user import UserLayer
+from .portability import export_user, import_user
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -27,6 +29,12 @@ def main(argv: list[str] | None = None) -> int:
     p_bootstrap.add_argument("--no-browser", action="store_true", help="Don't open the dashboard")
 
     p_status = sub.add_parser("status", help="Show last bootstrap report")
+
+    p_export = sub.add_parser("export-user", help="Export the user/ layer to a tar.gz")
+    p_export.add_argument("--to", type=Path, required=True, help="Destination .tar.gz path")
+
+    p_import = sub.add_parser("import-user", help="Import the user/ layer from a tar.gz")
+    p_import.add_argument("--from", dest="src", type=Path, required=True, help="Source .tar.gz path")
 
     args = parser.parse_args(argv)
     paths = Paths(root=(args.root or Path.cwd()).resolve())
@@ -42,6 +50,18 @@ def main(argv: list[str] | None = None) -> int:
             print("No previous bootstrap run recorded.", file=sys.stderr)
             return 1
         print(last.read_text(encoding="utf-8"))
+        return 0
+
+    if args.cmd == "export-user":
+        user = UserLayer(root=paths.root / "user")
+        manifest = export_user(user, args.to)
+        print(json.dumps(manifest, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.cmd == "import-user":
+        user = UserLayer(root=paths.root / "user")
+        result = import_user(user, args.src)
+        print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
 
     parser.error(f"unknown command: {args.cmd}")

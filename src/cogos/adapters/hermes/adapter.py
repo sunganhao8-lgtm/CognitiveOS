@@ -12,17 +12,25 @@ from ...kernel import Result
 from ...paths import Paths
 
 
-# Files and directories that are safe to copy verbatim from a Hermes home.
-# Anything not on this list stays on the original disk. Cache, auth.json,
-# state.db, sessions, logs etc. are deliberately excluded.
-SAFE_TOP_LEVEL = ("skills", "AGENTS.md", "SOUL.md", "IDENTITY.md", "USER.md")
-SAFE_PROFILE_FILES = (
-    "config.yaml",
-    "SOUL.md",
-    "AGENTS.md",
-    "MEMORY.md",
-    "USER.md",
+# Files and directories that CognitiveOS does NOT touch.
+#
+# Rationale: every AI agent already manages its own SOUL / AGENTS /
+# MEMORY / USER files at runtime. CognitiveOS does not need to copy,
+# index, or "own" those — the agent will read them itself on a new
+# machine. What CognitiveOS owns is the *user-level* cognitive state
+# that NO agent owns (preferences, project know-how, cross-agent
+# decisions, accumulated experience).
+#
+# So we deliberately exclude the agent's self-managed files.
+EXCLUDE_TOP_LEVEL = (
+    "SOUL.md",      # agent self-description
+    "AGENTS.md",    # agent self-instructions
+    "IDENTITY.md",  # agent identity
+    "USER.md",      # agent's per-user preferences (duplicate of cogos user/)
 )
+
+SAFE_TOP_LEVEL = ("skills",)
+SAFE_PROFILE_FILES = ()  # v0.2+ will define a USER-only whitelist
 
 
 class HermesAdapter:

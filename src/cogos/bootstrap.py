@@ -23,6 +23,7 @@ from .adapters import load_adapter
 from .discovery import discover as discover_agents
 from .paths import Paths
 from .normalizer import build_normalized_index
+from .user import UserLayer
 from .wiki import build_wiki
 from .dashboard import render_dashboard
 
@@ -93,10 +94,38 @@ def run(paths: Paths | None = None, *, open_browser: bool = True) -> BootstrapRe
         _json_dumps(report.to_dict()), encoding="utf-8"
     )
 
+    # Make sure the user-layer skeleton exists on first bootstrap. We do
+    # NOT auto-populate it — every file inside ``user/`` is authored by
+    # the user (or by an explicit cogos command) and never silently
+    # overwritten.
+    user = UserLayer(root=paths.root / "user")
+    user.ensure()
+    _ensure_user_readme(user)
+
     if open_browser and dashboard_path.exists():
         _open_in_browser(dashboard_path)
 
     return report
+
+
+def _ensure_user_readme(user: UserLayer) -> None:
+    readme = user.root / "README.md"
+    if readme.exists():
+        return
+    readme.write_text(
+        (
+            "# user/\n\n"
+            "This directory is **yours**. CognitiveOS never silently\n"
+            "writes here. You author files directly with a text editor.\n\n"
+            "It is the layer that travels with you — across machines and\n"
+            "across AI agent products. Copy this directory to another\n"
+            "computer (or `cogos export user/`) and your preferences,\n"
+            "project knowledge, and accumulated experience come with you.\n\n"
+            "See `preferences.md`, `style.md`, `projects/`, `experience/`,\n"
+            "and `cognitive/`.\n"
+        ),
+        encoding="utf-8",
+    )
 
 
 def _open_in_browser(path: Path) -> None:
