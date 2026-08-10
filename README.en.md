@@ -4,6 +4,8 @@ A Cognitive Runtime Layer for AI Agents.
 
 [中文](README.md) | [English](README.en.md)
 
+> **In one sentence**: ordinary Agents "make decisions for you". CognitiveOS **lets an Agent replicate your decisions, and proves it via active reproduction-testing** — not just distilling a few skills.
+
 > **The real differentiation**: CognitiveOS builds an Agent's *cognition of its master*, and separates that cognition from the Agent. "Cross-agent / cross-device / plain text" is the natural by-product of that separation (any import/export would do it).
 >
 > **The irreplaceable mechanism: active reproduction testing.** An Agent's "memory" is **passive record** — "the master said X". When a similar situation comes up again, the Agent will fall into the same trap unless corrected again. CognitiveOS takes the master's iron rules and turns them into **test cases**, actively re-running them whenever a new session starts, a new Agent is swapped in, or the Agent's prompt is upgraded.
