@@ -4,6 +4,42 @@ A Cognitive Runtime Layer for AI Agents.
 
 [中文](README.md) | [English](README.en.md)
 
+## Have you felt these pains?
+
+### Pain 1: Want to try a new AI agent, but afraid to switch 😰
+
+You've accumulated a lot of memory in your current agent: your habits,
+your preferences, the pitfalls you've hit, the context of hundreds of
+projects.
+
+Switching to a new agent = **starting from zero**. You'd have to
+re-teach it "who you are, what you care about, what's off-limits".
+
+The migration cost stops you from trying new products. **You're locked
+in by your memory.**
+
+### Pain 2: New computer = amnesia 🧠
+
+You install the agent on a new machine. It doesn't know you.
+
+It doesn't remember your projects, your decisions, the experience you
+gained from months of trial and error.
+
+Your "cognition" stays on the old machine. **New computer = amnesia.**
+
+### Pain 3: The agent's memory is "its", not "yours" 🔒
+
+Everything you accumulate in this agent stays with the agent.
+
+When you stop using it, **that accumulation is gone** — like changing
+butlers: what the butler remembers is the butler's business, not the
+master's.
+
+---
+
+**CognitiveOS's answer: take "your cognition" out of the agent, and put
+it in your own hands.**
+
 ## Vision
 
 Current AI agents are powerful but isolated:
