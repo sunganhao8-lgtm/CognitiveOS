@@ -388,9 +388,9 @@
             {% set q_text = q.question | replace('\n', ' ') %}
             {% set q_short = q_text | truncate(90, True, '…') %}
             <li>
-              <a href="./user/conversations/hermes-20260810.jsonl" target="_blank" title="{{ q.timestamp }}">
+              <a href="{{ q.detail_link }}" target="_blank" title="{{ q.timestamp }}">
                 <span class="q">{{ q_short }}</span>
-                <span class="ts">{{ q.timestamp[:10] }} · conversations/hermes-20260810.jsonl</span>
+                <span class="ts">{{ q.timestamp[:10] }}</span>
               </a>
             </li>
             {% endfor %}

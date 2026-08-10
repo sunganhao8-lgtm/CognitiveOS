@@ -220,7 +220,11 @@ def render_dashboard(paths: Paths) -> Path:
     """Render the root ``index.html``; return its on-disk path."""
     paths.root.mkdir(parents=True, exist_ok=True)
 
-    # Active projects: read directly from user/projects/. INDEX.md first.
+    # Active projects: read user/projects/INDEX.md and resolve to a real
+    # clickable target. If user/<rel_path> exists in-repo, link to it;
+    # otherwise the project lives outside the repo (e.g. zhaiyu-bp is on
+    # the master's Desktop) — in that case fall back to the project .md
+    # that we DO have inside user/projects/ for read-only reference.
     user_dir = paths.root / "user"
     projects: list[dict] = []
     projects_index = user_dir / "projects" / "INDEX.md"
@@ -231,8 +235,12 @@ def render_dashboard(paths: Paths) -> Path:
                 continue
             import re as _re
             m = _re.match(r"^- \[([^\]]+)\]\(([^)]+)\)\s*(?:—\s*(.*))?$", line)
-            if m:
-                projects.append({"title": m.group(1), "path": m.group(2), "note": m.group(3) or ""})
+            if not m:
+                continue
+            title, rel_path, note = m.group(1), m.group(2), m.group(3) or ""
+            local_md = user_dir / rel_path
+            link = f"./user/{rel_path}" if local_md.exists() else f"./user/projects/{rel_path}"
+            projects.append({"title": title, "path": link, "note": note})
 
     # Recent Q/A: most recent 6 entries from user/conversations/hermes-*.jsonl.
     qa_records: list[dict] = []
@@ -244,6 +252,12 @@ def render_dashboard(paths: Paths) -> Path:
                     continue
                 qa_records.append(json.loads(line))
     qa_records.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
+    for r in qa_records:
+        sid = r.get("session_id", "")
+        qid = r.get("question_id", 0)
+        ts = r.get("timestamp", "")
+        # detail .md lives under user/conversations/details/
+        r["detail_link"] = f"./user/conversations/details/{ts[:10]}_{sid[:8]}_q{qid}.md"
     recent_qa = qa_records[:6]
 
     env = Environment(

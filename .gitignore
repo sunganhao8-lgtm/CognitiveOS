@@ -19,3 +19,11 @@ user/persona/model.md
 
 # Private conversation history — never commit
 user/conversations/
+
+# Generated rule files (only seeded on first verify run)
+user/rules/*.json
+
+# Verify results — local audit trail
+user/verify/
+# Generated per-QA detail .md files — derived from private conversations
+user/conversations/details/

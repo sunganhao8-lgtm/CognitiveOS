@@ -94,9 +94,10 @@ DEMO_PROJECTS = [
 ]
 
 DEMO_QA = [
-    {"session_id": "demo", "question_id": 1, "question": "DEMO: how does CognitiveOS discover my agents?", "answer": "", "timestamp": "2026-08-10"},
-    {"session_id": "demo", "question_id": 2, "question": "DEMO: what does the brain map do?", "answer": "", "timestamp": "2026-08-09"},
-    {"session_id": "demo", "question_id": 3, "question": "DEMO: can I move my user/ layer to another machine?", "answer": "", "timestamp": "2026-08-08"},
+    {"session_id": "demo", "question_id": 1, "question": "DEMO: how does CognitiveOS discover my agents?", "answer": "", "timestamp": "2026-08-10", "detail_link": "#"},
+    {"session_id": "demo", "question_id": 2, "question": "DEMO: what does the brain map do?", "answer": "", "timestamp": "2026-08-09", "detail_link": "#"},
+    {"session_id": "demo", "question_id": 3, "question": "DEMO: can I move my user/ layer to another machine?", "answer": "", "timestamp": "2026-08-08", "detail_link": "#"},
+    # placeholder URLs — demo shows what the dashboard WOULD look like with real data
 ]
 
 
