@@ -40,6 +40,13 @@
     header h1 .en { color: var(--blue); }
     header h1 .zh { color: var(--accent-deep); margin-left: 8px; }
     .header-right { display: flex; align-items: center; gap: 14px; }
+    .tabs { display: flex; gap: 4px; }
+    .tabs button {
+      border: 1px solid var(--line); background: #FFF; color: var(--ink-soft);
+      padding: 6px 16px; border-radius: 999px; cursor: pointer; font-size: 13px;
+      transition: all 140ms;
+    }
+    .tabs button.active { background: var(--blue); border-color: var(--blue); color: #fff; }
     .lang-switch {
       display: inline-flex; border: 1px solid var(--line); border-radius: 999px;
       overflow: hidden; background: #FFF;
@@ -63,27 +70,24 @@
     }
     .identity .row { display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
     .identity strong { color: var(--ink); font-weight: 600; margin-right: 6px; }
-    .identity .rules {
-      margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;
-    }
+    .identity .rules { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
     .identity .rules span {
       padding: 2px 10px; border-radius: 999px;
       background: rgba(232,154,60,0.14); color: var(--accent-deep); font-size: 12px;
       border: 1px solid rgba(232,154,60,0.3);
     }
 
-    /* ---- main grid ---- */
+    /* ---- main grid (dashboard tab) ---- */
     main {
       display: grid;
       grid-template-columns: minmax(380px, 1fr) minmax(420px, 1.2fr);
       gap: 18px;
-      padding: 18px 24px 30px;
+      padding: 18px 24px 24px;
       max-width: 1500px;
       margin: 0 auto;
     }
     @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
 
-    /* ---- left column: brain ---- */
     .brain-card {
       background: var(--card);
       border: 1px solid var(--line);
@@ -99,7 +103,7 @@
     .brain-wrap img.brain { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
     .brain-wrap svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
     .leader { fill: none; stroke-width: 1.8; opacity: 0.7; }
-    .anchor { opacity: 0.9; transition: r 120ms; }
+    .anchor { opacity: 0.9; }
     .callout text { cursor: pointer; }
     .callout .lbl {
       font: 700 18px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
@@ -108,10 +112,8 @@
     .callout:hover .leader { stroke-width: 2.6; opacity: 1; }
     .callout:hover .lbl { fill: var(--accent-deep); }
     .callout.selected .leader { stroke-width: 2.6; opacity: 1; }
-    .callout.selected .anchor { r: 18; }
-    .callout.selected .lbl { fill: var(--accent-deep); font-size: 20px; }
+    .callout.selected .lbl { fill: var(--accent-deep); }
 
-    /* ---- right column: working memory ---- */
     .working { display: flex; flex-direction: column; gap: 14px; }
     .panel {
       background: var(--card);
@@ -121,8 +123,7 @@
       box-shadow: 0 6px 24px rgba(43,27,18,0.05);
     }
     .panel h2 {
-      margin: 0 0 8px;
-      font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
+      margin: 0 0 8px; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
       color: var(--accent-deep);
       display: flex; justify-content: space-between; align-items: center;
     }
@@ -151,17 +152,11 @@
     .qa-list li a:hover { background: #F0E4D2; }
     .qa-list .q { font-weight: 500; }
     .qa-list .ts { color: var(--ink-soft); font-size: 11px; margin-left: 6px; }
-    .tools {
-      display: grid; gap: 6px; font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
-      font-size: 13px;
-    }
-    .tools span {
-      padding: 5px 10px; background: var(--card-2); border: 1px solid var(--line);
-      border-radius: 6px;
-    }
+    .tools { display: grid; gap: 6px; font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; font-size: 13px; }
+    .tools span { padding: 5px 10px; background: var(--card-2); border: 1px solid var(--line); border-radius: 6px; }
     .tools span .label { color: var(--ink-soft); margin-right: 8px; }
 
-    /* ---- working memory (region detail) ---- */
+    /* ---- working memory strip ---- */
     .memory-strip {
       background: var(--card);
       border: 1px solid var(--line);
@@ -178,37 +173,92 @@
     .memory-strip .empty { color: var(--ink-soft); font-size: 13px; }
     .memory-strip .body { display: none; }
     .memory-strip .body.shown { display: block; }
-    .memory-strip .desc { color: #4A3A2C; margin: 4px 0 12px; font-size: 14px; }
+    .memory-strip .wm-head { display: flex; align-items: baseline; gap: 12px; }
+    .memory-strip .wm-head .brain {
+      font-size: 15px; font-weight: 700; color: var(--blue);
+    }
+    .memory-strip .wm-head .brain-zh {
+      font-size: 13px; font-weight: 600; color: var(--ink);
+    }
+    .memory-strip .wm-head .sys {
+      font-size: 12px; color: var(--ink-soft); font-weight: 500;
+    }
+    .memory-strip .desc { color: #4A3A2C; margin: 6px 0 12px; font-size: 14px; }
     .memory-strip h4 {
-      margin: 12px 0 4px; font-size: 11px; letter-spacing: 0.6px;
-      text-transform: uppercase; color: var(--ink-soft);
-    }
-    .memory-strip .file-list {
-      list-style: none; padding: 0; margin: 0;
-      display: flex; flex-wrap: wrap; gap: 4px 8px;
-    }
-    .memory-strip .file-list li {
-      font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
-      font-size: 12px; color: var(--ink-soft);
-      padding: 1px 8px; background: var(--card-2); border-radius: 4px;
+      margin: 14px 0 6px; font-size: 11px; letter-spacing: 0.6px;
+      text-transform: uppercase; color: var(--accent-deep);
     }
     .memory-strip ul.memory-list {
-      list-style: none; padding: 0; margin: 0;
-      display: grid; gap: 4px;
+      list-style: none; padding: 0; margin: 0; display: grid; gap: 5px;
     }
-    .memory-strip ul.memory-list li a {
-      display: flex; justify-content: space-between; gap: 8px;
-      padding: 6px 10px; background: var(--card-2); border: 1px solid var(--line);
-      border-radius: 6px; color: var(--ink); text-decoration: none; font-size: 13px;
+    .memory-strip ul.memory-list li {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 12px;
+      background: var(--card-2); border-left: 3px solid var(--accent);
+      border-radius: 0 6px 6px 0;
+      font-size: 13.5px; color: var(--ink);
     }
-    .memory-strip ul.memory-list li a:hover { background: #F0E4D2; }
-    .memory-strip ul.memory-list .path {
-      font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
-      font-size: 11px; color: var(--ink-soft);
-    }
+    .memory-strip ul.memory-list li::before { content: "•"; color: var(--accent-deep); font-weight: 700; }
+    .memory-strip ul.memory-list li a { color: var(--ink-soft); font-family: ui-monospace, Consolas, monospace; font-size: 11px; margin-left: auto; white-space: nowrap; }
     .memory-strip .close {
-      float: right; cursor: pointer; color: var(--ink-soft); font-size: 16px;
-      background: none; border: 0;
+      float: right; cursor: pointer; color: var(--ink-soft); font-size: 18px;
+      background: none; border: 0; line-height: 1;
+    }
+
+    /* ---- about tab ---- */
+    .about-wrap { display: none; padding: 22px 24px 40px; max-width: 900px; margin: 0 auto; }
+    .about-wrap.shown { display: block; }
+    .about-wrap h2 { font-size: 26px; color: var(--blue); margin: 0 0 6px; }
+    .about-wrap .lead { color: var(--ink-soft); font-size: 15px; margin: 0 0 18px; }
+    .about-wrap h3 {
+      font-size: 17px; color: var(--accent-deep); margin: 26px 0 8px;
+      padding-bottom: 4px; border-bottom: 1px solid var(--line);
+    }
+    .about-wrap p { color: #4A3A2C; margin: 8px 0; }
+    .about-wrap ul { color: #4A3A2C; padding-left: 22px; }
+    .about-wrap li { margin: 5px 0; }
+    .about-wrap .brain-regions {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px; margin: 12px 0;
+    }
+    .about-wrap .brain-regions .region {
+      background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .about-wrap .brain-regions .region .name { font-weight: 700; color: var(--blue); }
+    .about-wrap .brain-regions .region .role { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+    .about-wrap .vs {
+      display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: center;
+      margin: 14px 0;
+    }
+    .about-wrap .vs .box {
+      background: var(--card-2); border: 1px solid var(--line); border-radius: 10px;
+      padding: 12px 14px; font-size: 13.5px;
+    }
+    .about-wrap .vs .box .box-title { font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+    .about-wrap .vs .vs-mid { color: var(--accent-deep); font-weight: 700; font-size: 20px; }
+    .about-wrap .flow {
+      background: var(--card-2); border: 1px solid var(--line); border-radius: 10px;
+      padding: 12px 14px; font-family: ui-monospace, Consolas, monospace; font-size: 13px;
+      margin: 8px 0; color: #4A3A2C;
+    }
+    .about-wrap .future-agents { display: grid; gap: 8px; margin: 10px 0; }
+    .about-wrap .future-agents .agent {
+      display: flex; gap: 10px; align-items: baseline;
+      background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px;
+    }
+    .about-wrap .future-agents .agent .n { font-weight: 700; color: var(--accent-deep); }
+    .about-wrap .series { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 6px; counter-reset: series; }
+    .about-wrap .series li {
+      counter-increment: series;
+      background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+      padding: 9px 14px; font-size: 14px;
+    }
+    .about-wrap .series li::before {
+      content: counter(series);
+      display: inline-block; width: 22px; height: 22px; line-height: 22px;
+      text-align: center; background: var(--accent); color: #fff; border-radius: 50%;
+      font-size: 12px; font-weight: 700; margin-right: 10px;
     }
   </style>
 </head>
@@ -217,6 +267,10 @@
     <h1><span class="en">CognitiveOS</span><span class="zh">认知操作系统</span></h1>
     <div class="header-right">
       <div class="status"><span class="dot"></span><span data-i18n="statusOnline">operational</span></div>
+      <div class="tabs">
+        <button id="tab-dash" class="active" onclick="switchTab('dash')" data-i18n="tabDash">Dashboard</button>
+        <button id="tab-about" onclick="switchTab('about')" data-i18n="tabAbout">About</button>
+      </div>
       <div class="lang-switch">
         <button id="lang-en" class="active" onclick="setLang('en')">EN</button>
         <button id="lang-zh" onclick="setLang('zh')">中文</button>
@@ -239,91 +293,150 @@
     </div>
   </div>
 
-  <main>
-    <section class="brain-card">
-      <div class="title" data-i18n="brainTitle">Cognitive Map</div>
-      <div class="brain-wrap">
-        <img class="brain" src="assets/brain-source.svg" alt="" />
-        <svg class="overlay" viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          {% for r in regions %}
-          <g class="callout" data-region="{{ r.key }}">
-            {% if r.lx < 200 %}
-            <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax - 40 }} {{ r.ay }}, {{ r.lx + 60 }} {{ r.ly }}, {{ r.lx }} {{ r.ly }}" />
-            {% elif r.lx > 800 %}
-            <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax + 40 }} {{ r.ay }}, {{ r.lx - 60 }} {{ r.ly }}, {{ r.lx }} {{ r.ly }}" />
-            {% else %}
-            <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax }} {{ r.ay + 50 }}, {{ r.lx }} {{ r.ly - 50 }}, {{ r.lx }} {{ r.ly }}" />
-            {% endif %}
-            <circle class="anchor" cx="{{ r.ax }}" cy="{{ r.ay }}" r="14" fill="{{ r.color }}" />
-            {% if r.lx < 200 %}
-            <text class="lbl" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
-            <text class="lbl zh-label" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
-            {% elif r.lx > 800 %}
-            <text class="lbl" text-anchor="start" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
-            <text class="lbl zh-label" text-anchor="start" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
-            {% else %}
-            <text class="lbl" text-anchor="middle" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
-            <text class="lbl zh-label" text-anchor="middle" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
-            {% endif %}
-          </g>
-          {% endfor %}
-        </svg>
-      </div>
-    </section>
-
-    <section class="working">
-      <div class="panel">
-        <h2 data-i18n="projects">Active projects <span class="count">{{ projects | length }}</span></h2>
-        {% if projects %}
-        <ul class="project-list">
-          {% for p in projects %}
-          <li><a href="./user/{{ p.path }}">
-            <span>{{ p.title }}</span>
-            {% if p.note %}<span class="note">{{ p.note }}</span>{% endif %}
-          </a></li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p style="color:var(--ink-soft);font-size:13px" data-i18n="projectsEmpty">No projects yet.</p>
-        {% endif %}
-      </div>
-
-      <div class="panel">
-        <h2 data-i18n="qa">Recent Q&amp;A <span class="count">{{ recent_qa | length }}</span></h2>
-        {% if recent_qa %}
-        <ul class="qa-list">
-          {% for q in recent_qa %}
-          {% set q_text = q.question | replace('\n', ' ') %}
-          {% set q_short = q_text | truncate(90, True, '…') %}
-          <li><a href="./user/conversations/{{ q.session_id }}_{{ q.question_id }}.md" title="{{ q.timestamp }}">
-            <span class="q">{{ q_short }}</span>
-            <span class="ts">{{ q.timestamp[:10] }}</span>
-          </a></li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p style="color:var(--ink-soft);font-size:13px" data-i18n="qaEmpty">No conversations yet.</p>
-        {% endif %}
-      </div>
-
-      <div class="panel">
-        <h2 data-i18n="tools">Commands</h2>
-        <div class="tools">
-          <span><span class="label" data-i18n="tool1">brief</span>cogos brief --agent hermes</span>
-          <span><span class="label" data-i18n="tool2">fit</span>cogos persona fit --seed N</span>
-          <span><span class="label" data-i18n="tool3">export</span>cogos export-user --to file.tar.gz</span>
-          <span><span class="label" data-i18n="tool4">import</span>cogos import-user --from file.tar.gz</span>
+  <!-- ============ DASHBOARD TAB ============ -->
+  <div id="view-dash">
+    <main>
+      <section class="brain-card">
+        <div class="title" data-i18n="brainTitle">Cognitive Map</div>
+        <div class="brain-wrap">
+          <img class="brain" src="assets/brain-source.svg" alt="" />
+          <svg class="overlay" viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            {% for r in regions %}
+            <g class="callout" data-region="{{ r.key }}">
+              {% if r.lx < 200 %}
+              <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax - 40 }} {{ r.ay }}, {{ r.lx + 60 }} {{ r.ly }}, {{ r.lx }} {{ r.ly }}" />
+              {% elif r.lx > 800 %}
+              <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax + 40 }} {{ r.ay }}, {{ r.lx - 60 }} {{ r.ly }}, {{ r.lx }} {{ r.ly }}" />
+              {% else %}
+              <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax }} {{ r.ay + 50 }}, {{ r.lx }} {{ r.ly - 50 }}, {{ r.lx }} {{ r.ly }}" />
+              {% endif %}
+              <circle class="anchor" cx="{{ r.ax }}" cy="{{ r.ay }}" r="14" fill="{{ r.color }}" />
+              {% if r.lx < 200 %}
+              <text class="lbl" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
+              <text class="lbl zh-label" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
+              {% elif r.lx > 800 %}
+              <text class="lbl" text-anchor="start" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
+              <text class="lbl zh-label" text-anchor="start" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
+              {% else %}
+              <text class="lbl" text-anchor="middle" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
+              <text class="lbl zh-label" text-anchor="middle" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
+              {% endif %}
+            </g>
+            {% endfor %}
+          </svg>
         </div>
-      </div>
-    </section>
-  </main>
+      </section>
 
-  <section class="memory-strip" id="memory">
-    <button class="close" onclick="closeMemory()" aria-label="close">×</button>
-    <h2 data-i18n="memoryTitle">Working memory</h2>
-    <p class="empty" id="memory-empty" data-i18n="memoryEmpty">Click a region on the cognitive map to load its working memory.</p>
-    <div class="body" id="memory-body"></div>
-  </section>
+      <section class="working">
+        <div class="panel">
+          <h2 data-i18n="projects">Active projects <span class="count">{{ projects | length }}</span></h2>
+          {% if projects %}
+          <ul class="project-list">
+            {% for p in projects %}
+            <li><a href="./user/{{ p.path }}">
+              <span>{{ p.title }}</span>
+              {% if p.note %}<span class="note">{{ p.note }}</span>{% endif %}
+            </a></li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p style="color:var(--ink-soft);font-size:13px" data-i18n="projectsEmpty">No projects yet.</p>
+          {% endif %}
+        </div>
+
+        <div class="panel">
+          <h2 data-i18n="qa">Recent Q&amp;A <span class="count">{{ recent_qa | length }}</span></h2>
+          {% if recent_qa %}
+          <ul class="qa-list">
+            {% for q in recent_qa %}
+            {% set q_text = q.question | replace('\n', ' ') %}
+            {% set q_short = q_text | truncate(90, True, '…') %}
+            <li><a href="./user/conversations/{{ q.session_id }}_{{ q.question_id }}.md" title="{{ q.timestamp }}">
+              <span class="q">{{ q_short }}</span>
+              <span class="ts">{{ q.timestamp[:10] }}</span>
+            </a></li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <p style="color:var(--ink-soft);font-size:13px" data-i18n="qaEmpty">No conversations yet.</p>
+          {% endif %}
+        </div>
+
+        <div class="panel">
+          <h2 data-i18n="tools">Commands</h2>
+          <div class="tools">
+            <span><span class="label" data-i18n="tool1">brief</span>cogos brief --agent hermes</span>
+            <span><span class="label" data-i18n="tool2">fit</span>cogos persona fit --seed N</span>
+            <span><span class="label" data-i18n="tool3">export</span>cogos export-user --to file.tar.gz</span>
+            <span><span class="label" data-i18n="tool4">import</span>cogos import-user --from file.tar.gz</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <section class="memory-strip" id="memory">
+      <button class="close" onclick="closeMemory()" aria-label="close">×</button>
+      <h2 data-i18n="memoryTitle">Working memory</h2>
+      <p class="empty" id="memory-empty" data-i18n="memoryEmpty">Click a region on the cognitive map to load its working memory.</p>
+      <div class="body" id="memory-body"></div>
+    </section>
+  </div>
+
+  <!-- ============ ABOUT TAB ============ -->
+  <div class="about-wrap" id="view-about">
+    <h2 data-i18n="aboutTitle">如果 AI 是硅基生命，它也需要一个「大脑结构」吗？</h2>
+    <p class="lead" data-i18n="aboutLead">主人认知哲学的原始文本（来自 ChatGPT 会话，2026-08-10 整理）</p>
+
+    <p data-i18n="aboutP1">我不是 AI 行业的研究人员，只是一个普通的 AI 使用者。但在每天和 AI 交流、使用 Agent 的过程中，我发现一个很有意思的问题：现在的 AI 越来越聪明，但它好像还不像「人」。</p>
+
+    <h3 data-i18n="aboutH1">🧠 人类的大脑，本身并不是一个简单的大模型</h3>
+    <p data-i18n="aboutP2">我们的大脑有不同的区域，它更像一个由很多「专业 Agent」组成的系统：</p>
+    <div class="brain-regions">
+      <div class="region"><div class="name">🧠 海马体</div><div class="role" data-i18n="aboutHippo">负责记忆形成</div></div>
+      <div class="region"><div class="name">🧠 前额叶</div><div class="role" data-i18n="aboutPrefrontal">负责规划、决策</div></div>
+      <div class="region"><div class="name">🧠 小脑</div><div class="role" data-i18n="aboutCerebellum">负责动作控制</div></div>
+      <div class="region"><div class="name">🧠 语言区域</div><div class="role" data-i18n="aboutLanguage">负责语言处理</div></div>
+    </div>
+
+    <h3 data-i18n="aboutH2">而现在很多 AI Agent 是什么？</h3>
+    <div class="vs">
+      <div class="box">
+        <div class="box-title" data-i18n="aboutHuman">真正的人类智能</div>
+        <div data-i18n="aboutHumanBody">不只是记住，而是知道什么时候调用什么记忆。大脑自动判断：「这个问题，应该调用哪一部分经验？」</div>
+      </div>
+      <div class="vs-mid">vs</div>
+      <div class="box">
+        <div class="box-title" data-i18n="aboutAI">现在的 AI Agent</div>
+        <div data-i18n="aboutAIBody">一个大模型 + 一个知识库 + 一个记忆数据库 + 一些工具调用能力。像一个超级聪明的人，把所有东西都塞进一个房间。</div>
+      </div>
+    </div>
+
+    <h3 data-i18n="aboutH3">📊 报表开发者的例子</h3>
+    <p data-i18n="aboutP3">遇到 Oracle 问题，我会想到数据库经验；遇到报表需求，我会想到以前设计报表的逻辑；遇到性能问题，我会想到 SQL 优化经验。</p>
+    <div class="flow">
+      工作经验<br>　↓<br>SQL 优化经验 → Oracle 问题经验 → 报表设计经验<br>　↓<br>遇到报表问题 → 大脑自动激活相关区域
+    </div>
+    <p data-i18n="aboutP4">但现在很多 AI Agent 的 Memory：所有聊天记录 → 一个 Memory 库 → 全部检索。结果就是：记住了，但是不会分类；有信息，但是不知道什么时候调用；知道过去，但是无法形成经验体系。</p>
+
+    <h3 data-i18n="aboutH4">🚀 下一代 AI，也许不会只是继续扩大参数量</h3>
+    <p data-i18n="aboutP5">而是会越来越像人脑：拥有不同功能模块，不同 Agent 之间协作，就像人脑不同区域之间交流。</p>
+    <div class="future-agents">
+      <div class="agent"><span class="n">👨‍💻 工作 Agent</span><span data-i18n="aboutWork">负责职业技能、项目经验、行业知识</span></div>
+      <div class="agent"><span class="n">💡 创意 Agent</span><span data-i18n="aboutCreative">负责灵感、想法、内容创作</span></div>
+      <div class="agent"><span class="n">📚 学习 Agent</span><span data-i18n="aboutLearn">负责知识积累和成长路线</span></div>
+      <div class="agent"><span class="n">🧠 记忆 Agent</span><span data-i18n="aboutMem">负责整理人生经历，形成长期经验</span></div>
+    </div>
+    <p data-i18n="aboutP6">也许未来真正强大的 AI，不是一个「知道所有事情」的模型，而是一个「知道自己应该什么时候调用什么能力」的智能系统。</p>
+
+    <h3 data-i18n="aboutH5">📖 系列预告：《如果 AI 想成为数字生命，它还缺少什么？》</h3>
+    <ol class="series">
+      <li data-i18n="series1">AI 为什么需要「海马体」（长期记忆）</li>
+      <li data-i18n="series2">AI 为什么需要「前额叶」（目标规划）</li>
+      <li data-i18n="series3">AI 为什么需要「人格系统」（价值判断）</li>
+      <li data-i18n="series4">AI 为什么需要「睡眠」（整理经验）</li>
+      <li data-i18n="series5">AI 为什么需要「遗忘」（避免记忆污染）</li>
+    </ol>
+  </div>
 
   <script>
     const REGIONS = {{ regions_json | safe }};
@@ -331,11 +444,12 @@
     const I18N = {
       en: {
         statusOnline: "operational",
+        tabDash: "Dashboard", tabAbout: "About",
         master: "Master:", masterName: "Lin's Cognitive Layer",
         runtime: "Runtime:", runtimeVal: "v0.1 · local-first",
         butlers: "Butlers:", butlersVal: "Hermes · Codex · Claude",
-        rule1: '叫"品牌叫[REDACTED]"', rule2: "AI 是核心杠杆",
-        rule3: "店铺处于筹备阶段", rule4: "resume 隐私红线", rule5: "hands-off 模式",
+        rule1: 'Brand: "[REDACTED]"', rule2: "AI is the core lever",
+        rule3: "Store: preparing stage", rule4: "resume privacy red line", rule5: "hands-off mode",
         brainTitle: "Cognitive Map",
         projects: "Active projects", projectsEmpty: "No projects yet.",
         qa: "Recent Q&A", qaEmpty: "No conversations yet.",
@@ -343,12 +457,36 @@
         tool1: "brief", tool2: "fit", tool3: "export", tool4: "import",
         memoryTitle: "Working memory",
         memoryEmpty: "Click a region on the cognitive map to load its working memory.",
-        responsibilities: "Responsibilities",
-        whereLives: "Files",
-        remembers: "What this region remembers",
+        masterSays: "What the master keeps repeating",
+        aboutTitle: "If AI is silicon life, does it need a 'brain structure'?",
+        aboutLead: "The master's original vision text (from ChatGPT session, 2026-08-10)",
+        aboutP1: "I am not an AI researcher — just a regular AI user. But in daily use, I noticed something interesting: today's AI is smarter, yet it still doesn't feel like a 'person'.",
+        aboutH1: "🧠 The human brain is not a simple big model",
+        aboutP2: "Our brain has distinct regions — it's more like a system of many specialised 'agents':",
+        aboutHippo: "memory formation", aboutPrefrontal: "planning & decision", aboutCerebellum: "motor control", aboutLanguage: "language processing",
+        aboutH2: "What is today's AI agent, then?",
+        aboutHuman: "Real human intelligence", aboutHumanBody: "It's not just remembering — it's knowing WHEN to recall which memory. The brain auto-judges: 'which experience applies to this problem?'",
+        aboutAI: "Today's AI agent", aboutAIBody: "One big model + one knowledge base + one memory DB + some tool calls. Like a super-smart person who stuffed everything into one room.",
+        aboutH3: "📊 A reporting developer's example",
+        aboutP3: "Oracle problem → database experience. Reporting request → reporting design logic. Performance issue → SQL tuning experience.",
+        aboutP4: "But today's AI agent Memory: all chat logs → one memory store → full-text search. Result: remembers but can't classify; has info but doesn't know when to recall; knows the past but can't form an experience system.",
+        aboutH4: "🚀 Next-gen AI may not just grow parameters",
+        aboutP5: "It may grow to resemble the brain: functional modules, agents collaborating like brain regions communicate.",
+        aboutWork: "job skills, project experience, domain knowledge",
+        aboutCreative: "inspiration, ideas, content creation",
+        aboutLearn: "knowledge accumulation & growth path",
+        aboutMem: "organise life experience into long-term memory",
+        aboutP6: "Maybe the truly powerful AI is not one that 'knows everything', but one that 'knows when to call which capability'.",
+        aboutH5: "📖 Series preview: 'What would AI still lack to become digital life?'",
+        series1: "Why AI needs a 'hippocampus' (long-term memory)",
+        series2: "Why AI needs a 'prefrontal cortex' (goal planning)",
+        series3: "Why AI needs a 'personality system' (value judgement)",
+        series4: "Why AI needs 'sleep' (consolidating experience)",
+        series5: "Why AI needs 'forgetting' (avoiding memory pollution)",
       },
       zh: {
         statusOnline: "运行中",
+        tabDash: "仪表盘", tabAbout: "关于",
         master: "主人:", masterName: "Lin's 认知层",
         runtime: "运行时:", runtimeVal: "v0.1 · 本地优先",
         butlers: "管家:", butlersVal: "Hermes · Codex · Claude",
@@ -361,14 +499,38 @@
         tool1: "入职", tool2: "拟合", tool3: "导出", tool4: "导入",
         memoryTitle: "工作记忆",
         memoryEmpty: "点击认知地图上的分区，查看对应工作记忆。",
-        responsibilities: "职责",
-        whereLives: "对应文件",
-        remembers: "该分区记住的东西",
+        masterSays: "主人反复强调的",
+        aboutTitle: "如果 AI 是硅基生命，它也需要一个「大脑结构」吗？",
+        aboutLead: "主人认知哲学的原始文本（来自 ChatGPT 会话，2026-08-10 整理）",
+        aboutP1: "我不是 AI 行业的研究人员，只是一个普通的 AI 使用者。但在每天和 AI 交流、使用 Agent 的过程中，我发现一个很有意思的问题：现在的 AI 越来越聪明，但它好像还不像「人」。",
+        aboutH1: "🧠 人类的大脑，本身并不是一个简单的大模型",
+        aboutP2: "我们的大脑有不同的区域，它更像一个由很多「专业 Agent」组成的系统：",
+        aboutHippo: "负责记忆形成", aboutPrefrontal: "负责规划、决策", aboutCerebellum: "负责动作控制", aboutLanguage: "负责语言处理",
+        aboutH2: "而现在很多 AI Agent 是什么？",
+        aboutHuman: "真正的人类智能", aboutHumanBody: "不只是记住，而是知道什么时候调用什么记忆。大脑自动判断：「这个问题，应该调用哪一部分经验？」",
+        aboutAI: "现在的 AI Agent", aboutAIBody: "一个大模型 + 一个知识库 + 一个记忆数据库 + 一些工具调用能力。像一个超级聪明的人，把所有东西都塞进一个房间。",
+        aboutH3: "📊 报表开发者的例子",
+        aboutP3: "遇到 Oracle 问题，我会想到数据库经验；遇到报表需求，我会想到以前设计报表的逻辑；遇到性能问题，我会想到 SQL 优化经验。",
+        aboutP4: "但现在很多 AI Agent 的 Memory：所有聊天记录 → 一个 Memory 库 → 全部检索。结果就是：记住了，但是不会分类；有信息，但是不知道什么时候调用；知道过去，但是无法形成经验体系。",
+        aboutH4: "🚀 下一代 AI，也许不会只是继续扩大参数量",
+        aboutP5: "而是会越来越像人脑：拥有不同功能模块，不同 Agent 之间协作，就像人脑不同区域之间交流。",
+        aboutWork: "负责职业技能、项目经验、行业知识",
+        aboutCreative: "负责灵感、想法、内容创作",
+        aboutLearn: "负责知识积累和成长路线",
+        aboutMem: "负责整理人生经历，形成长期经验",
+        aboutP6: "也许未来真正强大的 AI，不是一个「知道所有事情」的模型，而是一个「知道自己应该什么时候调用什么能力」的智能系统。",
+        aboutH5: "📖 系列预告：《如果 AI 想成为数字生命，它还缺少什么？》",
+        series1: "AI 为什么需要「海马体」（长期记忆）",
+        series2: "AI 为什么需要「前额叶」（目标规划）",
+        series3: "AI 为什么需要「人格系统」（价值判断）",
+        series4: "AI 为什么需要「睡眠」（整理经验）",
+        series5: "AI 为什么需要「遗忘」（避免记忆污染）",
       },
     };
 
     let lang = (navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
     let activeKey = null;
+    let activeTab = 'dash';
 
     function t(k) { return (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k; }
 
@@ -391,22 +553,34 @@
       if (activeKey) renderMemory(activeKey);
     }
 
+    function switchTab(tab) {
+      activeTab = tab;
+      document.getElementById('tab-dash').classList.toggle('active', tab === 'dash');
+      document.getElementById('tab-about').classList.toggle('active', tab === 'about');
+      document.getElementById('view-dash').style.display = tab === 'dash' ? '' : 'none';
+      document.getElementById('view-about').classList.toggle('shown', tab === 'about');
+    }
+
     function renderMemory(key) {
       const r = REGIONS.find(x => x.key === key);
       if (!r) return;
       activeKey = key;
+      const brain = lang === 'zh' ? r.brain_zh : r.brain_en;
+      const sys = lang === 'zh' ? r.label_zh : r.label_en;
       const desc = lang === 'zh' ? r.desc_zh : r.desc_en;
-      const fileItems = r.files.map(([_, p]) => `<li>${p}</li>`).join('');
       const memItems = r.memory.map(m => {
         const title = lang === 'zh' ? m.title_zh : m.title_en;
-        return `<li><a href="./${m.path}"><span>${title}</span><span class="path">${m.path}</span></a></li>`;
+        const link = m.path ? `<a href="./${m.path}">${m.path}</a>` : '';
+        return `<li>${title}${link}</li>`;
       }).join('');
       const el = document.getElementById('memory-body');
       el.innerHTML = `
+        <div class="wm-head">
+          <span class="brain">${brain}</span>
+          <span class="sys">${sys}</span>
+        </div>
         <p class="desc">${desc}</p>
-        <h4>${t('whereLives')}</h4>
-        <ul class="file-list">${fileItems}</ul>
-        <h4>${t('remembers')}</h4>
+        <h4>${t('masterSays')}</h4>
         <ul class="memory-list">${memItems}</ul>
       `;
       el.classList.add('shown');
