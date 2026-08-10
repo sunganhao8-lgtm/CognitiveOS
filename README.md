@@ -4,6 +4,8 @@
 
 [中文](README.md) | [English](README.en.md)
 
+> **差异化只有三个字**：**跨 Agent、跨设备、文本可读**。Claude Code / Workbuddy / Qoder 这一层都长得一样（LLM + 上下文 + 工具调用），CognitiveOS 不在那层做差异化。它把"你的偏好、你的项目、你的禁忌"从 Agent 抽出来，放到你自己手里——`git diff`、换电脑、换 Cursor，都不丢。
+
 ## 这些痛点，你经历过吗？
 
 ### 痛点 1：想换个 AI Agent，却不敢换 😰
