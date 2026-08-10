@@ -1,92 +1,97 @@
 # CognitiveOS
 
-A Cognitive Runtime Layer for AI Agents.
+面向 AI Agent 的**认知运行时层**（Cognitive Runtime Layer）。
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[中文](README.md) | [English](README.en.md)
 
-## Vision
+## 愿景
 
-Current AI agents are powerful but isolated.
+现在的 AI Agent 很强大，但彼此孤立：
 
-Claude Code understands coding.
-OpenClaw understands automation.
-Codex understands engineering.
-Hermes understands orchestration.
+- Claude Code 擅长写代码
+- OpenClaw 擅长自动化
+- Codex 擅长工程
+- Hermes 擅长编排
 
-However, they lack:
+但它们缺乏：**共享记忆、统一身份、经验积累、认知协调**。
 
-- Shared memory
-- Unified identity
-- Experience accumulation
-- Cognitive coordination
+CognitiveOS 的目标，是为 AI Agent 提供一层"认知层"——并且这层认知属于**用户**，不属于任何 Agent。
 
-CognitiveOS aims to provide a cognitive layer for AI agents.
+## 核心理念
 
-## Core Idea
+> AI Agent 就像管家，用户是主人。以前换了管家或换了地方，就要重新交代一切。CognitiveOS 保存的是**主人最有价值的数据**——习惯、思维模式、经验、偏好——让主人换管家、换电脑、换产品时，认知无缝迁移。
 
-CognitiveOS is not another AI agent.
+CognitiveOS 不是另一个 AI Agent，而是让 Agent 能够 **记住（remember）、推理（reason）、协作（collaborate）、改进（improve）** 的基础设施。
 
-It is local-first infrastructure that:
+## v0.1 能做什么
 
-1. Discovers the AI agents already installed on your machine
-2. Lets one of them (the **Bootstrap Agent**) help understand your environment
-3. Builds a source-preserving, wiki-style knowledge base
-4. Exposes the result through a local HTML Dashboard
-
-## What v0.1 Does
-
-```
-$ pip install -e .
-$ cogos bootstrap
+```bash
+pip install -e .
+cogos bootstrap        # 全流程：发现 Agent → 收割 → wiki → 仪表盘
+cogos brief --agent X  # 给新管家一份"主人档案"
+cogos persona fit      # 用过去真实问答训练管家对主人的拟合
+cogos export-user      # 导出 user/ 层（跨设备迁移）
+cogos import-user      # 导入 user/ 层
 ```
 
-This will:
+打开生成的 `index.html`，你会看到一张可点击的**认知地图**（大脑分区图），以及你的活跃项目、最近问答和可用命令。
 
-1. Scan for installed agents (Hermes today; Claude Code / Codex / OpenClaw next).
-2. Pick an available one as the **Bootstrap Agent**.
-3. Let that agent analyze the local environment.
-4. Copy raw data into `knowledge/sources/<agent>/`.
-5. Normalize it into `knowledge/normalized/`.
-6. Build a human-readable wiki in `knowledge/wiki/`.
-7. Render `dashboard/index.html` and open it.
-
-## Architecture
+## 架构
 
 ```
 cogos/
-  discovery/        find agents on this machine
-  adapters/         uniform Agent interface (one impl per agent)
-    hermes/         first adapter
-  sources/           raw-source writers (preserve original layout)
-  normalized/       cross-agent normal form
-  knowledge/        wiki-style knowledge base
-  dashboard/        HTML template + renderer
-  bootstrap.py      orchestration pipeline
-  cli.py            `cogos` entry point
+  discovery.py      发现本机已安装的 AI Agent
+  adapters/         统一 Agent 接口（Hermes 第一个实现）
+  kernel.py         Kernel 编排循环（DESIGN.md 的实现）
+  persona_fit.py    主人人格拟合训练（语义匹配打分）
+  conversations.py  从 Hermes 会话库提取真实问答对
+  portability.py    user/ 层导出/导入（跨设备迁移）
+  dashboard.py      生成 index.html 认知地图
 ```
 
-Each layer has a single responsibility and can be replaced independently.
-The data flow is always:
+数据流永远是：
 
 ```
 Raw Source → Normalized Document → Wiki Page
 ```
 
-and every wiki page can be traced back to its source file.
+## user/ 层（核心资产）
 
-## Principles
+```
+user/
+  manifest.md       主人档案（新管家入职第一份文件）
+  preferences.md    沟通/输出/工具偏好
+  style.md          决策风格
+  projects/         每个项目的 tacit knowledge
+  experience/       值得记住的具体经历
+  conversations/    历史问答对（从 Agent 会话库提取）
+  cognitive/        跨设备、跨 Agent 的认知状态
+```
 
-- **Local-first** — your data stays on your machine.
-- **Agent-agnostic** — CognitiveOS does not belong to any agent.
-- **Source-preserving** — every piece of knowledge traces back to a file.
-- **Human-readable** — knowledge files are plain Markdown.
-- **Machine-readable** — frontmatter keeps them queryable.
-- **Modular** — discovery, adapter, dashboard are all swappable.
-- **Progressive** — first bootstrap does the minimum; later runs extend it.
-- **Open ecosystem** — third parties can register new adapters.
+**这些文件属于你，不属于任何 Agent。** 换机器、换 Agent，`user/` 跟着你走。
 
-## Status
+## 设计原则
 
-Experimental / Research Project.
+- **Local-first**：数据默认留在本地
+- **Agent-agnostic**：CognitiveOS 不属于任何一个 Agent
+- **Source-preserving**：每条知识都能追溯到原始文件
+- **Human-readable**：知识库人可以直接阅读
+- **Machine-readable**：同时方便 AI 读取
+- **Modular**：发现、适配、仪表盘都可以独立替换
+- **Progressive**：第一次初始化只做必要工作
+- **Open ecosystem**：允许第三方 Agent / Adapter 接入
 
-Hermes adapter ships in v0.1. Other adapters are designed but not implemented.
+## 路线图
+
+- **v0.1 Foundation**：项目架构、Agent 发现、user/ 层、认知地图 ✅
+- **v0.2 Agent Integration**：接入更多 Agent（Codex / Claude Code / OpenClaw）
+- **v0.3 Reflection**：自我改进循环（sleep cycle）
+- **v1.0 Cognitive Runtime**：稳定的开源生态
+
+## 状态
+
+实验性 / 研究项目（Experimental / Research Project）
+
+## 参与贡献
+
+欢迎！请看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解如何加入。
