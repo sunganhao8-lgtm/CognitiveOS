@@ -18,6 +18,7 @@ from .paths import Paths
 from .user import UserLayer
 from .portability import export_user, import_user
 from .brief import render_brief
+from .verify import DEFAULT_RULES, load_rules, seed_default_rules, run_one, record
 from .persona_fit import (
     build_persona_block,
     load_qa_pairs,
@@ -66,6 +67,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p_plog = persona_sub.add_parser("log", help="Show recent training samples")
     p_plog.add_argument("--last", type=int, default=5)
+
+    p_verify = sub.add_parser("verify", help="Run reproduction tests: throw iron rules at the current agent and report breaches")
+    p_verify.add_argument("--seed", type=int, default=None, help="Optional seed for reproducibility")
 
     args = parser.parse_args(argv)
     paths = Paths(root=(args.root or Path.cwd()).resolve())
@@ -206,6 +210,32 @@ def main(argv: list[str] | None = None) -> int:
                 "elapsed": round(elapsed, 2),
             }, ensure_ascii=False, indent=2))
             return 0
+
+    if args.cmd == "verify":
+        import time as _time
+        user = UserLayer(root=paths.root / "user")
+        seeded = seed_default_rules(user)
+        rules = load_rules(user)
+        print(f"Running {len(rules)} reproduction probe(s)...\n")
+        results: list[dict] = []
+        passes = 0
+        for r in rules:
+            t0 = _time.time()
+            res = run_one(r)
+            record(user, res)
+            elapsed = _time.time() - t0
+            mark = "PASS" if res.verdict == "PASS" else "FAIL"
+            if res.verdict == "PASS":
+                passes += 1
+            print(f"[{mark}] {r.id} ({elapsed:.1f}s)")
+            print(f"  probe:    {res.probe}")
+            print(f"  response: {res.agent_response[:160].replace(chr(10), ' ')}{'...' if len(res.agent_response) > 160 else ''}")
+            print(f"  detail:   {res.detail}")
+            print()
+            results.append({"id": r.id, "verdict": res.verdict, "detail": res.detail})
+        total = len(rules)
+        print(f"summary: {passes}/{total} rules held")
+        return 0 if passes == total else 3
 
     parser.error(f"unknown command: {args.cmd}")
     return 2
