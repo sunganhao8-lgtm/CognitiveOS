@@ -216,6 +216,36 @@ def render_dashboard(paths: Paths) -> Path:
     """Render the root ``index.html``; return its on-disk path."""
     paths.root.mkdir(parents=True, exist_ok=True)
 
+    # Active projects: read directly from user/projects/. INDEX.md first.
+    user_dir = paths.root / "user"
+    projects: list[dict] = []
+    projects_index = user_dir / "projects" / "INDEX.md"
+    if projects_index.exists():
+        for line in projects_index.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line.startswith("- ["):
+                continue
+            # - [name](file.md) — optional em dash description
+            import re as _re
+            m = _re.match(r"^- \[([^\]]+)\]\(([^)]+)\)\s*(?:—\s*(.*))?$", line)
+            if m:
+                projects.append(
+                    {"title": m.group(1), "path": m.group(2), "note": m.group(3) or ""}
+                )
+
+    # Recent Q/A: most recent 6 entries from user/conversations/hermes-*.jsonl.
+    qa_records: list[dict] = []
+    conv_dir = user_dir / "conversations"
+    if conv_dir.exists():
+        import json as _json
+        for f in sorted(conv_dir.glob("hermes-*.jsonl"), reverse=True):
+            for line in f.read_text(encoding="utf-8").splitlines():
+                if not line.strip():
+                    continue
+                qa_records.append(_json.loads(line))
+    qa_records.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
+    recent_qa = qa_records[:6]
+
     env = Environment(
         loader=FileSystemLoader(str(TEMPLATES_DIR)),
         autoescape=select_autoescape(["html"]),
@@ -225,6 +255,8 @@ def render_dashboard(paths: Paths) -> Path:
     html = template.render(
         regions=REGIONS,
         regions_json=_regions_json(REGIONS),
+        projects=projects,
+        recent_qa=recent_qa,
     )
 
     out = paths.dashboard_index

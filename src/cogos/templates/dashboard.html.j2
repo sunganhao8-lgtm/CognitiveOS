@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CognitiveOS — Cognitive Map</title>
+  <title>CognitiveOS</title>
   <style>
     :root {
       --bg: #FAF6F0;
@@ -15,123 +15,208 @@
       --accent: #E89A3C;
       --accent-deep: #C77F25;
       --blue: #1B3A6E;
+      --good: #4A7C59;
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-      line-height: 1.6;
+      line-height: 1.55;
       min-height: 100vh;
+      font-size: 15px;
     }
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ---- top bar ---- */
     header {
-      padding: 18px 28px 14px;
+      padding: 14px 24px 10px;
       border-bottom: 1px solid var(--line);
       background: linear-gradient(90deg, #FFFFFF 0%, #FBF4EA 55%, #F7ECDB 100%);
       display: flex; justify-content: space-between; align-items: center;
-      gap: 20px; flex-wrap: wrap;
+      gap: 16px; flex-wrap: wrap;
     }
-    header h1 { margin: 0; font-size: 22px; letter-spacing: 0.3px; }
+    header h1 { margin: 0; font-size: 20px; letter-spacing: 0.3px; font-weight: 600; }
     header h1 .en { color: var(--blue); }
-    header h1 .zh { color: var(--accent-deep); }
-    .header-right { display: flex; align-items: center; gap: 16px; }
+    header h1 .zh { color: var(--accent-deep); margin-left: 8px; }
+    .header-right { display: flex; align-items: center; gap: 14px; }
     .lang-switch {
       display: inline-flex; border: 1px solid var(--line); border-radius: 999px;
       overflow: hidden; background: #FFF;
     }
     .lang-switch button {
-      border: 0; background: transparent; padding: 6px 14px; cursor: pointer;
-      font-size: 13px; color: var(--ink-soft); transition: all 140ms;
+      border: 0; background: transparent; padding: 5px 14px; cursor: pointer;
+      font-size: 12px; color: var(--ink-soft);
     }
     .lang-switch button.active { background: var(--blue); color: #fff; }
+    .status {
+      display: flex; gap: 14px; font-size: 12px; color: var(--ink-soft);
+      padding: 4px 10px; background: var(--card-2); border-radius: 999px;
+    }
+    .status .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--good); margin-right: 5px; vertical-align: middle; }
 
+    /* ---- identity strip ---- */
+    .identity {
+      padding: 14px 24px 18px;
+      border-bottom: 1px solid var(--line);
+      background: #FFFCF6;
+    }
+    .identity .row { display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
+    .identity strong { color: var(--ink); font-weight: 600; margin-right: 6px; }
+    .identity .rules {
+      margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .identity .rules span {
+      padding: 2px 10px; border-radius: 999px;
+      background: rgba(232,154,60,0.14); color: var(--accent-deep); font-size: 12px;
+      border: 1px solid rgba(232,154,60,0.3);
+    }
+
+    /* ---- main grid ---- */
     main {
       display: grid;
-      grid-template-columns: minmax(420px, 1.25fr) minmax(340px, 1fr);
-      gap: 22px;
-      padding: 22px 28px 40px;
+      grid-template-columns: minmax(380px, 1fr) minmax(420px, 1.2fr);
+      gap: 18px;
+      padding: 18px 24px 30px;
       max-width: 1500px;
       margin: 0 auto;
     }
-    @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+    @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
 
-    .map-card {
+    /* ---- left column: brain ---- */
+    .brain-card {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 18px;
-      box-shadow: 0 8px 28px rgba(43,27,18,0.06);
+      border-radius: 14px;
+      padding: 14px 14px 10px;
+      box-shadow: 0 6px 24px rgba(43,27,18,0.05);
     }
-    .map-card h2 {
-      margin: 0 0 8px;
-      font-size: 12px;
-      letter-spacing: 1.2px;
-      text-transform: uppercase;
-      color: var(--accent-deep);
+    .brain-card .title {
+      font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--accent-deep); margin-bottom: 6px;
     }
     .brain-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; }
     .brain-wrap img.brain { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
     .brain-wrap svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
-
-    .leader { fill: none; stroke-width: 2.2; opacity: 0.75; }
-    .anchor { opacity: 0.9; }
-    .hit { fill: transparent; cursor: pointer; }
+    .leader { fill: none; stroke-width: 1.8; opacity: 0.7; }
+    .anchor { opacity: 0.9; transition: r 120ms; }
     .callout text { cursor: pointer; }
-    .callout .lbl { font: 700 24px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 5px; }
-    .callout:hover .leader { stroke-width: 3; opacity: 1; }
+    .callout .lbl {
+      font: 700 18px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 4px;
+    }
+    .callout:hover .leader { stroke-width: 2.6; opacity: 1; }
     .callout:hover .lbl { fill: var(--accent-deep); }
-    .callout.selected .leader { stroke-width: 3; opacity: 1; }
-    .callout.selected .lbl { fill: var(--accent-deep); }
+    .callout.selected .leader { stroke-width: 2.6; opacity: 1; }
+    .callout.selected .anchor { r: 18; }
+    .callout.selected .lbl { fill: var(--accent-deep); font-size: 20px; }
 
-    .detail-card {
+    /* ---- right column: working memory ---- */
+    .working { display: flex; flex-direction: column; gap: 14px; }
+    .panel {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 22px 24px;
-      box-shadow: 0 8px 28px rgba(43,27,18,0.06);
-      min-height: 100%;
+      border-radius: 14px;
+      padding: 14px 16px 12px;
+      box-shadow: 0 6px 24px rgba(43,27,18,0.05);
     }
-    .detail-card h3 { margin: 0 0 6px; font-size: 22px; color: var(--blue); }
-    .detail-card .desc { color: #4A3A2C; font-size: 14.5px; margin: 0 0 18px; }
-    .detail-card h4 {
-      margin: 14px 0 6px;
-      font-size: 11px;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
+    .panel h2 {
+      margin: 0 0 8px;
+      font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
       color: var(--accent-deep);
+      display: flex; justify-content: space-between; align-items: center;
     }
-    .detail-card ul.memory-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: 6px;
+    .panel h2 .count {
+      background: var(--card-2); color: var(--ink-soft);
+      padding: 1px 8px; border-radius: 999px; font-size: 11px;
+      letter-spacing: 0; text-transform: none;
     }
-    .detail-card ul.memory-list li a {
+    .project-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+    .project-list li a {
       display: flex; justify-content: space-between; gap: 8px;
-      padding: 9px 12px;
-      background: var(--card-2);
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      color: var(--ink);
-      text-decoration: none;
-      font-size: 13.5px;
-      transition: background 130ms, border-color 130ms;
+      padding: 8px 10px;
+      background: var(--card-2); border: 1px solid var(--line); border-radius: 8px;
+      color: var(--ink); text-decoration: none; font-size: 13.5px;
     }
-    .detail-card ul.memory-list li a:hover { background: #F0E4D2; border-color: var(--accent); }
-    .detail-card ul.memory-list li a .path {
+    .project-list li a:hover { background: #F0E4D2; text-decoration: none; }
+    .project-list .note { color: var(--ink-soft); font-size: 12px; }
+    .qa-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 5px; }
+    .qa-list li a {
+      display: block;
+      padding: 7px 10px;
+      border-left: 3px solid var(--accent);
+      background: var(--card-2); border-radius: 0 6px 6px 0;
+      color: var(--ink); text-decoration: none; font-size: 13px;
+    }
+    .qa-list li a:hover { background: #F0E4D2; }
+    .qa-list .q { font-weight: 500; }
+    .qa-list .ts { color: var(--ink-soft); font-size: 11px; margin-left: 6px; }
+    .tools {
+      display: grid; gap: 6px; font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+      font-size: 13px;
+    }
+    .tools span {
+      padding: 5px 10px; background: var(--card-2); border: 1px solid var(--line);
+      border-radius: 6px;
+    }
+    .tools span .label { color: var(--ink-soft); margin-right: 8px; }
+
+    /* ---- working memory (region detail) ---- */
+    .memory-strip {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px 18px;
+      box-shadow: 0 6px 24px rgba(43,27,18,0.05);
+      margin: 0 24px 24px;
+      max-width: 1500px;
+    }
+    .memory-strip h2 {
+      margin: 0 0 6px; font-size: 11px; letter-spacing: 1.2px;
+      text-transform: uppercase; color: var(--accent-deep);
+    }
+    .memory-strip .empty { color: var(--ink-soft); font-size: 13px; }
+    .memory-strip .body { display: none; }
+    .memory-strip .body.shown { display: block; }
+    .memory-strip .desc { color: #4A3A2C; margin: 4px 0 12px; font-size: 14px; }
+    .memory-strip h4 {
+      margin: 12px 0 4px; font-size: 11px; letter-spacing: 0.6px;
+      text-transform: uppercase; color: var(--ink-soft);
+    }
+    .memory-strip .file-list {
+      list-style: none; padding: 0; margin: 0;
+      display: flex; flex-wrap: wrap; gap: 4px 8px;
+    }
+    .memory-strip .file-list li {
       font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
       font-size: 12px; color: var(--ink-soft);
+      padding: 1px 8px; background: var(--card-2); border-radius: 4px;
     }
-    .detail-card ul.file-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
-    .detail-card ul.file-list li { font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; font-size: 12.5px; color: var(--ink-soft); }
-    .detail-empty { color: var(--ink-soft); padding: 36px 10px; text-align: center; font-size: 14px; }
-    footer { color: var(--ink-soft); font-size: 12px; padding: 12px 28px; border-top: 1px solid var(--line); }
+    .memory-strip ul.memory-list {
+      list-style: none; padding: 0; margin: 0;
+      display: grid; gap: 4px;
+    }
+    .memory-strip ul.memory-list li a {
+      display: flex; justify-content: space-between; gap: 8px;
+      padding: 6px 10px; background: var(--card-2); border: 1px solid var(--line);
+      border-radius: 6px; color: var(--ink); text-decoration: none; font-size: 13px;
+    }
+    .memory-strip ul.memory-list li a:hover { background: #F0E4D2; }
+    .memory-strip ul.memory-list .path {
+      font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+      font-size: 11px; color: var(--ink-soft);
+    }
+    .memory-strip .close {
+      float: right; cursor: pointer; color: var(--ink-soft); font-size: 16px;
+      background: none; border: 0;
+    }
   </style>
 </head>
 <body>
   <header>
-    <h1><span class="en">CognitiveOS</span> <span class="zh">认知地图</span></h1>
+    <h1><span class="en">CognitiveOS</span><span class="zh">认知操作系统</span></h1>
     <div class="header-right">
+      <div class="status"><span class="dot"></span><span data-i18n="statusOnline">operational</span></div>
       <div class="lang-switch">
         <button id="lang-en" class="active" onclick="setLang('en')">EN</button>
         <button id="lang-zh" onclick="setLang('zh')">中文</button>
@@ -139,11 +224,26 @@
     </div>
   </header>
 
+  <div class="identity">
+    <div class="row">
+      <span><strong data-i18n="master">Master:</strong><span data-i18n="masterName">Lin's Cognitive Layer</span></span>
+      <span><strong data-i18n="runtime">Runtime:</strong><span data-i18n="runtimeVal">v0.1 · local-first</span></span>
+      <span><strong data-i18n="butlers">Butlers:</strong><span data-i18n="butlersVal">Hermes · Codex · Claude</span></span>
+    </div>
+    <div class="rules">
+      <span data-i18n="rule1">叫"品牌叫[REDACTED]"</span>
+      <span data-i18n="rule2">AI 是核心杠杆</span>
+      <span data-i18n="rule3">店铺处于筹备阶段</span>
+      <span data-i18n="rule4">resume 隐私红线</span>
+      <span data-i18n="rule5">hands-off 模式</span>
+    </div>
+  </div>
+
   <main>
-    <section class="map-card">
-      <h2>Cognitive Map</h2>
+    <section class="brain-card">
+      <div class="title" data-i18n="brainTitle">Cognitive Map</div>
       <div class="brain-wrap">
-        <img class="brain" src="assets/brain-source.svg" alt="Brain illustration (CC0, Wikimedia Commons)" />
+        <img class="brain" src="assets/brain-source.svg" alt="" />
         <svg class="overlay" viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           {% for r in regions %}
           <g class="callout" data-region="{{ r.key }}">
@@ -155,7 +255,6 @@
             <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax }} {{ r.ay + 50 }}, {{ r.lx }} {{ r.ly - 50 }}, {{ r.lx }} {{ r.ly }}" />
             {% endif %}
             <circle class="anchor" cx="{{ r.ax }}" cy="{{ r.ay }}" r="14" fill="{{ r.color }}" />
-            <circle class="hit" cx="{{ r.ax }}" cy="{{ r.ay }}" r="44" />
             {% if r.lx < 200 %}
             <text class="lbl" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
             <text class="lbl zh-label" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
@@ -172,34 +271,116 @@
       </div>
     </section>
 
-    <section class="detail-card" id="detail">
-      <div class="detail-empty">← Click a callout.</div>
+    <section class="working">
+      <div class="panel">
+        <h2 data-i18n="projects">Active projects <span class="count">{{ projects | length }}</span></h2>
+        {% if projects %}
+        <ul class="project-list">
+          {% for p in projects %}
+          <li><a href="./user/{{ p.path }}">
+            <span>{{ p.title }}</span>
+            {% if p.note %}<span class="note">{{ p.note }}</span>{% endif %}
+          </a></li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p style="color:var(--ink-soft);font-size:13px" data-i18n="projectsEmpty">No projects yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="qa">Recent Q&amp;A <span class="count">{{ recent_qa | length }}</span></h2>
+        {% if recent_qa %}
+        <ul class="qa-list">
+          {% for q in recent_qa %}
+          {% set q_text = q.question | replace('\n', ' ') %}
+          {% set q_short = q_text | truncate(90, True, '…') %}
+          <li><a href="./user/conversations/{{ q.session_id }}_{{ q.question_id }}.md" title="{{ q.timestamp }}">
+            <span class="q">{{ q_short }}</span>
+            <span class="ts">{{ q.timestamp[:10] }}</span>
+          </a></li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p style="color:var(--ink-soft);font-size:13px" data-i18n="qaEmpty">No conversations yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="panel">
+        <h2 data-i18n="tools">Commands</h2>
+        <div class="tools">
+          <span><span class="label" data-i18n="tool1">brief</span>cogos brief --agent hermes</span>
+          <span><span class="label" data-i18n="tool2">fit</span>cogos persona fit --seed N</span>
+          <span><span class="label" data-i18n="tool3">export</span>cogos export-user --to file.tar.gz</span>
+          <span><span class="label" data-i18n="tool4">import</span>cogos import-user --from file.tar.gz</span>
+        </div>
+      </div>
     </section>
   </main>
 
-  <footer>CognitiveOS · local-first · regenerated by <code>cogos bootstrap</code> · brain artwork: Human-brain-vector.svg (CC0, Wikimedia Commons)</footer>
+  <section class="memory-strip" id="memory">
+    <button class="close" onclick="closeMemory()" aria-label="close">×</button>
+    <h2 data-i18n="memoryTitle">Working memory</h2>
+    <p class="empty" id="memory-empty" data-i18n="memoryEmpty">Click a region on the cognitive map to load its working memory.</p>
+    <div class="body" id="memory-body"></div>
+  </section>
 
   <script>
     const REGIONS = {{ regions_json | safe }};
 
-    function detectLang() {
-      const nav = (navigator.language || navigator.userLanguage || 'en').toLowerCase();
-      return nav.startsWith('zh') ? 'zh' : 'en';
-    }
+    const I18N = {
+      en: {
+        statusOnline: "operational",
+        master: "Master:", masterName: "Lin's Cognitive Layer",
+        runtime: "Runtime:", runtimeVal: "v0.1 · local-first",
+        butlers: "Butlers:", butlersVal: "Hermes · Codex · Claude",
+        rule1: '叫"品牌叫[REDACTED]"', rule2: "AI 是核心杠杆",
+        rule3: "店铺处于筹备阶段", rule4: "resume 隐私红线", rule5: "hands-off 模式",
+        brainTitle: "Cognitive Map",
+        projects: "Active projects", projectsEmpty: "No projects yet.",
+        qa: "Recent Q&A", qaEmpty: "No conversations yet.",
+        tools: "Commands",
+        tool1: "brief", tool2: "fit", tool3: "export", tool4: "import",
+        memoryTitle: "Working memory",
+        memoryEmpty: "Click a region on the cognitive map to load its working memory.",
+        responsibilities: "Responsibilities",
+        whereLives: "Files",
+        remembers: "What this region remembers",
+      },
+      zh: {
+        statusOnline: "运行中",
+        master: "主人:", masterName: "Lin's 认知层",
+        runtime: "运行时:", runtimeVal: "v0.1 · 本地优先",
+        butlers: "管家:", butlersVal: "Hermes · Codex · Claude",
+        rule1: '叫"品牌叫[REDACTED]"', rule2: "AI 是核心杠杆",
+        rule3: "店铺处于筹备阶段", rule4: "简历 隐私红线", rule5: "hands-off 模式",
+        brainTitle: "认知地图",
+        projects: "活跃项目", projectsEmpty: "暂无项目。",
+        qa: "最近的问答", qaEmpty: "暂无对话记录。",
+        tools: "可用命令",
+        tool1: "入职", tool2: "拟合", tool3: "导出", tool4: "导入",
+        memoryTitle: "工作记忆",
+        memoryEmpty: "点击认知地图上的分区，查看对应工作记忆。",
+        responsibilities: "职责",
+        whereLives: "对应文件",
+        remembers: "该分区记住的东西",
+      },
+    };
 
-    let lang = detectLang();
+    let lang = (navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
     let activeKey = null;
-    const detail = document.getElementById('detail');
 
-    function t(lang, en, zh) { return lang === 'zh' ? zh : en; }
-    function fileUrl(p) { return './' + p; }
+    function t(k) { return (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k; }
 
     function setLang(next) {
       lang = next;
       document.documentElement.lang = next === 'zh' ? 'zh-CN' : 'en';
       document.getElementById('lang-en').classList.toggle('active', next === 'en');
       document.getElementById('lang-zh').classList.toggle('active', next === 'zh');
-
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const k = el.getAttribute('data-i18n');
+        if (I18N[lang][k] !== undefined) el.textContent = t(k);
+      });
       document.querySelectorAll('.callout').forEach(g => {
         const r = REGIONS.find(x => x.key === g.dataset.region);
         if (!r) return;
@@ -207,33 +388,42 @@
         g.querySelectorAll('.lbl')[0].setAttribute('display', zh ? 'none' : 'inline');
         g.querySelectorAll('.lbl')[1].setAttribute('display', zh ? 'inline' : 'none');
       });
-
-      if (activeKey) render(activeKey);
+      if (activeKey) renderMemory(activeKey);
     }
 
-    function render(key) {
+    function renderMemory(key) {
       const r = REGIONS.find(x => x.key === key);
       if (!r) return;
       activeKey = key;
-      const desc = t(lang, r.desc_en, r.desc_zh);
-      const fileItems = r.files.map(([l, p]) => `<li>${p}</li>`).join('');
+      const desc = lang === 'zh' ? r.desc_zh : r.desc_en;
+      const fileItems = r.files.map(([_, p]) => `<li>${p}</li>`).join('');
       const memItems = r.memory.map(m => {
-        const title = t(lang, m.title_en, m.title_zh);
-        return `<li><a href="${fileUrl(m.path)}"><span>${title}</span><span class="path">${m.path}</span></a></li>`;
+        const title = lang === 'zh' ? m.title_zh : m.title_en;
+        return `<li><a href="./${m.path}"><span>${title}</span><span class="path">${m.path}</span></a></li>`;
       }).join('');
-      detail.innerHTML = `
-        <h3 style="color:${r.color}">${t(lang, r.label_en, r.label_zh)}</h3>
+      const el = document.getElementById('memory-body');
+      el.innerHTML = `
         <p class="desc">${desc}</p>
-        <h4>${lang === 'zh' ? '设计文件' : 'Design files'}</h4>
+        <h4>${t('whereLives')}</h4>
         <ul class="file-list">${fileItems}</ul>
-        <h4>${lang === 'zh' ? '该分区记住的东西' : 'What this region remembers'}</h4>
+        <h4>${t('remembers')}</h4>
         <ul class="memory-list">${memItems}</ul>
       `;
+      el.classList.add('shown');
+      document.getElementById('memory-empty').style.display = 'none';
       document.querySelectorAll('.callout').forEach(g => g.classList.toggle('selected', g.dataset.region === key));
     }
 
+    function closeMemory() {
+      activeKey = null;
+      document.getElementById('memory-body').classList.remove('shown');
+      document.getElementById('memory-body').innerHTML = '';
+      document.getElementById('memory-empty').style.display = '';
+      document.querySelectorAll('.callout').forEach(g => g.classList.remove('selected'));
+    }
+
     document.querySelectorAll('.callout').forEach(g => {
-      const fire = () => render(g.dataset.region);
+      const fire = () => renderMemory(g.dataset.region);
       g.addEventListener('click', fire);
       g.addEventListener('keydown', e => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fire(); }
@@ -242,9 +432,7 @@
       g.setAttribute('role', 'button');
     });
 
-    // Apply detected language immediately on load.
     if (lang === 'zh') setLang('zh');
-    render('prefrontal');
   </script>
 </body>
 </html>

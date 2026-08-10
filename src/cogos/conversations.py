@@ -62,13 +62,22 @@ def extract_qa(db_path: Path, *, limit: int | None = None, min_len: int = 20) ->
     finally:
         con.close()
 
+    def _iso(ts_raw) -> str:
+        """Normalise whatever timestamp column shape we get into ISO."""
+        if ts_raw is None:
+            return ""
+        if isinstance(ts_raw, (int, float)):
+            from datetime import datetime as _dt, timezone as _tz
+            return _dt.fromtimestamp(float(ts_raw), _tz.utc).isoformat(timespec="seconds")
+        return str(ts_raw)
+
     pairs: list[QA] = []
     by_session: dict[str, list[tuple[int, str, str, str]]] = {}
     for mid, sid, role, content, ts in rows:
         content = (content or "").strip()
         if not content:
             continue
-        by_session.setdefault(sid, []).append((mid, role, content, ts))
+        by_session.setdefault(sid, []).append((mid, role, content, _iso(ts)))
 
     for sid, msgs in by_session.items():
         for i, (mid, role, content, ts) in enumerate(msgs):
