@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from . import __version__
@@ -17,7 +18,14 @@ from .paths import Paths
 from .user import UserLayer
 from .portability import export_user, import_user
 from .brief import render_brief
-from .persona import build_prompt, pick_random, parse_sample_output, maybe_update_model, record_sample, list_experiences
+from .persona_fit import (
+    build_persona_block,
+    load_qa_pairs,
+    pick_random_qa,
+    record_fit_sample,
+    maybe_update_model,
+    FitSample,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -49,7 +57,7 @@ def main(argv: list[str] | None = None) -> int:
     p_persona = sub.add_parser("persona", help="Train / inspect the user persona model")
     persona_sub = p_persona.add_subparsers(dest="persona_cmd", required=True)
 
-    p_ptrain = persona_sub.add_parser("train", help="Run one offline persona-training round")
+    p_ptrain = persona_sub.add_parser("fit", help="Run one persona-fitting round (semantic match against master's past answer)")
     p_ptrain.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility")
 
     p_plist = persona_sub.add_parser("list", help="List available experiences")
@@ -95,12 +103,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "persona":
         user = UserLayer(root=paths.root / "user")
         if args.persona_cmd == "list":
-            for e in list_experiences(user):
-                print(e.path.relative_to(paths.root))
+            for e in load_qa_pairs(user)[:20]:
+                print(f"q{e.question_id} [{e.session_id[:8]}] {e.question[:60].replace(chr(10), ' ')}")
             return 0
         if args.persona_cmd == "show":
             mp = user.root / "persona" / "model.md"
-            print(mp.read_text(encoding="utf-8") if mp.exists() else "(model.md does not exist yet — run `cogos persona train` to start)")
+            print(mp.read_text(encoding="utf-8") if mp.exists() else "(model.md does not exist yet — run `cogos persona fit` to start)")
             return 0
         if args.persona_cmd == "log":
             log = user.root / "persona" / "drivel.jsonl"
@@ -110,36 +118,89 @@ def main(argv: list[str] | None = None) -> int:
             lines = log.read_text(encoding="utf-8").splitlines()[-args.last:]
             for line in lines:
                 rec = json.loads(line)
-                print(f"[{rec['timestamp']}] {rec['experience']} reward={rec['reward']:.2f}")
-                print(f"    prediction: {rec['prediction'][:120].replace(chr(10), ' ')}...")
-                if rec.get("model_diff"):
-                    print(f"    diff: {rec['model_diff']}")
+                print(f"[{rec['timestamp']}] q{rec['question_id']} score={rec.get('semantic_score', '?')}")
+                print(f"    Q: {rec['question'][:100].replace(chr(10), ' ')}")
+                print(f"    butler: {rec['butler_answer'][:100].replace(chr(10), ' ')}")
+                print(f"    master: {rec['master_answer'][:100].replace(chr(10), ' ')}")
+                if rec.get("diff_note"):
+                    print(f"    diff: {rec['diff_note']}")
                 print()
             return 0
-        if args.persona_cmd == "train":
+        if args.persona_cmd == "fit":
             import shutil, subprocess, time
-            exp = pick_random(user, seed=args.seed)
-            if exp is None:
-                print("No experiences under user/experience/. Add one with `cogos add-experience` or write directly.", file=sys.stderr)
+
+            qa = pick_random_qa(user, seed=args.seed)
+            if qa is None:
+                print("No conversations under user/conversations/. Run the extractor first.", file=sys.stderr)
                 return 1
-            prompt = build_prompt(user, exp)
+            persona = build_persona_block(user)
+            prompt = (
+                "# MASTER PERSONA\n\n" + persona +
+                "\n\n# QUESTION\n\n" + qa.question +
+                "\n\n# TASK\n\n" + (
+                    "Answer this question AS the master would answer it — in their "
+                    "voice and priorities. 3-6 lines, their style. This is a persona "
+                    "prediction task, not a help-desk task."
+                )
+            )
             if shutil.which("hermes") is None:
                 print("hermes CLI not on PATH", file=sys.stderr)
                 return 1
+
+            # Stage 1: butler answers as the master (no ground truth shown).
             t0 = time.time()
-            proc = subprocess.run(
+            proc1 = subprocess.run(
                 ["hermes", "chat", "-q", prompt, "-t", "terminal,file", "--max-turns", "1", "-Q"],
                 capture_output=True, text=True, timeout=120, encoding="utf-8",
             )
-            elapsed = time.time() - t0
-            if proc.returncode != 0:
-                print(f"hermes failed: {proc.stderr[:200]}", file=sys.stderr)
+            if proc1.returncode != 0:
+                print(f"hermes stage-1 failed: {proc1.stderr[:200]}", file=sys.stderr)
                 return 2
-            sample, sample_path = record_sample(user, exp, prompt, proc.stdout)
+            butler_answer = proc1.stdout.strip()
+
+            # Stage 2: semantic-match scoring against the master's actual answer.
+            eval_prompt = (
+                "Score semantic match between these two answers.\n\n"
+                f"BUTLER (master persona):\n{butler_answer}\n\n"
+                f"MASTER ACTUAL HISTORY:\n{qa.answer[:1500]}\n\n"
+                'Reply with ONLY JSON: {"score": 0.0-1.0, "note": "one line"}'
+            )
+            proc2 = subprocess.run(
+                ["hermes", "chat", "-q", eval_prompt, "-t", "terminal,file", "--max-turns", "1", "-Q"],
+                capture_output=True, text=True, timeout=120, encoding="utf-8",
+            )
+            elapsed = time.time() - t0
+            if proc2.returncode != 0:
+                print(f"hermes stage-2 failed: {proc2.stderr[:200]}", file=sys.stderr)
+                return 2
+            # Parse JSON from eval response.
+            import re
+            m = re.search(r"\{[^{}]*\"score\"[^{}]*\}", proc2.stdout)
+            score, note = 0.5, "(unparsed)"
+            if m:
+                try:
+                    parsed = json.loads(m.group(0))
+                    score = float(parsed.get("score", 0.5))
+                    note = parsed.get("note", "")
+                except Exception:
+                    pass
+
+            sample = FitSample(
+                timestamp=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                question_id=qa.question_id,
+                question=qa.question,
+                butler_answer=butler_answer,
+                master_answer=qa.answer[:1500],
+                semantic_score=score,
+                diff_note=note,
+                session_id=qa.session_id,
+            )
+            sample_path = record_fit_sample(user, sample)
             updated = maybe_update_model(user, sample)
             print(json.dumps({
-                "experience": sample.experience,
-                "reward": sample.reward,
+                "question_id": qa.question_id,
+                "question": qa.question[:80],
+                "semantic_score": score,
                 "model_updated": updated,
                 "sample_path": str(sample_path),
                 "elapsed": round(elapsed, 2),
