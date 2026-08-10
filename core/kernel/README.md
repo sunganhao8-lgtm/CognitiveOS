@@ -2,6 +2,6 @@
 
 The kernel is the central component of CognitiveOS.
 
-In v0.1 this directory only contains a stub.
+It coordinates memory, routing, and reflection.
 
-The kernel will coordinate memory, routing, and reflection.
+See [DESIGN.md](DESIGN.md) for the v0.1 design (phase 2 of the roadmap).
