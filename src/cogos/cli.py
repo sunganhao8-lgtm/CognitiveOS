@@ -16,6 +16,7 @@ from .bootstrap import run as bootstrap_run
 from .paths import Paths
 from .user import UserLayer
 from .portability import export_user, import_user
+from .brief import render_brief
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,6 +36,14 @@ def main(argv: list[str] | None = None) -> int:
 
     p_import = sub.add_parser("import-user", help="Import the user/ layer from a tar.gz")
     p_import.add_argument("--from", dest="src", type=Path, required=True, help="Source .tar.gz path")
+
+    p_brief = sub.add_parser("brief", help="Render a butler induction brief for a specific agent")
+    p_brief.add_argument(
+        "--agent",
+        choices=["hermes", "codex", "claude", "raw"],
+        default="raw",
+        help="Target agent format (default: raw markdown)",
+    )
 
     args = parser.parse_args(argv)
     paths = Paths(root=(args.root or Path.cwd()).resolve())
@@ -62,6 +71,11 @@ def main(argv: list[str] | None = None) -> int:
         user = UserLayer(root=paths.root / "user")
         result = import_user(user, args.src)
         print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.cmd == "brief":
+        user = UserLayer(root=paths.root / "user")
+        print(render_brief(user, args.agent))
         return 0
 
     parser.error(f"unknown command: {args.cmd}")
