@@ -6,15 +6,20 @@ A Cognitive Runtime Layer for AI Agents.
 
 > **The real differentiation**: CognitiveOS builds an Agent's *cognition of its master*, and separates that cognition from the Agent. "Cross-agent / cross-device / plain text" is the natural by-product of that separation (any import/export would do it).
 >
-> **The irreplaceable mechanism: active reproduction testing.** An Agent's "memory" is **passive record** — "the master said X". When a similar situation comes up again, the Agent will fall into the same trap unless corrected again. CognitiveOS takes the master's iron rules and turns them into **test cases**, actively re-running them whenever a new session starts, a new Agent is swapped in, or the Agent's prompt is upgraded. This is something the Agent cannot do for itself — it cannot see itself, it does not replay past corrections, and it does not turn rules into executable probes.
+> **The irreplaceable mechanism: active reproduction testing.** An Agent's "memory" is **passive record** — "the master said X". When a similar situation comes up again, the Agent will fall into the same trap unless corrected again. CognitiveOS takes the master's iron rules and turns them into **test cases**, actively re-running them whenever a new session starts, a new Agent is swapped in, or the Agent's prompt is upgraded.
 >
-> CognitiveOS does three jobs, each one *outside* the Agent:
+> **Why the brain-like framework is required.** Making reproduction testing reliable is NOT a matter of dropping rules into a markdown file for the Agent to read. It requires an **independent cognitive structure** that does four jobs:
 >
-> 1. **Observe** — monitor the Agent's responses to the master; spot patterns where the master has corrected / preferred / scolded
-> 2. **Distill** — turn scattered corrections into structured iron rules (domain red lines, decision style, wording preferences), write them into the master profile
-> 3. **Reproduction-test** — turn those rules into test cases; run them against new sessions / new Agents / new prompts; report any rules that were broken
+> | Brain region | Role in CognitiveOS | What breaks without it |
+> |---|---|---|
+> | Prefrontal (Router) | Decides which Agent / which prompt to run the verification against | Switching Agent or upgrading prompt has no automatic trigger |
+> | Hippocampus (Sources) | Keeps the original quoted words of every correction / failure verbatim | Once distilled, no way to audit; contaminated rules become invisible |
+> | Cortex (Knowledge) | Turns original quotes into executable, comparable "test probes" | Only abstract rules survive; probes can't be specific |
+> | Reflection Loop | Re-runs probes; on FAIL, walks back to hippocampus for evidence | A PASS proves "this time OK", not "next time OK" |
 >
-> Import/export can do half of #1. The rest two — the Agent can't do them itself.
+> Without this independent structure, reproduction testing collapses into "the Agent reads its own rules and self-checks" — which is *itself* the thing being tested. That's why CognitiveOS *must* extract cognition out of the Agent: **only standing outside the Agent can you objectively test if it's still stepping on the same rake.**
+>
+> Import/export can do half of #1 (the moving-files part). The other four — the Agent can't do them itself (it can't test itself).
 
 ## Have you felt these pains?
 
