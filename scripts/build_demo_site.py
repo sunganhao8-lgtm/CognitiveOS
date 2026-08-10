@@ -61,12 +61,17 @@ for r in REGIONS:
             ("Portable user/ layer", "user/ 层可移植"),
         ),
     }
+    # Demo memory: no `path` field — demo should NOT link to real files,
+    # because the demo is for strangers who do not have the repo.
     mem = tuple(
         type(r.memory[0])(en, zh, "") for en, zh in demos.get(r.key, (("(demo)", "(示例)"),))
     )
-    DEMO_REGIONS.append(type(r)(key=r.key, color=r.color, ax=r.ax, ay=r.ay, lx=r.lx, ly=r.ly,
-                                label_en=r.label_en, label_zh=r.label_zh, brain_en=r.brain_en,
-                                brain_zh=r.brain_zh, desc_en=r.desc_en, desc_zh=r.desc_zh, memory=mem))
+    DEMO_REGIONS.append(type(r)(
+        key=r.key, color=r.color, ax=r.ax, ay=r.ay, lx=r.lx, ly=r.ly,
+        label_en=r.label_en, label_zh=r.label_zh, brain_en=r.brain_en,
+        brain_zh=r.brain_zh, desc_en=r.desc_en, desc_zh=r.desc_zh,
+        role_en=r.role_en, role_zh=r.role_zh,
+        memory=mem))
 
 
 def _regions_json(regions) -> str:

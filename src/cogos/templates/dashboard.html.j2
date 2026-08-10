@@ -27,6 +27,8 @@
     }
     a { color: var(--blue); text-decoration: none; }
     a:hover { text-decoration: underline; }
+    a.real { background: rgba(74,124,89,0.10); border-bottom: 1px dashed var(--good); padding: 0 2px; border-radius: 2px; }
+    a.placeholder { color: var(--ink-soft); border-bottom: 1px dotted var(--line); padding: 0 2px; }
 
     /* ---- top bar ---- */
     header {
@@ -34,17 +36,16 @@
       border-bottom: 1px solid var(--line);
       background: linear-gradient(90deg, #FFFFFF 0%, #FBF4EA 55%, #F7ECDB 100%);
       display: flex; justify-content: space-between; align-items: center;
-      gap: 16px; flex-wrap: wrap;
+      gap: 20px; flex-wrap: wrap;
     }
-    header h1 { margin: 0; font-size: 20px; letter-spacing: 0.3px; font-weight: 600; }
+    header h1 { margin: 0; font-size: 22px; letter-spacing: 0.3px; font-weight: 600; }
     header h1 .en { color: var(--blue); }
     header h1 .zh { color: var(--accent-deep); margin-left: 8px; }
-    .header-right { display: flex; align-items: center; gap: 14px; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
     .tabs { display: flex; gap: 4px; }
     .tabs button {
       border: 1px solid var(--line); background: #FFF; color: var(--ink-soft);
       padding: 6px 16px; border-radius: 999px; cursor: pointer; font-size: 13px;
-      transition: all 140ms;
     }
     .tabs button.active { background: var(--blue); border-color: var(--blue); color: #fff; }
     .lang-switch {
@@ -77,17 +78,18 @@
       border: 1px solid rgba(232,154,60,0.3);
     }
 
-    /* ---- main grid (dashboard tab) ---- */
-    main {
+    /* ---- main grid ---- */
+    main.dash {
       display: grid;
-      grid-template-columns: minmax(380px, 1fr) minmax(420px, 1.2fr);
+      grid-template-columns: minmax(380px, 1.05fr) minmax(420px, 1fr);
       gap: 18px;
-      padding: 18px 24px 24px;
+      padding: 18px 24px 0;
       max-width: 1500px;
       margin: 0 auto;
     }
-    @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+    @media (max-width: 980px) { main.dash { grid-template-columns: 1fr; } }
 
+    /* ---- left column: brain ---- */
     .brain-card {
       background: var(--card);
       border: 1px solid var(--line);
@@ -114,7 +116,8 @@
     .callout.selected .leader { stroke-width: 2.6; opacity: 1; }
     .callout.selected .lbl { fill: var(--accent-deep); }
 
-    .working { display: flex; flex-direction: column; gap: 14px; }
+    /* ---- right column: working memory (left) + tools (right) ---- */
+    .right-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
     .panel {
       background: var(--card);
       border: 1px solid var(--line);
@@ -152,68 +155,59 @@
     .qa-list li a:hover { background: #F0E4D2; }
     .qa-list .q { font-weight: 500; }
     .qa-list .ts { color: var(--ink-soft); font-size: 11px; margin-left: 6px; }
+    .qa-list .ts.placeholder { font-style: italic; }
     .tools { display: grid; gap: 6px; font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; font-size: 13px; }
     .tools span { padding: 5px 10px; background: var(--card-2); border: 1px solid var(--line); border-radius: 6px; }
     .tools span .label { color: var(--ink-soft); margin-right: 8px; }
 
-    /* ---- working memory strip ---- */
+    /* ---- working memory (the heart of the dashboard) ---- */
     .memory-strip {
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: 14px;
-      padding: 16px 18px;
+      padding: 20px 24px;
       box-shadow: 0 6px 24px rgba(43,27,18,0.05);
-      margin: 0 24px 24px;
+      margin: 16px 24px 0;
       max-width: 1500px;
+      margin-left: auto;
+      margin-right: auto;
     }
     .memory-strip h2 {
-      margin: 0 0 6px; font-size: 11px; letter-spacing: 1.2px;
+      margin: 0 0 4px; font-size: 11px; letter-spacing: 1.2px;
       text-transform: uppercase; color: var(--accent-deep);
     }
     .memory-strip .empty { color: var(--ink-soft); font-size: 13px; }
     .memory-strip .body { display: none; }
     .memory-strip .body.shown { display: block; }
-    .memory-strip .wm-head { display: flex; align-items: baseline; gap: 12px; }
-    .memory-strip .wm-head .brain {
-      font-size: 15px; font-weight: 700; color: var(--blue);
+
+    .wm-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+    .wm-head .brain-name { font-size: 18px; font-weight: 700; color: var(--blue); }
+    .wm-head .sys-name { font-size: 14px; color: var(--accent-deep); font-weight: 600; }
+    .wm-head .close {
+      margin-left: auto; background: none; border: 0; cursor: pointer;
+      color: var(--ink-soft); font-size: 18px; line-height: 1;
     }
-    .memory-strip .wm-head .brain-zh {
-      font-size: 13px; font-weight: 600; color: var(--ink);
-    }
-    .memory-strip .wm-head .sys {
-      font-size: 12px; color: var(--ink-soft); font-weight: 500;
-    }
-    .memory-strip .desc { color: #4A3A2C; margin: 6px 0 12px; font-size: 14px; }
-    .memory-strip h4 {
-      margin: 14px 0 6px; font-size: 11px; letter-spacing: 0.6px;
-      text-transform: uppercase; color: var(--accent-deep);
-    }
-    .memory-strip ul.memory-list {
-      list-style: none; padding: 0; margin: 0; display: grid; gap: 5px;
-    }
-    .memory-strip ul.memory-list li {
+
+    .wm-row { margin: 8px 0 4px; display: flex; gap: 8px; align-items: baseline; }
+    .wm-row .k { font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--accent-deep); width: 110px; flex: none; }
+    .wm-row .v { font-size: 13.5px; color: var(--ink); }
+
+    .memory-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+    .memory-list li {
       display: flex; align-items: center; gap: 8px;
-      padding: 7px 12px;
-      background: var(--card-2); border-left: 3px solid var(--accent);
-      border-radius: 0 6px 6px 0;
+      padding: 6px 12px; background: var(--card-2);
+      border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0;
       font-size: 13.5px; color: var(--ink);
     }
-    .memory-strip ul.memory-list li::before { content: "•"; color: var(--accent-deep); font-weight: 700; }
-    .memory-strip ul.memory-list li a { color: var(--ink-soft); font-family: ui-monospace, Consolas, monospace; font-size: 11px; margin-left: auto; white-space: nowrap; }
-    .memory-strip .close {
-      float: right; cursor: pointer; color: var(--ink-soft); font-size: 18px;
-      background: none; border: 0; line-height: 1;
-    }
+    .memory-list li::before { content: "•"; color: var(--accent-deep); font-weight: 700; }
+    .memory-list li a { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--ink-soft); margin-left: auto; }
 
     /* ---- about tab ---- */
     .about-wrap { display: none; padding: 22px 24px 40px; max-width: 900px; margin: 0 auto; }
     .about-wrap.shown { display: block; }
     .about-wrap h2 { font-size: 26px; color: var(--blue); margin: 0 0 6px; }
+    .about-wrap h2.about-h2 { font-size: 22px; color: var(--ink); margin: 32px 0 8px; padding-top: 20px; border-top: 1px solid var(--line); }
     .about-wrap .lead { color: var(--ink-soft); font-size: 15px; margin: 0 0 18px; }
-    .about-wrap h3 {
-      font-size: 17px; color: var(--accent-deep); margin: 26px 0 8px;
-      padding-bottom: 4px; border-bottom: 1px solid var(--line);
-    }
     .about-wrap p { color: #4A3A2C; margin: 8px 0; }
     .about-wrap ul { color: #4A3A2C; padding-left: 22px; }
     .about-wrap li { margin: 5px 0; }
@@ -289,11 +283,28 @@
       border-radius: 0 8px 8px 0;
       color: var(--accent-deep); font-weight: 600; font-size: 14px;
     }
+
+    /* ---- cognitive flow diagram (about tab) ---- */
+    .flow-diagram {
+      background: var(--card); border: 1px solid var(--line);
+      border-radius: 14px; padding: 22px;
+      margin: 24px 0;
+    }
+    .flow-diagram h2 { font-size: 18px; color: var(--blue); margin: 0 0 6px; }
+    .flow-diagram p.lede { color: var(--ink-soft); font-size: 13px; margin: 0 0 16px; }
+    .flow-diagram svg.flow-svg { width: 100%; height: auto; display: block; }
+    .flow-diagram .step text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
+    .flow-diagram .step-label { font: 700 12px/1.2 -apple-system, sans-serif; fill: #fff; }
+    .flow-diagram .step-sub { font: 500 9.5px/1.2 -apple-system, sans-serif; fill: #fff; opacity: 0.9; }
+    .flow-diagram .arrow { stroke: var(--ink-soft); stroke-width: 1.5; fill: none; marker-end: url(#arrowhead); }
+    .flow-diagram .arrow-label { font: 500 10px/1.2 -apple-system, sans-serif; fill: var(--ink-soft); }
+    .flow-diagram .legend { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: var(--ink-soft); }
+    .flow-diagram .legend b { color: var(--ink); }
   </style>
 </head>
 <body>
   <header>
-    <h1><span class="en">CognitiveOS</span><span class="zh">认知操作系统</span></h1>
+    <h1><span class="en">CognitiveOS</span><span class="zh">认知地图</span></h1>
     <div class="header-right">
       <div class="status"><span class="dot"></span><span data-i18n="statusOnline">operational</span></div>
       <div class="tabs">
@@ -320,7 +331,7 @@
 
   <!-- ============ DASHBOARD TAB ============ -->
   <div id="view-dash">
-    <main>
+    <main class="dash">
       <section class="brain-card">
         <div class="title" data-i18n="brainTitle">Cognitive Map</div>
         <div class="brain-wrap">
@@ -352,13 +363,13 @@
         </div>
       </section>
 
-      <section class="working">
+      <section class="right-col">
         <div class="panel">
           <h2 data-i18n="projects">Active projects <span class="count">{{ projects | length }}</span></h2>
           {% if projects %}
           <ul class="project-list">
             {% for p in projects %}
-            <li><a href="./user/{{ p.path }}">
+            <li><a href="{{ p.path }}">
               <span>{{ p.title }}</span>
               {% if p.note %}<span class="note">{{ p.note }}</span>{% endif %}
             </a></li>
@@ -376,10 +387,12 @@
             {% for q in recent_qa %}
             {% set q_text = q.question | replace('\n', ' ') %}
             {% set q_short = q_text | truncate(90, True, '…') %}
-            <li><a href="./user/conversations/{{ q.session_id }}_{{ q.question_id }}.md" title="{{ q.timestamp }}">
-              <span class="q">{{ q_short }}</span>
-              <span class="ts">{{ q.timestamp[:10] }}</span>
-            </a></li>
+            <li>
+              <a href="./user/conversations/hermes-20260810.jsonl" target="_blank" title="{{ q.timestamp }}">
+                <span class="q">{{ q_short }}</span>
+                <span class="ts">{{ q.timestamp[:10] }} · conversations/hermes-20260810.jsonl</span>
+              </a>
+            </li>
             {% endfor %}
           </ul>
           {% else %}
@@ -392,8 +405,8 @@
           <div class="tools">
             <span><span class="label" data-i18n="tool1">brief</span>cogos brief --agent hermes</span>
             <span><span class="label" data-i18n="tool2">fit</span>cogos persona fit --seed N</span>
-            <span><span class="label" data-i18n="tool3">export</span>cogos export-user --to file.tar.gz</span>
-            <span><span class="label" data-i18n="tool4">import</span>cogos import-user --from file.tar.gz</span>
+            <span><span class="label" data-i18n="tool3">verify</span>cogos verify</span>
+            <span><span class="label" data-i18n="tool4">export</span>cogos export-user --to file.tar.gz</span>
           </div>
         </div>
       </section>
@@ -429,6 +442,85 @@
         </div>
       </div>
       <div class="pains-answer" data-i18n="painsAnswer">CognitiveOS 的答案：把"你的认知"从 Agent 里拿出来，放到你自己手里。</div>
+    </div>
+
+    <!-- ====== Cognitive Flow Diagram (the user's main ask) ====== -->
+    <div class="flow-diagram">
+      <h2 data-i18n="flowTitle">🧠 大脑各部门如何协作</h2>
+      <p class="lede" data-i18n="flowLede">主人发起一次提问时，7 个脑区按下面的顺序协同工作：</p>
+      <svg class="flow-svg" viewBox="0 0 1100 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cognitive flow diagram">
+        <defs>
+          <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-soft)" />
+          </marker>
+        </defs>
+
+        <!-- Horizontal flow: thalamus -> hippocampus -> cortex -> prefrontal -> corpus -> reflection -->
+        <g class="step">
+          <rect x="20"  y="100" width="130" height="60" rx="10" fill="#D97706" />
+          <text class="step-label" x="85"  y="128" text-anchor="middle">Thalamus</text>
+          <text class="step-sub"   x="85"  y="146" text-anchor="middle" data-i18n="flowStep1Sub">receives input</text>
+        </g>
+        <g class="step">
+          <rect x="195" y="100" width="140" height="60" rx="10" fill="#16A34A" />
+          <text class="step-label" x="265" y="128" text-anchor="middle">Hippocampus</text>
+          <text class="step-sub"   x="265" y="146" text-anchor="middle" data-i18n="flowStep2Sub">stashes raw</text>
+        </g>
+        <g class="step">
+          <rect x="380" y="100" width="130" height="60" rx="10" fill="#7C3AED" />
+          <text class="step-label" x="445" y="128" text-anchor="middle">Cortex</text>
+          <text class="step-sub"   x="445" y="146" text-anchor="middle" data-i18n="flowStep3Sub">distills rules</text>
+        </g>
+        <g class="step">
+          <rect x="555" y="100" width="140" height="60" rx="10" fill="#E89A3C" />
+          <text class="step-label" x="625" y="128" text-anchor="middle">Prefrontal</text>
+          <text class="step-sub"   x="625" y="146" text-anchor="middle" data-i18n="flowStep4Sub">routes to agent</text>
+        </g>
+        <g class="step">
+          <rect x="740" y="100" width="130" height="60" rx="10" fill="#0891B2" />
+          <text class="step-label" x="805" y="128" text-anchor="middle">Corpus</text>
+          <text class="step-sub"   x="805" y="146" text-anchor="middle" data-i18n="flowStep5Sub">bridges to Agent</text>
+        </g>
+        <g class="step">
+          <rect x="915" y="100" width="165" height="60" rx="10" fill="#DB2777" />
+          <text class="step-label" x="997" y="128" text-anchor="middle">Reflection</text>
+          <text class="step-sub"   x="997" y="146" text-anchor="middle" data-i18n="flowStep6Sub">reproduces probe</text>
+        </g>
+
+        <!-- arrows -->
+        <path class="arrow" d="M150 130 L195 130" />
+        <path class="arrow" d="M335 130 L380 130" />
+        <path class="arrow" d="M510 130 L555 130" />
+        <path class="arrow" d="M695 130 L740 130" />
+        <path class="arrow" d="M870 130 L915 130" />
+
+        <!-- bottom row: return to cortex + brainstem hosting -->
+        <g class="step">
+          <rect x="380" y="240" width="500" height="40" rx="20" fill="#64748B" />
+          <text class="step-label" x="630" y="265" text-anchor="middle" data-i18n="flowStepBrainstem">Brainstem — keeps the runtime alive, hosts every other region</text>
+        </g>
+        <!-- loop arrow from reflection back to hippocampus -->
+        <path class="arrow" d="M997 160 Q997 220 800 220 Q265 220 265 160" />
+        <text class="arrow-label" x="630" y="215" text-anchor="middle" data-i18n="flowLoop">failure → hippocampus for evidence</text>
+
+        <!-- the agent -->
+        <g class="step">
+          <rect x="730" y="295" width="180" height="50" rx="8" fill="#1B3A6E" />
+          <text class="step-label" x="820" y="318" text-anchor="middle" data-i18n="flowStepAgent">External Agent</text>
+          <text class="step-sub"   x="820" y="334" text-anchor="middle">Hermes / Codex / Claude</text>
+        </g>
+        <path class="arrow" d="M805 160 L805 295" />
+        <path class="arrow" d="M820 295 L820 160" stroke-dasharray="4 3" />
+        <text class="arrow-label" x="855" y="235" data-i18n="flowStepAsk">ask</text>
+        <text class="arrow-label" x="785" y="235" data-i18n="flowStepAns">answer</text>
+      </svg>
+
+      <div class="legend">
+        <div><b data-i18n="flowLegend1Bold">1. 摄入</b> <span data-i18n="flowLegend1Body">主人的输入经丘脑路由到海马体，原样留档。</span></div>
+        <div><b data-i18n="flowLegend2Bold">2. 提炼</b> <span data-i18n="flowLegend2Body">皮层把原话变成可复用知识/规则。</span></div>
+        <div><b data-i18n="flowLegend3Bold">3. 路由</b> <span data-i18n="flowLegend3Body">前额叶根据任务决定调用哪个 Agent。</span></div>
+        <div><b data-i18n="flowLegend4Bold">4. 复刻</b> <span data-i18n="flowLegend4Body">胼胝体把知识+规则传给 Agent，验证它复刻主人的决策模式。</span></div>
+      </div>
     </div>
 
     <h2 class="about-h2" data-i18n="aboutTitle">如果 AI 是硅基生命，它也需要一个「大脑结构」吗？</h2>
@@ -498,10 +590,13 @@
         projects: "Active projects", projectsEmpty: "No projects yet.",
         qa: "Recent Q&A", qaEmpty: "No conversations yet.",
         tools: "Commands",
-        tool1: "brief", tool2: "fit", tool3: "export", tool4: "import",
+        tool1: "brief", tool2: "fit", tool3: "verify", tool4: "export",
         memoryTitle: "Working memory",
         memoryEmpty: "Click a region on the cognitive map to load its working memory.",
         masterSays: "What the master keeps repeating",
+        whereLives: "Files",
+        remembers: "What this region remembers",
+        wmFunction: "Function", wmRole: "In the flow",
         painsTitle: "Have you felt these pains?",
         pain1Title: "Want to switch agents, but afraid to",
         pain1Body: "A new agent means starting from zero. You're locked in by your memory.",
@@ -510,6 +605,18 @@
         pain3Title: "The agent's memory is 'its', not 'yours'",
         pain3Body: "Stop using it and the accumulation is gone — the butler's memories aren't the master's.",
         painsAnswer: "CognitiveOS's answer: take YOUR cognition out of the agent, and keep it in your own hands.",
+        flowTitle: "🧠 How the regions collaborate",
+        flowLede: "When the master asks a question, the 7 regions work in sequence:",
+        flowStep1Sub: "receives input", flowStep2Sub: "stashes raw",
+        flowStep3Sub: "distills rules", flowStep4Sub: "routes to agent",
+        flowStep5Sub: "bridges to Agent", flowStep6Sub: "reproduces probe",
+        flowStepBrainstem: "Brainstem — keeps the runtime alive, hosts every other region",
+        flowStepAgent: "External Agent", flowStepAsk: "ask", flowStepAns: "answer",
+        flowLoop: "failure → hippocampus for evidence",
+        flowLegend1Bold: "1. Intake", flowLegend1Body: "the master's input arrives via thalamus, lands in hippocampus verbatim.",
+        flowLegend2Bold: "2. Distill", flowLegend2Body: "cortex turns the raw into reusable rules.",
+        flowLegend3Bold: "3. Route", flowLegend3Body: "prefrontal picks which agent handles this task.",
+        flowLegend4Bold: "4. Replicate", flowLegend4Body: "corpus hands the rules to the agent; reflection probes for regressions.",
         aboutTitle: "If AI is silicon life, does it need a 'brain structure'?",
         aboutLead: "The master's original vision text (from ChatGPT session, 2026-08-10)",
         aboutP1: "I am not an AI researcher — just a regular AI user. But in daily use, I noticed something interesting: today's AI is smarter, yet it still doesn't feel like a 'person'.",
@@ -522,6 +629,7 @@
         aboutH3: "📊 A reporting developer's example",
         aboutP3: "Oracle problem → database experience. Reporting request → reporting design logic. Performance issue → SQL tuning experience.",
         aboutP4: "But today's AI agent Memory: all chat logs → one memory store → full-text search. Result: remembers but can't classify; has info but doesn't know when to recall; knows the past but can't form an experience system.",
+        aboutH5: "📖 Series preview: 'What would AI still lack to become digital life?'",
         aboutH4: "🚀 Next-gen AI may not just grow parameters",
         aboutP5: "It may grow to resemble the brain: functional modules, agents collaborating like brain regions communicate.",
         aboutWork: "job skills, project experience, domain knowledge",
@@ -529,7 +637,6 @@
         aboutLearn: "knowledge accumulation & growth path",
         aboutMem: "organise life experience into long-term memory",
         aboutP6: "Maybe the truly powerful AI is not one that 'knows everything', but one that 'knows when to call which capability'.",
-        aboutH5: "📖 Series preview: 'What would AI still lack to become digital life?'",
         series1: "Why AI needs a 'hippocampus' (long-term memory)",
         series2: "Why AI needs a 'prefrontal cortex' (goal planning)",
         series3: "Why AI needs a 'personality system' (value judgement)",
@@ -545,10 +652,13 @@
         projects: "活跃项目", projectsEmpty: "暂无项目。",
         qa: "最近的问答", qaEmpty: "暂无对话记录。",
         tools: "可用命令",
-        tool1: "入职", tool2: "拟合", tool3: "导出", tool4: "导入",
+        tool1: "入职", tool2: "拟合", tool3: "校验", tool4: "导出",
         memoryTitle: "工作记忆",
         memoryEmpty: "点击认知地图上的分区，查看对应工作记忆。",
         masterSays: "主人反复强调的",
+        whereLives: "对应文件",
+        remembers: "该分区记住的东西",
+        wmFunction: "功能", wmRole: "协作角色",
         painsTitle: "这些痛点，你经历过吗？",
         pain1Title: "想换个 AI Agent，却不敢换",
         pain1Body: "换新的 = 全部重来。你被\"记忆锁定\"在旧 Agent 上了。",
@@ -557,6 +667,18 @@
         pain3Title: "Agent 的记忆是\"它的\"，不是\"你的\"",
         pain3Body: "不用它了，积累就没了——换了管家，管家记得的事不是主人的事。",
         painsAnswer: "CognitiveOS 的答案：把\"你的认知\"从 Agent 里拿出来，放到你自己手里。",
+        flowTitle: "🧠 大脑各部门如何协作",
+        flowLede: "主人发起一次提问时，7 个脑区按下面的顺序协同工作：",
+        flowStep1Sub: "接收输入", flowStep2Sub: "原样留档",
+        flowStep3Sub: "提炼规则", flowStep4Sub: "路由 Agent",
+        flowStep5Sub: "桥接 Agent", flowStep6Sub: "复刻校验",
+        flowStepBrainstem: "脑干——维持运行时，承载所有其他脑区",
+        flowStepAgent: "外部 Agent", flowStepAsk: "提问", flowStepAns: "回答",
+        flowLoop: "失败→回海马体取证",
+        flowLegend1Bold: "1. 摄入", flowLegend1Body: "主人的输入经丘脑路由到海马体，原样留档。",
+        flowLegend2Bold: "2. 提炼", flowLegend2Body: "皮层把原话变成可复用知识/规则。",
+        flowLegend3Bold: "3. 路由", flowLegend3Body: "前额叶根据任务决定调用哪个 Agent。",
+        flowLegend4Bold: "4. 复刻", flowLegend4Body: "胼胝体把知识+规则传给 Agent，验证它复刻主人的决策模式。",
         aboutTitle: "如果 AI 是硅基生命，它也需要一个「大脑结构」吗？",
         aboutLead: "主人认知哲学的原始文本（来自 ChatGPT 会话，2026-08-10 整理）",
         aboutP1: "我不是 AI 行业的研究人员，只是一个普通的 AI 使用者。但在每天和 AI 交流、使用 Agent 的过程中，我发现一个很有意思的问题：现在的 AI 越来越聪明，但它好像还不像「人」。",
@@ -587,7 +709,6 @@
 
     let lang = (navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
     let activeKey = null;
-    let activeTab = 'dash';
 
     function t(k) { return (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k; }
 
@@ -611,7 +732,6 @@
     }
 
     function switchTab(tab) {
-      activeTab = tab;
       document.getElementById('tab-dash').classList.toggle('active', tab === 'dash');
       document.getElementById('tab-about').classList.toggle('active', tab === 'about');
       document.getElementById('view-dash').style.display = tab === 'dash' ? '' : 'none';
@@ -624,23 +744,26 @@
       activeKey = key;
       const brain = lang === 'zh' ? r.brain_zh : r.brain_en;
       const sys = lang === 'zh' ? r.label_zh : r.label_en;
-      const desc = lang === 'zh' ? r.desc_zh : r.desc_en;
+      const func = lang === 'zh' ? r.desc_zh : r.desc_en;
+      const role = lang === 'zh' ? r.role_zh : r.role_en;
       const memItems = r.memory.map(m => {
         const title = lang === 'zh' ? m.title_zh : m.title_en;
-        const link = m.path ? `<a href="./${m.path}">${m.path}</a>` : '';
+        const link = m.path
+          ? `<a href="./${m.path}" target="_blank">${m.path}</a>`
+          : '<a class="placeholder">(path not set)</a>';
         return `<li>${title}${link}</li>`;
       }).join('');
-      const el = document.getElementById('memory-body');
-      el.innerHTML = `
+      document.getElementById('memory-body').innerHTML = `
         <div class="wm-head">
-          <span class="brain">${brain}</span>
-          <span class="sys">${sys}</span>
+          <span class="brain-name">${brain}</span>
+          <span class="sys-name">${sys}</span>
         </div>
-        <p class="desc">${desc}</p>
-        <h4>${t('masterSays')}</h4>
+        <div class="wm-row"><span class="k">${t('wmFunction')}</span><span class="v">${func}</span></div>
+        <div class="wm-row"><span class="k">${t('wmRole')}</span><span class="v">${role}</span></div>
+        <div class="wm-row"><span class="k">${t('masterSays')}</span></div>
         <ul class="memory-list">${memItems}</ul>
       `;
-      el.classList.add('shown');
+      document.getElementById('memory-body').classList.add('shown');
       document.getElementById('memory-empty').style.display = 'none';
       document.querySelectorAll('.callout').forEach(g => g.classList.toggle('selected', g.dataset.region === key));
     }

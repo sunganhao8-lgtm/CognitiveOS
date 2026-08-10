@@ -63,11 +63,16 @@ class Region:
     brain_zh: str  # anatomical name (中文)
     desc_en: str
     desc_zh: str
+    # How this region participates in the overall cognitive flow
+    role_en: str  # e.g. "First to receive input"
+    role_zh: str
     # The principles the master cares about most, in this region.
     memory: tuple[MemoryItem, ...]
 
 
 # Brain viewBox 960x960; anchors are eyeballed against the artwork.
+# Each MemoryItem's `path` is a clickable link inside the dashboard —
+# clicking the principle jumps to the actual file in the repo.
 REGIONS: tuple[Region, ...] = (
     Region(
         key="prefrontal",
@@ -80,10 +85,12 @@ REGIONS: tuple[Region, ...] = (
         brain_zh="前额叶",
         desc_en="Decides which agent should run a given task — the planning & decision centre.",
         desc_zh="决定任务交给哪个 Agent——规划与决策中枢。",
+        role_en="Decides which agent to call and orchestrates the flow",
+        role_zh="决定调用哪个 Agent，编排整体流程",
         memory=(
-            MemoryItem("Hands-off by default; only confirm irreversible actions", "默认别每步问我；只有不可逆操作才确认"),
-            MemoryItem("Lead with the conclusion; details after", "结论先行，过程后置"),
-            MemoryItem("\"[REDACTED] / [REDACTED]\" means: act now, don't explain", "听到「[REDACTED] / [REDACTED]」：立刻执行，不解释"),
+            MemoryItem("Hands-off by default; only confirm irreversible actions", "默认别每步问我；只有不可逆操作才确认", "user/style.md"),
+            MemoryItem("Lead with the conclusion; details after", "结论先行，过程后置", "user/preferences.md"),
+            MemoryItem('"[REDACTED] / [REDACTED]" means: act now, don\'t explain', "听到「[REDACTED] / [REDACTED]」：立刻执行，不解释", "docs/design-decisions.md"),
         ),
     ),
     Region(
@@ -97,10 +104,12 @@ REGIONS: tuple[Region, ...] = (
         brain_zh="丘脑",
         desc_en="Sensory relay — first run must be automatic, no manual directory lists.",
         desc_zh="感官中继——首次初始化必须全自动，不需要用户手动告诉读哪些目录。",
+        role_en="First to receive the master's input; routes it inward",
+        role_zh="第一个接收到主人输入的脑区，向内路由",
         memory=(
-            MemoryItem("Bootstrap discovers the environment itself; never ask what to scan", "初始化要自己发现环境，绝不问「要扫描哪些目录」"),
-            MemoryItem("First run does the minimum; refine progressively", "第一次只做必要工作，后续逐步完善"),
-            MemoryItem("Produce a JSON report every run", "每次运行都要产出 JSON 报告"),
+            MemoryItem("Bootstrap discovers the environment itself; never ask what to scan", "初始化要自己发现环境，绝不问「要扫描哪些目录」", "docs/architecture.md"),
+            MemoryItem("First run does the minimum; refine progressively", "第一次只做必要工作，后续逐步完善", "ROADMAP.md"),
+            MemoryItem("Produce a JSON report every run", "每次运行都要产出 JSON 报告", ".cogos/last_report.json"),
         ),
     ),
     Region(
@@ -114,11 +123,13 @@ REGIONS: tuple[Region, ...] = (
         brain_zh="海马体",
         desc_en="Long-term memory formation — raw data, original layout preserved.",
         desc_zh="长期记忆形成——原始数据，保留原始目录结构。",
+        role_en="Stashes the raw record of what happened verbatim",
+        role_zh="把发生过的事情原样留档",
         memory=(
-            MemoryItem("Memory must be layered; never mix everything together", "记忆必须分层，不能把什么都混在一起记"),
-            MemoryItem("Traceability: source → normalized → wiki, always reversible", "可追溯：原始 → 标准化 → wiki，层层可查"),
-            MemoryItem("Resume privacy: never name the chip fabs; say \"factory-side\" only", "简历隐私红线：不写具体公司名，只说「工厂智能化相关」"),
-            MemoryItem("The store is 筹备阶段, not failed; brand is 品牌叫[REDACTED]", "铺子说「筹备阶段」不说「没开起来」；品牌叫「[REDACTED]」"),
+            MemoryItem("Memory must be layered; never mix everything together", "记忆必须分层，不能把什么都混在一起记", "docs/design-decisions.md"),
+            MemoryItem("Traceability: source → normalized → wiki, always reversible", "可追溯：原始 → 标准化 → wiki，层层可查", "docs/architecture.md"),
+            MemoryItem('Resume privacy: never name the chip fabs; say "factory-side" only', '简历隐私红线：不写具体公司名，只说「工厂智能化相关」', "user/preferences.md"),
+            MemoryItem("The store is 筹备阶段, not failed; brand is 品牌叫[REDACTED]", "铺子说「筹备阶段」不说「没开起来」；品牌叫「[REDACTED]」", "user/projects/zhaiyu-bp.md"),
         ),
     ),
     Region(
@@ -132,10 +143,12 @@ REGIONS: tuple[Region, ...] = (
         brain_zh="皮层",
         desc_en="Integration of experience into generalised, queryable knowledge.",
         desc_zh="把经验整合成可查询的通用知识。",
+        role_en="Distills raw records into reusable knowledge",
+        role_zh="把原始记录提炼成可复用知识",
         memory=(
-            MemoryItem("The directory structure IS the knowledge structure", "目录结构本身就是知识结构"),
-            MemoryItem("Human-readable AND machine-readable", "知识库要人可读，也要机器可读"),
-            MemoryItem("No giant everything.json — keep it vertical and tidy", "不要一个巨大的 everything.json——垂直、整洁、可追溯"),
+            MemoryItem("The directory structure IS the knowledge structure", "目录结构本身就是知识结构", "docs/architecture.md"),
+            MemoryItem("Human-readable AND machine-readable", "知识库要人可读，也要机器可读", "docs/vision.md"),
+            MemoryItem("No giant everything.json — keep it vertical and tidy", "不要一个巨大的 everything.json——垂直、整洁、可追溯", "docs/design-decisions.md"),
         ),
     ),
     Region(
@@ -149,10 +162,12 @@ REGIONS: tuple[Region, ...] = (
         brain_zh="睡眠周期",
         desc_en="Offline consolidation — what the system learns after tasks (v0.3).",
         desc_zh="离线巩固——任务结束后系统学到什么（v0.3）。",
+        role_en="Sleeps, re-runs probes, audits whether the Agent still obeys the rules",
+        role_zh="睡眠、回放探针，校验 Agent 是否仍守规则",
         memory=(
-            MemoryItem("Train on real past Q&A, compare against the master's actual words", "用过去真实的问答训练，对照主人原话做语义匹配打分"),
-            MemoryItem("Never self-reward; the master's judgement is the signal", "绝不自评自嗨；主人的判断才是训练信号"),
-            MemoryItem("Lessons become long-term memory; task state stays in the session", "教训进长期记忆；任务进度留在会话里"),
+            MemoryItem("Train on real past Q&A, compare against the master's actual words", "用过去真实的问答训练，对照主人原话做语义匹配打分", "docs/persona-training.md"),
+            MemoryItem("Never self-reward; the master's judgement is the signal", "绝不自评自嗨；主人的判断才是训练信号", "docs/design-decisions.md"),
+            MemoryItem("Lessons become long-term memory; task state stays in the session", "教训进长期记忆；任务进度留在会话里", "docs/vision.md"),
         ),
     ),
     Region(
@@ -166,10 +181,12 @@ REGIONS: tuple[Region, ...] = (
         brain_zh="胼胝体",
         desc_en="The bridge — agents share knowledge without being merged.",
         desc_zh="左右脑的桥——Agent 之间共享知识但不合并。",
+        role_en="Bridges cognition with the external Agent (Hermes/Codex/Claude)",
+        role_zh="把认知系统与外部 Agent 桥接起来",
         memory=(
-            MemoryItem("Hermes is the first adapter, NOT the core", "Hermes 是第一个 Adapter，不是 CognitiveOS 的核心"),
-            MemoryItem("Agent-agnostic: no if-hermes / elif-claude switch", "与 Agent 无关：不做 if Hermes / elif Claude 的硬编码"),
-            MemoryItem("Shared cognition, per-agent identity preserved", "统一认知，但保留每个 Agent 的来源与身份"),
+            MemoryItem("Hermes is the first adapter, NOT the core", "Hermes 是第一个 Adapter，不是 CognitiveOS 的核心", "agents/README.md"),
+            MemoryItem("Agent-agnostic: no if-hermes / elif-claude switch", "与 Agent 无关：不做 if Hermes / elif Claude 的硬编码", "core/protocol/README.md"),
+            MemoryItem("Shared cognition, per-agent identity preserved", "统一认知，但保留每个 Agent 的来源与身份", "docs/architecture.md"),
         ),
     ),
     Region(
@@ -183,10 +200,12 @@ REGIONS: tuple[Region, ...] = (
         brain_zh="脑干",
         desc_en="Life support — install, paths, CLI. Boring but essential.",
         desc_zh="生命维持——安装、路径、命令行。无聊但必不可少。",
+        role_en="Keeps the runtime alive: install, paths, CLI",
+        role_zh="维持运行时：安装、路径、命令行",
         memory=(
-            MemoryItem("Local-first: your data stays on your machine", "本地优先：数据默认留在本地"),
-            MemoryItem("When tooling is missing: install/fix/wire it, don't retreat", "工具链缺失时默认走「装/修/接」路径，不给退缩型选项"),
-            MemoryItem("Portable: user/ travels to any machine, any agent", "可移植：user/ 能带到任何电脑、任何 Agent"),
+            MemoryItem("Local-first: your data stays on your machine", "本地优先：数据默认留在本地", "docs/vision.md"),
+            MemoryItem("When tooling is missing: install/fix/wire it, don't retreat", "工具链缺失时默认走「装/修/接」路径，不给退缩型选项", "docs/design-decisions.md"),
+            MemoryItem("Portable: user/ travels to any machine, any agent", "可移植：user/ 能带到任何电脑、任何 Agent", "user/README.md"),
         ),
     ),
 )
@@ -268,6 +287,8 @@ def _regions_json(regions: tuple[Region, ...]) -> str:
             "brain_zh": r.brain_zh,
             "desc_en": r.desc_en,
             "desc_zh": r.desc_zh,
+            "role_en": r.role_en,
+            "role_zh": r.role_zh,
             "memory": [
                 {"title_en": m.title_en, "title_zh": m.title_zh, "path": m.path}
                 for m in r.memory
