@@ -5,3 +5,8 @@ node_modules/
 .idea/
 .vscode/
 *.log
+
+# CognitiveOS local data — never commit user knowledge
+knowledge/
+dashboard/
+.cogos/
