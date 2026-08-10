@@ -280,16 +280,12 @@
 
   <div class="identity">
     <div class="row">
-      <span><strong data-i18n="master">Master:</strong><span data-i18n="masterName">Lin's Cognitive Layer</span></span>
+      <span><strong data-i18n="master">Master:</strong><span>{{ master_name }}</span></span>
       <span><strong data-i18n="runtime">Runtime:</strong><span data-i18n="runtimeVal">v0.1 · local-first</span></span>
       <span><strong data-i18n="butlers">Butlers:</strong><span data-i18n="butlersVal">Hermes · Codex · Claude</span></span>
     </div>
     <div class="rules">
-      <span data-i18n="rule1">叫"品牌叫[REDACTED]"</span>
-      <span data-i18n="rule2">AI 是核心杠杆</span>
-      <span data-i18n="rule3">店铺处于筹备阶段</span>
-      <span data-i18n="rule4">resume 隐私红线</span>
-      <span data-i18n="rule5">hands-off 模式</span>
+      {% for rule in rules %}<span>{{ rule }}</span>{% endfor %}
     </div>
   </div>
 
@@ -445,11 +441,8 @@
       en: {
         statusOnline: "operational",
         tabDash: "Dashboard", tabAbout: "About",
-        master: "Master:", masterName: "Lin's Cognitive Layer",
-        runtime: "Runtime:", runtimeVal: "v0.1 · local-first",
+        master: "Master:", runtime: "Runtime:", runtimeVal: "v0.1 · local-first",
         butlers: "Butlers:", butlersVal: "Hermes · Codex · Claude",
-        rule1: 'Brand: "[REDACTED]"', rule2: "AI is the core lever",
-        rule3: "Store: preparing stage", rule4: "resume privacy red line", rule5: "hands-off mode",
         brainTitle: "Cognitive Map",
         projects: "Active projects", projectsEmpty: "No projects yet.",
         qa: "Recent Q&A", qaEmpty: "No conversations yet.",
@@ -487,11 +480,8 @@
       zh: {
         statusOnline: "运行中",
         tabDash: "仪表盘", tabAbout: "关于",
-        master: "主人:", masterName: "Lin's 认知层",
-        runtime: "运行时:", runtimeVal: "v0.1 · 本地优先",
+        master: "主人:", runtime: "运行时:", runtimeVal: "v0.1 · 本地优先",
         butlers: "管家:", butlersVal: "Hermes · Codex · Claude",
-        rule1: '叫"品牌叫[REDACTED]"', rule2: "AI 是核心杠杆",
-        rule3: "店铺处于筹备阶段", rule4: "简历 隐私红线", rule5: "hands-off 模式",
         brainTitle: "认知地图",
         projects: "活跃项目", projectsEmpty: "暂无项目。",
         qa: "最近的问答", qaEmpty: "暂无对话记录。",

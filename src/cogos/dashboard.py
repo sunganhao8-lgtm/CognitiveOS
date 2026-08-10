@@ -238,6 +238,14 @@ def render_dashboard(paths: Paths) -> Path:
         regions_json=_regions_json(REGIONS),
         projects=projects,
         recent_qa=recent_qa,
+        master_name="Lin's Cognitive Layer",
+        rules=[
+            "叫「品牌叫[REDACTED]」",
+            "AI 是核心杠杆",
+            "店铺处于筹备阶段",
+            "简历 隐私红线",
+            "hands-off 模式",
+        ],
     )
 
     out = paths.dashboard_index
