@@ -4,7 +4,17 @@ A Cognitive Runtime Layer for AI Agents.
 
 [中文](README.md) | [English](README.en.md)
 
-> **The real differentiation**: CognitiveOS builds an Agent's *cognition of its master*, and separates that cognition from the Agent. "Cross-agent / cross-device / plain text" is the natural by-product of that separation (any import/export would do it). What's NOT replaceable is **actively observing the Agent's behaviour toward the master, distilling repeated feedback into structured rules, and updating the master profile over time** — the Agent cannot do this for itself (it cannot see itself).
+> **The real differentiation**: CognitiveOS builds an Agent's *cognition of its master*, and separates that cognition from the Agent. "Cross-agent / cross-device / plain text" is the natural by-product of that separation (any import/export would do it).
+>
+> **The irreplaceable mechanism: active reproduction testing.** An Agent's "memory" is **passive record** — "the master said X". When a similar situation comes up again, the Agent will fall into the same trap unless corrected again. CognitiveOS takes the master's iron rules and turns them into **test cases**, actively re-running them whenever a new session starts, a new Agent is swapped in, or the Agent's prompt is upgraded. This is something the Agent cannot do for itself — it cannot see itself, it does not replay past corrections, and it does not turn rules into executable probes.
+>
+> CognitiveOS does three jobs, each one *outside* the Agent:
+>
+> 1. **Observe** — monitor the Agent's responses to the master; spot patterns where the master has corrected / preferred / scolded
+> 2. **Distill** — turn scattered corrections into structured iron rules (domain red lines, decision style, wording preferences), write them into the master profile
+> 3. **Reproduction-test** — turn those rules into test cases; run them against new sessions / new Agents / new prompts; report any rules that were broken
+>
+> Import/export can do half of #1. The rest two — the Agent can't do them itself.
 
 ## Have you felt these pains?
 
