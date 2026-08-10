@@ -2,6 +2,8 @@
 
 A Cognitive Runtime Layer for AI Agents.
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 ## Vision
 
 Current AI agents are powerful but isolated.
@@ -9,6 +11,7 @@ Current AI agents are powerful but isolated.
 Claude Code understands coding.
 OpenClaw understands automation.
 Codex understands engineering.
+Hermes understands orchestration.
 
 However, they lack:
 
