@@ -16,3 +16,6 @@ index.html
 user/persona/samples/
 user/persona/drivel.jsonl
 user/persona/model.md
+
+# Private conversation history — never commit
+user/conversations/
