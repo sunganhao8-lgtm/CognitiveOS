@@ -28,6 +28,9 @@ from .persona_fit import (
     maybe_update_model,
     FitSample,
 )
+from .tasks import add_task_parser, run_task
+from .inbox import add_inbox_parser, run_inbox
+from .workspace import add_workspace_parser, run_workspace, add_lock_parser, run_lock
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -74,6 +77,11 @@ def main(argv: list[str] | None = None) -> int:
 
     p_ingest = sub.add_parser("ingest", help="Extract conversation memories from other agents (Codex / Claude Code) into user/conversations/")
     p_ingest.add_argument("--limit", type=int, default=None, help="Max pairs per source")
+
+    add_task_parser(sub)
+    add_inbox_parser(sub)
+    add_workspace_parser(sub)
+    add_lock_parser(sub)
 
     args = parser.parse_args(argv)
     paths = Paths(root=(args.root or Path.cwd()).resolve())
@@ -253,6 +261,18 @@ def main(argv: list[str] | None = None) -> int:
             for source, count in result.items():
                 print(f"{source}: extracted {count} QA pairs -> user/conversations/")
         return 0
+
+    if args.cmd == "task":
+        return run_task(args)
+
+    if args.cmd == "inbox":
+        return run_inbox(args)
+
+    if args.cmd == "workspace":
+        return run_workspace(args)
+
+    if args.cmd == "lock":
+        return run_lock(args)
 
     parser.error(f"unknown command: {args.cmd}")
     return 2
