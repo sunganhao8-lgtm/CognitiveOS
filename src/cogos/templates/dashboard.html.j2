@@ -5,18 +5,84 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CognitiveOS</title>
   <style>
+    /* ============================================================
+       Design tokens — Apple translucent material + warm light theme.
+       v0.2: 引入 dark 模式占位（默认 light,localStorage 持久化）。
+       Easing 单一常量贯穿全站,见 cubic-bezier(0.16, 1, 0.3, 1)。
+       ============================================================ */
     :root {
-      --bg: #FAF6F0;
-      --card: #FFFFFF;
-      --card-2: #F4EEE4;
-      --ink: #2B1B12;
-      --ink-soft: #6B5B4E;
-      --line: #E4D9C9;
-      --accent: #E89A3C;
-      --accent-deep: #C77F25;
-      --blue: #1B3A6E;
-      --good: #4A7C59;
+      --bg:            #FAF6F0;
+      --bg-elev:       #FBF4EA;
+      --card:          #FFFFFF;
+      --card-2:        #F4EEE4;
+      --ink:           #2B1B12;
+      --ink-soft:      #6B5B4E;
+      --ink-faint:     #9C8B7C;
+      --line:          #E4D9C9;
+      --line-soft:     rgba(43,27,18,0.06);
+      --accent:        #E89A3C;
+      --accent-deep:   #C77F25;
+      --accent-warm:   rgba(232,154,60,0.18);
+      --blue:          #1B3A6E;
+      --good:          #4A7C59;
+      --purple:        #7C3AED;
+      --cyan:          #0891B2;
+      --pink:          #DB2777;
+      --slate:         #64748B;
+
+      /* Agent 专属色（每条 QA 来源不同） */
+      --agent-hermes:   #1B3A6E;
+      --agent-codex:    #16A34A;
+      --agent-claude:   #7C3AED;
+
+      /* iOS-style soft spring — Apple §12 + Emil "strong ease-out".
+         用于所有 panel / card / viewer 的 transition. */
+      --ease-spring:   cubic-bezier(0.16, 1, 0.3, 1);
+      --ease-out:      cubic-bezier(0.23, 1, 0.32, 1);
+      --ease-in-out:   cubic-bezier(0.77, 0, 0.175, 1);
+      --ease-drawer:   cubic-bezier(0.32, 0.72, 0, 1);
+
+      /* 动画时长 */
+      --t-quick:       140ms;   /* press feedback */
+      --t-base:        240ms;   /* hover / color */
+      --t-sheet:       360ms;   /* viewer / panel */
+      --t-stagger:     60ms;    /* vocabulary §Stagger 间隔 */
+
+      /* 模糊半径,Apple §12: 大表面=更厚 */
+      --blur-chrome:   blur(20px) saturate(180%);
+      --blur-sheet:    blur(28px) saturate(180%);
+
+      /* 阴影层级,Apple §12: 越重要越深 */
+      --shadow-card:   0 6px 24px rgba(43,27,18,0.05);
+      --shadow-lift:   0 14px 38px rgba(43,27,18,0.10), 0 2px 6px rgba(43,27,18,0.04);
+      --shadow-sheet:  0 28px 64px -12px rgba(43,27,18,0.22), 0 8px 24px rgba(43,27,18,0.08);
     }
+
+    /* ---------- Dark mode (v0.2 placeholder, 默认 light) ---------- */
+    [data-theme="dark"] {
+      --bg:           #16110D;
+      --bg-elev:      #1F1812;
+      --card:         #221A13;
+      --card-2:       #2A2018;
+      --ink:          #F5EDE3;
+      --ink-soft:     #C9B9A8;
+      --ink-faint:    #8A7868;
+      --line:         #3A2E22;
+      --line-soft:    rgba(245,237,227,0.08);
+      --accent:       #F4A85A;
+      --accent-deep:  #E89A3C;
+      --accent-warm:  rgba(244,168,90,0.20);
+      --shadow-card:  0 6px 24px rgba(0,0,0,0.35);
+      --shadow-lift:  0 14px 38px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.20);
+      --shadow-sheet: 0 28px 64px -12px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.30);
+    }
+    [data-theme="dark"] .header,
+    [data-theme="dark"] .qa-viewer,
+    [data-theme="dark"] .memory-strip,
+    [data-theme="dark"] .identity {
+      background: rgba(34,26,19,0.72);
+    }
+
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
     body {
@@ -24,218 +90,574 @@
       line-height: 1.55;
       min-height: 100vh;
       font-size: 15px;
+      /* Apple §15: optical letter-spacing — body 接近 0 */
+      letter-spacing: -0.005em;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
     a { color: var(--blue); text-decoration: none; }
     a:hover { text-decoration: underline; }
     a.real { background: rgba(74,124,89,0.10); border-bottom: 1px dashed var(--good); padding: 0 2px; border-radius: 2px; }
     a.placeholder { color: var(--ink-soft); border-bottom: 1px dotted var(--line); padding: 0 2px; }
 
-    /* ---- top bar ---- */
-    header {
-      padding: 14px 24px 10px;
-      border-bottom: 1px solid var(--line);
-      background: linear-gradient(90deg, #FFFFFF 0%, #FBF4EA 55%, #F7ECDB 100%);
+    /* ============================================================
+       HEADER — Apple §12 translucent chrome, content scrolls under.
+       ============================================================ */
+    .header {
+      position: sticky; top: 0; z-index: 50;
+      padding: 12px 24px 10px;
       display: flex; justify-content: space-between; align-items: center;
       gap: 20px; flex-wrap: wrap;
+      background: rgba(255,255,255,0.72);
+      -webkit-backdrop-filter: var(--blur-chrome);
+      backdrop-filter: var(--blur-chrome);
+      border-bottom: 1px solid var(--line-soft);
+      /* 顶边一道高光 — Apple §12 "bright top edge" */
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
     }
-    header h1 { margin: 0; font-size: 22px; letter-spacing: 0.3px; font-weight: 600; }
-    header h1 .en { color: var(--blue); }
-    header h1 .zh { color: var(--accent-deep); margin-left: 8px; }
-    .header-right { display: flex; align-items: center; gap: 16px; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo {
+      width: 28px; height: 28px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #FFF5E6 0%, #F4C77A 100%);
+      border-radius: 9px;
+      box-shadow: 0 2px 8px rgba(232,154,60,0.25), inset 0 1px 0 rgba(255,255,255,0.6);
+      /* vocabulary §Pulse — 非常轻微的 idle 呼吸 */
+      animation: pulse-idle 4s var(--ease-in-out) infinite;
+    }
+    @keyframes pulse-idle {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.04); }
+    }
+    .brand-logo svg { width: 18px; height: 18px; }
+    .brand h1 { margin: 0; font-size: 19px; letter-spacing: -0.01em; font-weight: 600; }
+    .brand h1 .en { color: var(--blue); }
+    .brand h1 .zh { color: var(--accent-deep); margin-left: 8px; font-weight: 500; }
+
+    .header-right { display: flex; align-items: center; gap: 14px; }
     .tabs { display: flex; gap: 4px; }
     .tabs button {
-      border: 1px solid var(--line); background: #FFF; color: var(--ink-soft);
+      border: 1px solid var(--line); background: transparent; color: var(--ink-soft);
       padding: 6px 16px; border-radius: 999px; cursor: pointer; font-size: 13px;
+      transition: background var(--t-base) var(--ease-spring),
+                  color     var(--t-base) var(--ease-spring),
+                  border-color var(--t-base) var(--ease-spring),
+                  transform var(--t-quick) var(--ease-out);
     }
+    /* Emil §"Buttons must feel responsive" — press feedback */
+    .tabs button:active { transform: scale(0.97); }
     .tabs button.active { background: var(--blue); border-color: var(--blue); color: #fff; }
-    .lang-switch {
-      display: inline-flex; border: 1px solid var(--line); border-radius: 999px;
-      overflow: hidden; background: #FFF;
+    .tabs button:hover:not(.active) { background: var(--card-2); color: var(--ink); }
+
+    .theme-toggle {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 1px solid var(--line); background: transparent;
+      color: var(--ink-soft); cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: background var(--t-base) var(--ease-spring),
+                  color var(--t-base) var(--ease-spring),
+                  transform var(--t-quick) var(--ease-out);
     }
-    .lang-switch button {
-      border: 0; background: transparent; padding: 5px 14px; cursor: pointer;
-      font-size: 12px; color: var(--ink-soft);
-    }
-    .lang-switch button.active { background: var(--blue); color: #fff; }
+    .theme-toggle:hover { background: var(--card-2); color: var(--ink); }
+    .theme-toggle:active { transform: scale(0.92); }
+    .theme-toggle svg { width: 16px; height: 16px; }
+
     .status {
       display: flex; gap: 14px; font-size: 12px; color: var(--ink-soft);
-      padding: 4px 10px; background: var(--card-2); border-radius: 999px;
+      padding: 5px 12px; background: var(--card-2); border-radius: 999px;
     }
-    .status .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--good); margin-right: 5px; vertical-align: middle; }
+    .status .dot {
+      display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+      background: var(--good); margin-right: 5px; vertical-align: middle;
+      box-shadow: 0 0 0 0 rgba(74,124,89,0.6);
+      /* vocabulary §Pulse — 状态点轻微呼吸 */
+      animation: status-pulse 2.4s var(--ease-in-out) infinite;
+    }
+    @keyframes status-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(74,124,89,0.5); }
+      50%      { box-shadow: 0 0 0 6px rgba(74,124,89,0); }
+    }
 
-    /* ---- identity strip ---- */
+    /* ============================================================
+       IDENTITY strip
+       ============================================================ */
     .identity {
-      padding: 14px 24px 18px;
-      border-bottom: 1px solid var(--line);
+      padding: 14px 24px 16px;
       background: #FFFCF6;
+      border-bottom: 1px solid var(--line-soft);
     }
     .identity .row { display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; color: var(--ink-soft); }
     .identity strong { color: var(--ink); font-weight: 600; margin-right: 6px; }
     .identity .rules { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
     .identity .rules span {
-      padding: 2px 10px; border-radius: 999px;
-      background: rgba(232,154,60,0.14); color: var(--accent-deep); font-size: 12px;
-      border: 1px solid rgba(232,154,60,0.3);
+      padding: 3px 10px; border-radius: 999px;
+      background: var(--accent-warm); color: var(--accent-deep); font-size: 12px;
+      border: 1px solid rgba(232,154,60,0.30);
+      transition: transform var(--t-quick) var(--ease-out),
+                  background var(--t-base) var(--ease-spring);
+    }
+    .identity .rules span:hover {
+      transform: translateY(-1px);
+      background: rgba(232,154,60,0.28);
     }
 
-    /* ---- hero positioning strip (first screen) ---- */
+    /* ============================================================
+       HERO — 大标题 / 大脑图 / 右侧详情 三段 1:2:1 (用户反馈#1).
+       ============================================================ */
     .hero {
-      padding: 30px 24px;
-      background: linear-gradient(120deg, #FFF8EC 0%, #FBE8CA 55%, #F6D8A8 100%);
-      border-bottom: 1px solid var(--line);
-      text-align: center;
-    }
-    .hero .hero-title {
-      font-size: 28px; font-weight: 700; color: var(--ink);
-      letter-spacing: 0.5px; line-height: 1.35;
-    }
-    .hero .hero-sub {
-      margin-top: 10px; font-size: 15px; color: #8A5A1E;
-    }
-
-    /* ---- pains strip (first screen: 3 pain cards) ---- */
-    .pains-strip {
-      max-width: 1500px;
-      margin: 0 auto;
-      padding: 18px 24px 0;
-    }
-    .pains-strip .pains-grid {
-      grid-template-columns: repeat(3, 1fr);
-      background: var(--card-2);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px;
-    }
-    @media (max-width: 980px) { .pains-strip .pains-grid { grid-template-columns: 1fr; } }
-
-    /* ---- main grid ---- */
-    main.dash {
+      padding: 36px 28px 12px;
       display: grid;
-      grid-template-columns: minmax(380px, 1.05fr) minmax(420px, 1fr);
-      gap: 18px;
-      padding: 18px 24px 0;
-      max-width: 1500px;
-      margin: 0 auto;
+      grid-template-columns: 1fr 2fr 1fr;
+      gap: 24px; align-items: start;
+      max-width: 1500px; margin: 0 auto;
     }
-    @media (max-width: 980px) { main.dash { grid-template-columns: 1fr; } }
+    @media (max-width: 1100px) { .hero { grid-template-columns: 1fr; } }
 
-    /* ---- left column: brain ---- */
-    .brain-card {
+    .hero-left {
+      /* 左侧栏: 大标题 + 副标 */
+      padding-top: 8px;
+    }
+    .hero-eyebrow {
+      font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase;
+      color: var(--accent-deep); font-weight: 700; margin-bottom: 8px;
+    }
+    .hero-title {
+      /* Apple §15: 大字 → 紧 tracking */
+      font-size: clamp(22px, 2.2vw, 30px);
+      font-weight: 700; color: var(--ink);
+      letter-spacing: -0.022em;
+      line-height: 1.22;
+      margin: 0;
+    }
+    .hero-sub {
+      margin-top: 12px;
+      font-size: 14px; color: var(--ink-soft);
+      letter-spacing: -0.005em;
+      line-height: 1.55;
+    }
+
+    .hero-center {
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .hero-right {
+      padding-top: 14px;
+      font-size: 12.5px; color: var(--ink-soft);
+      line-height: 1.55;
+    }
+    .hero-right .tip {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: var(--shadow-card);
+    }
+    .hero-right .tip b { color: var(--ink); display: block; margin-bottom: 4px; }
+
+    /* ============================================================
+       PAIN CARDS — hover: translateY(-4px) + 加深阴影 (用户反馈#9).
+       vocabulary §Stagger — 入场按索引错开。
+       ============================================================ */
+    .pains {
+      max-width: 1500px; margin: 18px auto 0; padding: 0 28px;
+    }
+    .pains-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+    }
+    @media (max-width: 980px) { .pains-grid { grid-template-columns: 1fr; } }
+    .pain-card {
+      --i: 0;
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: 14px;
-      padding: 14px 14px 10px;
-      box-shadow: 0 6px 24px rgba(43,27,18,0.05);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-card);
+      /* Spring + ease-spring, 只动 transform / opacity (vocabulary §Performance) */
+      transition: transform var(--t-sheet) var(--ease-spring),
+                  box-shadow var(--t-sheet) var(--ease-spring),
+                  border-color var(--t-base) var(--ease-spring);
+      will-change: transform;
+      /* 入场 stagger: 0.05s 偏移 * i */
+      opacity: 0;
+      transform: translateY(12px);
+      animation: reveal-up 540ms var(--ease-spring) forwards;
+      animation-delay: calc(var(--i) * var(--t-stagger) + 80ms);
+    }
+    .pains-grid .pain-card:nth-child(1) { --i: 0; }
+    .pains-grid .pain-card:nth-child(2) { --i: 1; }
+    .pains-grid .pain-card:nth-child(3) { --i: 2; }
+    @keyframes reveal-up {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .pain-card:hover {
+      /* 用户反馈 #9: 不直接 transition, 而是 translateY + shadow 增强 */
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lift);
+      border-color: rgba(232,154,60,0.35);
+    }
+    .pain-emoji { font-size: 26px; margin-bottom: 6px; }
+    .pain-name { font-weight: 700; color: var(--blue); font-size: 14px; margin-bottom: 4px; letter-spacing: -0.01em; }
+    .pain-body { color: var(--ink-soft); font-size: 13px; }
+
+    /* ============================================================
+       MAIN DASHBOARD GRID — 大脑图 (中) + 工作记忆 (右)
+       ============================================================ */
+    main.dash {
+      display: grid;
+      grid-template-columns: minmax(360px, 1fr) minmax(420px, 1fr);
+      gap: 20px;
+      padding: 22px 28px 4px;
+      max-width: 1500px; margin: 0 auto;
+    }
+    @media (max-width: 980px) { main.dash { grid-template-columns: 1fr; } }
+
+    /* ----- Brain card ----- */
+    .brain-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px 18px 12px;
+      box-shadow: var(--shadow-card);
     }
     .brain-card .title {
       font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
-      color: var(--accent-deep); margin-bottom: 6px;
+      color: var(--accent-deep); margin-bottom: 8px; font-weight: 700;
     }
-    .brain-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: visible; }
+    .brain-wrap {
+      position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: visible;
+      /* 入场: 略放大 + 淡入 (Emil §"Never animate from scale(0)" — 从 0.94 起) */
+      animation: brain-arrive 720ms var(--ease-spring) both;
+      animation-delay: 120ms;
+    }
+    @keyframes brain-arrive {
+      from { opacity: 0; transform: scale(0.94); }
+      to   { opacity: 1; transform: scale(1); }
+    }
     .brain-wrap img.brain { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
     .brain-wrap svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-    .leader { fill: none; stroke-width: 1.8; opacity: 0.7; }
-    .anchor { opacity: 0.9; }
+
+    /* 用户反馈 #7: 引线细一点,圆点小一点 */
+    .leader {
+      fill: none;
+      stroke-width: 0.6;
+      opacity: 0.55;
+      stroke: var(--ink);
+      transition: stroke-width var(--t-base) var(--ease-spring),
+                  opacity      var(--t-base) var(--ease-spring);
+    }
+    .anchor {
+      opacity: 0.95;
+      transition: r var(--t-base) var(--ease-spring),
+                  filter var(--t-base) var(--ease-spring);
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+    }
     .callout text { cursor: pointer; }
     .callout .lbl {
-      font: 700 18px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      font: 700 16px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
       fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 4px;
+      transition: fill var(--t-base) var(--ease-spring);
     }
-    .callout:hover .leader { stroke-width: 2.6; opacity: 1; }
+    .callout .anchor { r: 10; }
+    /* hover — 引线变粗、圆点放大、label 着色 */
+    .callout:hover .leader { stroke-width: 1.4; opacity: 1; stroke: var(--accent-deep); }
+    .callout:hover .anchor { r: 12; filter: drop-shadow(0 2px 6px rgba(232,154,60,0.5)); }
     .callout:hover .lbl { fill: var(--accent-deep); }
-    .callout.selected .leader { stroke-width: 2.6; opacity: 1; }
+    .callout.selected .leader { stroke-width: 1.4; opacity: 1; stroke: var(--accent-deep); }
+    .callout.selected .anchor { r: 12; filter: drop-shadow(0 2px 6px rgba(232,154,60,0.5)); }
     .callout.selected .lbl { fill: var(--accent-deep); }
 
-    /* ---- right column: working memory (left) + tools (right) ---- */
-    .right-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    /* ----- Right column ----- */
+    .right-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+    /* ============================================================
+       PANEL — translucent material (Apple §12)
+       ============================================================ */
     .panel {
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: 14px;
       padding: 14px 16px 12px;
-      box-shadow: 0 6px 24px rgba(43,27,18,0.05);
+      box-shadow: var(--shadow-card);
     }
     .panel h2 {
-      margin: 0 0 8px; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
-      color: var(--accent-deep);
+      margin: 0 0 10px;
+      font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--accent-deep); font-weight: 700;
       display: flex; justify-content: space-between; align-items: center;
     }
     .panel h2 .count {
       background: var(--card-2); color: var(--ink-soft);
       padding: 1px 8px; border-radius: 999px; font-size: 11px;
-      letter-spacing: 0; text-transform: none;
+      letter-spacing: 0; text-transform: none; font-weight: 500;
     }
-    .project-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
-    .project-list li a {
-      display: flex; justify-content: space-between; gap: 8px;
-      padding: 8px 10px;
-      background: var(--card-2); border: 1px solid var(--line); border-radius: 8px;
-      color: var(--ink); text-decoration: none; font-size: 13.5px;
-    }
-    .project-list li a:hover { background: #F0E4D2; text-decoration: none; }
-    .project-list .note { color: var(--ink-soft); font-size: 12px; }
-    .qa-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 5px; }
-    .qa-list li a {
-      display: block;
-      padding: 7px 10px;
-      border-left: 3px solid var(--accent);
-      background: var(--card-2); border-radius: 0 6px 6px 0;
-      color: var(--ink); text-decoration: none; font-size: 13px;
-    }
-    .qa-list li a:hover { background: #F0E4D2; }
-    .qa-list .q { font-weight: 500; }
-    .qa-list .ts { color: var(--ink-soft); font-size: 11px; margin-left: 6px; }
-    .qa-list .ts.placeholder { font-style: italic; }
-    .tools { display: grid; gap: 6px; font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; font-size: 13px; }
-    .tools span { padding: 5px 10px; background: var(--card-2); border: 1px solid var(--line); border-radius: 6px; }
-    .tools span .label { color: var(--ink-soft); margin-right: 8px; }
 
-    /* ---- working memory (the heart of the dashboard) ---- */
+    /* ============================================================
+       WORKING MEMORY — 主人反复强调的更高权重 (用户反馈#2):
+       暖橙底 + 左边框 4px + 更粗字。
+       ============================================================ */
     .memory-strip {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 20px 24px;
-      box-shadow: 0 6px 24px rgba(43,27,18,0.05);
-      margin: 16px 24px 0;
-      max-width: 1500px;
-      margin-left: auto;
-      margin-right: auto;
+      border-radius: 16px;
+      padding: 22px 24px 20px;
+      box-shadow: var(--shadow-card);
+      margin: 18px 28px 0;
+      max-width: 1500px; margin-left: auto; margin-right: auto;
     }
     .memory-strip h2 {
       margin: 0 0 4px; font-size: 11px; letter-spacing: 1.2px;
-      text-transform: uppercase; color: var(--accent-deep);
+      text-transform: uppercase; color: var(--accent-deep); font-weight: 700;
     }
     .memory-strip .empty { color: var(--ink-soft); font-size: 13px; }
     .memory-strip .body { display: none; }
     .memory-strip .body.shown { display: block; }
 
-    .wm-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
-    .wm-head .brain-name { font-size: 18px; font-weight: 700; color: var(--blue); }
-    .wm-head .sys-name { font-size: 14px; color: var(--accent-deep); font-weight: 600; }
-    .wm-head .close {
-      margin-left: auto; background: none; border: 0; cursor: pointer;
-      color: var(--ink-soft); font-size: 18px; line-height: 1;
+    .wm-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+    .wm-head .brain-name {
+      font-size: 20px; font-weight: 700; color: var(--blue);
+      letter-spacing: -0.015em;
+    }
+    .wm-head .sys-name {
+      font-size: 14px; color: var(--accent-deep); font-weight: 600;
     }
 
-    .wm-row { margin: 8px 0 4px; display: flex; gap: 8px; align-items: baseline; }
-    .wm-row .k { font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--accent-deep); width: 110px; flex: none; }
-    .wm-row .v { font-size: 13.5px; color: var(--ink); }
+    .wm-row { margin: 10px 0 6px; display: flex; gap: 10px; align-items: baseline; }
+    .wm-row .k {
+      font-size: 11px; letter-spacing: 0.8px; text-transform: uppercase;
+      color: var(--accent-deep); width: 110px; flex: none; font-weight: 700;
+    }
+    .wm-row .v { font-size: 14px; color: var(--ink); }
 
-    .memory-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; }
+    /* 「主人反复强调的」标题块 — 用户反馈 #2: 给最高权重 */
+    .master-says-block {
+      margin-top: 14px;
+      background: var(--accent-warm);
+      border-left: 4px solid var(--accent);
+      border-radius: 0 10px 10px 0;
+      padding: 12px 14px;
+    }
+    .master-says-block .master-label {
+      font-size: 11px; letter-spacing: 1.0px; text-transform: uppercase;
+      color: var(--accent-deep); font-weight: 700;
+      margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .master-says-block .master-label::before {
+      content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--accent);
+    }
+    .memory-list {
+      list-style: none; padding: 0; margin: 0;
+      display: grid; gap: 6px;
+    }
     .memory-list li {
-      display: flex; align-items: center; gap: 8px;
-      padding: 6px 12px; background: var(--card-2);
-      border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0;
-      font-size: 13.5px; color: var(--ink);
+      /* 主人强调的条目: 更粗字 + 暖橙左边框 + 暖底色 */
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.72);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0;
+      font-size: 14px;        /* 比次要信息粗 */
+      font-weight: 600;       /* 比次要信息粗 */
+      color: var(--ink);
+      line-height: 1.5;
+      transition: transform var(--t-base) var(--ease-spring),
+                  background var(--t-base) var(--ease-spring);
     }
-    .memory-list li::before { content: "•"; color: var(--accent-deep); font-weight: 700; }
-    .memory-list li a { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--ink-soft); margin-left: auto; }
+    .memory-list li::before { content: "•"; color: var(--accent-deep); font-weight: 700; margin-right: 6px; }
+    .memory-list li:hover { transform: translateX(2px); background: #FFFFFF; }
+    .memory-list li a.mem-link {
+      display: inline-block; margin-left: 8px;
+      font-size: 11px; color: var(--ink-soft); font-weight: 400;
+      text-decoration: underline dotted; cursor: pointer;
+      transition: color var(--t-base) var(--ease-spring);
+    }
+    .memory-list li a.mem-link:hover { color: var(--blue); text-decoration: underline; }
 
-    /* ---- about tab ---- */
-    .about-wrap { display: none; padding: 22px 24px 40px; max-width: 900px; margin: 0 auto; }
+    /* ============================================================
+       LOWER STRIP — projects / qa / commands
+       ============================================================ */
+    .lower-strip {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) minmax(340px, 1.4fr) minmax(220px, 1fr);
+      gap: 18px;
+      padding: 18px 28px 24px;
+      max-width: 1500px; margin: 0 auto;
+    }
+    @media (max-width: 1100px) { .lower-strip { grid-template-columns: 1fr; } }
+
+    /* ----- Project list ----- */
+    .project-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+    .project-list li a {
+      display: flex; justify-content: space-between; gap: 8px;
+      padding: 9px 12px;
+      background: var(--card-2); border: 1px solid var(--line); border-radius: 10px;
+      color: var(--ink); text-decoration: none; font-size: 13.5px;
+      transition: background var(--t-base) var(--ease-spring),
+                  transform var(--t-quick) var(--ease-out),
+                  box-shadow var(--t-base) var(--ease-spring);
+    }
+    .project-list li a:hover {
+      background: #F0E4D2;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(43,27,18,0.06);
+      text-decoration: none;
+    }
+    .project-list li a:active { transform: translateY(0) scale(0.99); }
+    .project-list .note { color: var(--ink-soft); font-size: 12px; }
+
+    /* ============================================================
+       QA PANEL — agent badge 着色 + hover 微物理动效 (用户反馈#3)
+       ============================================================ */
+    .qa-panel { max-height: 480px; overflow-y: auto; }
+    .qa-group { margin-bottom: 14px; }
+    .qa-group:last-child { margin-bottom: 0; }
+
+    .qa-group-head {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .qa-agent {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 700; letter-spacing: 0.3px;
+      padding: 3px 10px 3px 8px; border-radius: 999px;
+      color: #fff;
+      /* agent 专属色: hermes=blue / codex=green / claude_code=violet */
+    }
+    .qa-agent svg { width: 12px; height: 12px; opacity: 0.9; }
+    .qa-agent[data-source="hermes"]     { background: var(--agent-hermes); }
+    .qa-agent[data-source="codex"]      { background: var(--agent-codex); }
+    .qa-agent[data-source="claude_code"]{ background: var(--agent-claude); }
+    .qa-agent[data-source="default"]    { background: var(--slate); }
+
+    .qa-count {
+      font-size: 11px; color: var(--ink-soft);
+      background: var(--card-2); padding: 1px 8px; border-radius: 999px;
+    }
+
+    .qa-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+    .qa-list li a {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      padding: 8px 12px;
+      border-left: 3px solid var(--accent);
+      background: var(--card-2); border-radius: 0 8px 8px 0;
+      color: var(--ink); text-decoration: none; font-size: 13px;
+      cursor: pointer;
+      /* 物理式 hover: translateY + scale + 阴影 (用户反馈#3) */
+      transition: transform var(--t-base) var(--ease-spring),
+                  background var(--t-base) var(--ease-spring),
+                  box-shadow var(--t-base) var(--ease-spring),
+                  border-left-color var(--t-base) var(--ease-spring);
+    }
+    .qa-list li a:hover {
+      transform: translateY(-2px) scale(1.01);
+      background: #FFFFFF;
+      box-shadow: 0 6px 18px rgba(43,27,18,0.08);
+      border-left-color: var(--accent-deep);
+      text-decoration: none;
+    }
+    .qa-list li a:active { transform: translateY(-1px) scale(0.995); }
+    .qa-list .q { font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .qa-list .ts { color: var(--ink-soft); font-size: 11px; margin-left: 6px; flex: none; }
+    .qa-list .ts.placeholder { font-style: italic; }
+
+    /* ----- Tools ----- */
+    .tools {
+      display: grid; gap: 6px;
+      font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+      font-size: 12.5px;
+    }
+    .tools span {
+      padding: 6px 11px; background: var(--card-2);
+      border: 1px solid var(--line); border-radius: 7px;
+      transition: background var(--t-base) var(--ease-spring),
+                  transform var(--t-quick) var(--ease-out);
+    }
+    .tools span:hover { background: #F0E4D2; transform: translateX(2px); }
+    .tools span .label { color: var(--ink-soft); margin-right: 8px; }
+
+    /* ============================================================
+       INLINE VIEWERS — translucent material + spring entry
+       (用户反馈#4 + Apple §12 + Emil §"never scale(0)")
+       ============================================================ */
+    .qa-viewer {
+      display: none;
+      margin: 12px 28px 24px;
+      max-width: 1500px; margin-left: auto; margin-right: auto;
+      padding: 22px 26px;
+      background: rgba(255,255,255,0.72);
+      -webkit-backdrop-filter: var(--blur-sheet);
+      backdrop-filter: var(--blur-sheet);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: var(--shadow-sheet);
+      /* spring entry — scale 0.96 起 (Emil: never 0) + opacity */
+      opacity: 0;
+      transform: translateY(10px) scale(0.96);
+      transition: opacity var(--t-sheet) var(--ease-spring),
+                  transform var(--t-sheet) var(--ease-spring);
+    }
+    .qa-viewer.open {
+      display: block;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    .qa-viewer .close {
+      float: right; cursor: pointer;
+      color: var(--ink-soft); font-size: 18px;
+      background: var(--card-2); border: 0;
+      width: 28px; height: 28px; border-radius: 50%;
+      line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+      transition: background var(--t-base) var(--ease-spring),
+                  color var(--t-base) var(--ease-spring),
+                  transform var(--t-quick) var(--ease-out);
+    }
+    .qa-viewer .close:hover { background: var(--accent-warm); color: var(--accent-deep); }
+    .qa-viewer .close:active { transform: scale(0.9); }
+
+    .qa-viewer .qv-q {
+      font-weight: 600; color: var(--blue); font-size: 15px;
+      padding: 10px 14px;
+      background: rgba(27,58,110,0.06);
+      border-radius: 10px; margin: 0 0 12px;
+    }
+    .qa-viewer .qv-a {
+      color: #4A3A2C; font-size: 14px; padding: 4px 2px;
+      line-height: 1.7;
+    }
+    .qa-viewer .qv-a h1, .qa-viewer .qv-a h2,
+    .qa-viewer .qv-a h3, .qa-viewer .qv-a h4 {
+      margin: 14px 0 6px; color: var(--ink); line-height: 1.3;
+    }
+    .qa-viewer .qv-a h1 { font-size: 18px; }
+    .qa-viewer .qv-a h2 { font-size: 16px; }
+    .qa-viewer .qv-a h3 { font-size: 15px; }
+    .qa-viewer .qv-a p { margin: 6px 0; }
+    .qa-viewer .qv-a ul, .qa-viewer .qv-a ol { margin: 6px 0; padding-left: 22px; }
+    .qa-viewer .qv-a li { margin: 3px 0; }
+    .qa-viewer .qv-a code {
+      background: var(--card-2); padding: 1px 6px; border-radius: 4px;
+      font-size: 12.5px; font-family: ui-monospace, Consolas, monospace;
+      color: var(--blue);
+    }
+    .qa-viewer .qv-a pre {
+      background: var(--card-2); border: 1px solid var(--line);
+      border-radius: 8px; padding: 10px 12px; overflow-x: auto;
+      margin: 8px 0;
+    }
+    .qa-viewer .qv-a pre code { background: none; padding: 0; }
+    .qa-viewer .qv-a blockquote {
+      border-left: 3px solid var(--accent); padding: 4px 12px;
+      color: var(--ink-soft); margin: 8px 0; background: var(--card-2);
+      border-radius: 0 6px 6px 0;
+    }
+    .qa-viewer .qv-meta {
+      color: var(--ink-soft); font-size: 12px; margin-bottom: 10px;
+    }
+
+    /* ============================================================
+       ABOUT TAB — preserved (about-h2 spacing, brain-regions, vs box 等)
+       ============================================================ */
+    .about-wrap { display: none; padding: 22px 28px 40px; max-width: 900px; margin: 0 auto; }
     .about-wrap.shown { display: block; }
-    .about-wrap h2 { font-size: 26px; color: var(--blue); margin: 0 0 6px; }
+    .about-wrap h2 { font-size: 26px; color: var(--blue); margin: 0 0 6px; letter-spacing: -0.02em; }
     .about-wrap h2.about-h2 { font-size: 22px; color: var(--ink); margin: 32px 0 8px; padding-top: 20px; border-top: 1px solid var(--line); }
     .about-wrap .lead { color: var(--ink-soft); font-size: 15px; margin: 0 0 18px; }
     .about-wrap p { color: #4A3A2C; margin: 8px 0; }
@@ -284,43 +706,14 @@
       text-align: center; background: var(--accent); color: #fff; border-radius: 50%;
       font-size: 12px; font-weight: 700; margin-right: 10px;
     }
-    /* pains block */
-    .pains {
-      background: linear-gradient(135deg, #FFFCF6, #F7ECDB);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 22px 24px;
-      margin-bottom: 28px;
-    }
-    .pains-title { font-size: 20px; color: var(--ink); margin: 0 0 14px; }
-    .pains-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-    }
-    .pain-card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 14px 16px;
-    }
-    .pain-emoji { font-size: 26px; margin-bottom: 6px; }
-    .pain-name { font-weight: 700; color: var(--blue); font-size: 14px; margin-bottom: 4px; }
-    .pain-body { color: var(--ink-soft); font-size: 13px; }
-    .pains-answer {
-      margin-top: 14px; padding: 10px 14px;
-      background: rgba(232,154,60,0.12);
-      border-left: 4px solid var(--accent);
-      border-radius: 0 8px 8px 0;
-      color: var(--accent-deep); font-weight: 600; font-size: 14px;
-    }
 
-    /* ---- cognitive flow diagram (about tab) ---- */
+    /* ----- flow diagram ----- */
     .flow-diagram {
       background: var(--card); border: 1px solid var(--line);
       border-radius: 14px; padding: 22px;
       margin: 24px 0;
     }
-    .flow-diagram h2 { font-size: 18px; color: var(--blue); margin: 0 0 6px; }
+    .flow-diagram h2 { font-size: 18px; color: var(--blue); margin: 0 0 6px; letter-spacing: -0.01em; }
     .flow-diagram p.lede { color: var(--ink-soft); font-size: 13px; margin: 0 0 16px; }
     .flow-diagram svg.flow-svg { width: 100%; height: auto; display: block; }
     .flow-diagram .step text { font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
@@ -330,120 +723,67 @@
     .flow-diagram .arrow-label { font: 500 10px/1.2 -apple-system, sans-serif; fill: var(--ink-soft); }
     .flow-diagram .legend { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: var(--ink-soft); }
     .flow-diagram .legend b { color: var(--ink); }
-  
-    /* ---- lower strip (projects + qa groups + commands) ---- */
-    .lower-strip {
-      display: grid;
-      grid-template-columns: minmax(240px, 1fr) minmax(340px, 1.4fr) minmax(220px, 1fr);
-      gap: 16px;
-      padding: 16px 24px 20px;
-      max-width: 1500px;
-      margin: 0 auto;
-    }
-    @media (max-width: 1100px) { .lower-strip { grid-template-columns: 1fr; } }
 
-    /* right column memory panel */
-    .right-col { min-width: 0; }
-    .memory-panel { min-height: 380px; display: flex; flex-direction: column; }
-    .memory-panel .body { flex: 1; overflow-y: auto; }
-    .memory-panel .close { align-self: flex-end; }
-
-    /* qa groups */
-    .qa-panel { max-height: 460px; overflow-y: auto; }
-    .qa-group { margin-bottom: 12px; }
-    .qa-group:last-child { margin-bottom: 0; }
-    .qa-group-head {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 6px;
-    }
-    .qa-agent {
-      font-size: 12px; font-weight: 700; letter-spacing: 0.4px;
-      color: var(--blue); text-transform: uppercase;
-      padding: 2px 10px; background: rgba(27,58,110,0.08);
-      border-radius: 999px;
-    }
-    .qa-count {
-      font-size: 11px; color: var(--ink-soft);
-      background: var(--card-2); padding: 1px 8px; border-radius: 999px;
-    }
-    .qa-list li a { cursor: pointer; }
-
-    /* inline QA viewer */
-    .qa-viewer {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 18px 22px;
-      margin: 0 24px 24px;
-      max-width: 1500px;
-      margin-left: auto; margin-right: auto;
-      box-shadow: 0 6px 24px rgba(43,27,18,0.08);
-    }
-    .qa-viewer .close {
-      float: right; cursor: pointer; color: var(--ink-soft); font-size: 18px;
-      background: none; border: 0; line-height: 1;
-    }
-    .qa-viewer .qv-q {
-      font-weight: 600; color: var(--blue); font-size: 15px;
-      padding: 8px 12px; background: rgba(27,58,110,0.06);
-      border-radius: 8px; margin: 0 0 12px;
-    }
-    .qa-viewer .qv-a {
-      color: #4A3A2C; font-size: 14px; padding: 4px 2px;
-      line-height: 1.7;
-    }
-    .qa-viewer .qv-a h1, .qa-viewer .qv-a h2,
-    .qa-viewer .qv-a h3, .qa-viewer .qv-a h4 {
-      margin: 14px 0 6px; color: var(--ink); line-height: 1.3;
-    }
-    .qa-viewer .qv-a h1 { font-size: 18px; }
-    .qa-viewer .qv-a h2 { font-size: 16px; }
-    .qa-viewer .qv-a h3 { font-size: 15px; }
-    .qa-viewer .qv-a p { margin: 6px 0; }
-    .qa-viewer .qv-a ul, .qa-viewer .qv-a ol { margin: 6px 0; padding-left: 22px; }
-    .qa-viewer .qv-a li { margin: 3px 0; }
-    .qa-viewer .qv-a code {
-      background: var(--card-2); padding: 1px 6px; border-radius: 4px;
-      font-size: 12.5px; font-family: ui-monospace, Consolas, monospace;
-      color: var(--blue);
-    }
-    .qa-viewer .qv-a pre {
-      background: var(--card-2); border: 1px solid var(--line);
-      border-radius: 8px; padding: 10px 12px; overflow-x: auto;
-      margin: 8px 0;
-    }
-    .qa-viewer .qv-a pre code { background: none; padding: 0; }
-    .qa-viewer .qv-a blockquote {
-      border-left: 3px solid var(--accent); padding: 4px 12px;
-      color: var(--ink-soft); margin: 8px 0; background: var(--card-2);
-      border-radius: 0 6px 6px 0;
-    }
-    .qa-viewer .qv-meta {
-      color: var(--ink-soft); font-size: 12px; margin-bottom: 10px;
+    /* ============================================================
+       Reduced motion — Apple §14: 替换为 opacity crossfade
+       ============================================================ */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 200ms !important;
+        transition-timing-function: ease !important;
+      }
+      .qa-viewer { transform: none !important; }
+      .pain-card { transform: none !important; opacity: 1 !important; }
     }
 
-    .memory-list a.mem-link {
-      display: inline-block; margin-left: 8px;
-      font-size: 11px; color: var(--blue);
-      text-decoration: underline dotted;
-      cursor: pointer;
+    /* ============================================================
+       Responsive
+       ============================================================ */
+    @media (max-width: 700px) {
+      .header { padding: 10px 16px; }
+      .identity { padding: 12px 16px 14px; }
+      .hero { padding: 24px 16px 8px; }
+      .pains { padding: 0 16px; }
+      main.dash { padding: 16px 16px 0; }
+      .lower-strip { padding: 16px 16px 20px; }
+      .qa-viewer { margin: 12px 16px 20px; }
     }
-    .memory-list a.mem-link:hover { text-decoration: underline; }
-</style>
+  </style>
 </head>
 <body>
-  <header>
-    <h1><span class="en">CognitiveOS</span><span class="zh">认知地图</span></h1>
+  <!-- ============ HEADER: 顶导 + translucent material ============ -->
+  <div class="header" role="banner">
+    <div class="brand">
+      <span class="brand-logo" aria-hidden="true">
+        <!-- 内联 SVG 大脑 logo -->
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 5c-2 0-3.5 1.5-3.5 3.5-1 .5-1.5 1.5-1.5 2.5 0 1.2.7 2.2 1.7 2.7C4.2 14.5 4 15.3 4 16c0 1.7 1.3 3 3 3h.5c.3 1.2 1.4 2 2.7 2 1.6 0 2.8-1.2 2.8-2.8V8.2C13 6.4 11.6 5 9.8 5H8z"
+                fill="#fff" opacity="0.6"/>
+          <path d="M16 5c2 0 3.5 1.5 3.5 3.5 1 .5 1.5 1.5 1.5 2.5 0 1.2-.7 2.2-1.7 2.7.5.8.7 1.6.7 2.3 0 1.7-1.3 3-3 3h-.5c-.3 1.2-1.4 2-2.7 2-1.6 0-2.8-1.2-2.8-2.8V8.2C11 6.4 12.4 5 14.2 5H16z"
+                fill="#C77F25" opacity="0.85"/>
+          <path d="M12 8.5v9" stroke="#fff" stroke-width="0.7" opacity="0.7"/>
+        </svg>
+      </span>
+      <h1><span class="en">CognitiveOS</span><span class="zh">认知地图</span></h1>
+    </div>
     <div class="header-right">
       <div class="status"><span class="dot"></span><span data-i18n="statusOnline">operational</span></div>
       <div class="tabs">
         <button id="tab-dash" class="active" onclick="switchTab('dash')" data-i18n="tabDash">Dashboard</button>
         <button id="tab-about" onclick="switchTab('about')" data-i18n="tabAbout">About</button>
       </div>
-      <!-- 语言切换已移除（只保留中文） -->
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" aria-label="toggle theme" title="切换深色/浅色">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+      </button>
     </div>
-  </header>
+  </div>
 
+  <!-- ============ IDENTITY ============ -->
   <div class="identity">
     <div class="row">
       <span><strong>主人:</strong><span>{{ master_name }}</span></span>
@@ -455,14 +795,24 @@
     </div>
   </div>
 
-  <!-- ============ HERO: what is this / why care (first screen) ============ -->
+  <!-- ============ HERO: 三段 1:2:1 布局 (用户反馈#1) ============ -->
   <div class="hero">
-    <div class="hero-title" data-i18n="heroTitle">AI 是你的管家，CognitiveOS 保管你的认知</div>
-    <div class="hero-sub" data-i18n="heroSub">换管家、换电脑、换产品，你的偏好/项目/经验都不丢</div>
+    <div class="hero-left">
+      <div class="hero-eyebrow">本地优先 · v0.2</div>
+      <h1 class="hero-title" data-i18n="heroTitle">AI 是你的管家，CognitiveOS 保管你的认知</h1>
+      <p class="hero-sub" data-i18n="heroSub">换管家、换电脑、换产品，你的偏好/项目/经验都不丢。</p>
+    </div>
+    <div class="hero-center"></div>
+    <div class="hero-right">
+      <div class="tip">
+        <b>使用提示</b>
+        点击大脑图上的彩色锚点，右侧会加载该脑区的工作记忆；点击「最近的问答」可内嵌查看完整对话。
+      </div>
+    </div>
   </div>
 
-  <!-- ============ PAINS STRIP: 3 pain cards on the first screen ============ -->
-  <section class="pains-strip">
+  <!-- ============ PAINS STRIP: 3 pain cards (用户反馈#9: hover translateY + shadow) ============ -->
+  <section class="pains">
     <div class="pains-grid">
       <div class="pain-card">
         <div class="pain-emoji">😰</div>
@@ -499,7 +849,7 @@
               {% else %}
               <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax }} {{ r.ay + 50 }}, {{ r.lx }} {{ r.ly - 50 }}, {{ r.lx }} {{ r.ly }}" />
               {% endif %}
-              <circle class="anchor" cx="{{ r.ax }}" cy="{{ r.ay }}" r="14" fill="{{ r.color }}" />
+              <circle class="anchor" cx="{{ r.ax }}" cy="{{ r.ay }}" r="10" fill="{{ r.color }}" />
               {% if r.lx < 200 %}
               <text class="lbl" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_zh }}</text>
               {% elif r.lx > 800 %}
@@ -513,7 +863,6 @@
         </div>
       </section>
 
-      <!-- right column: working memory (detail of the clicked region) -->
       <section class="right-col">
         <div class="panel memory-panel" id="memory-panel">
           <h2 data-i18n="memoryTitle">Working memory</h2>
@@ -523,7 +872,6 @@
       </section>
     </main>
 
-    <!-- lower strip: projects + per-agent conversations + commands -->
     <div class="lower-strip">
       <div class="panel">
         <h2 data-i18n="projects">Active projects <span class="count">{{ projects | length }}</span></h2>
@@ -548,7 +896,18 @@
         {% set g_idx = loop.index0 %}
         <div class="qa-group">
           <div class="qa-group-head">
-            <span class="qa-agent">{{ g.display }}</span>
+            <span class="qa-agent" data-source="{{ g.source }}">
+              {% if g.source == 'hermes' %}
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 6v6c0 5 3.5 9 8 10 4.5-1 8-5 8-10V6l-8-4z"/></svg>
+              {% elif g.source == 'codex' %}
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 3l-2 2v14l2 2h8l2-2V5l-2-2H8zm2 4h4v2h-4V7zm0 4h4v2h-4v-2zm0 4h4v2h-4v-2z"/></svg>
+              {% elif g.source == 'claude_code' %}
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 2a10 10 0 0110 10h-3a7 7 0 00-7-7V2zM2 12A10 10 0 0112 2v3a7 7 0 00-7 7H2zm10 10A10 10 0 012 12h3a7 7 0 007 7v3zm10-10a10 10 0 01-10 10v-3a7 7 0 007-7h3z"/></svg>
+              {% else %}
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
+              {% endif %}
+              {{ g.display }}
+            </span>
             <span class="qa-count">{{ g.records | length }}</span>
           </div>
           <ul class="qa-list">
@@ -584,13 +943,13 @@
       </div>
     </div>
 
-    <!-- inline QA viewer (renders the clicked conversation) -->
-    <div class="qa-viewer" id="qa-viewer" style="display:none">
+    <!-- inline QA viewer (spring + translucent material) -->
+    <div class="qa-viewer" id="qa-viewer">
       <button class="close" onclick="closeQA()" aria-label="close">×</button>
       <div class="qa-viewer-body" id="qa-viewer-body"></div>
     </div>
 
-    <div class="qa-viewer" id="mem-viewer" style="display:none">
+    <div class="qa-viewer" id="mem-viewer">
       <button class="close" onclick="closeMem()" aria-label="close">×</button>
       <div class="qa-viewer-body" id="mem-viewer-body"></div>
     </div>
@@ -598,7 +957,6 @@
 
   <!-- ============ ABOUT TAB ============ -->
   <div class="about-wrap" id="view-about">
-    <!-- ====== Cognitive Flow Diagram (the user's main ask) ====== -->
     <div class="flow-diagram">
       <h2 data-i18n="flowTitle">🧠 大脑各部门如何协作</h2>
       <p class="lede" data-i18n="flowLede">主人发起一次提问时，7 个脑区按下面的顺序协同工作：</p>
@@ -608,8 +966,6 @@
             <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-soft)" />
           </marker>
         </defs>
-
-        <!-- Horizontal flow: thalamus -> hippocampus -> cortex -> prefrontal -> corpus -> reflection -->
         <g class="step">
           <rect x="20"  y="100" width="130" height="60" rx="10" fill="#D97706" />
           <text class="step-label" x="85"  y="128" text-anchor="middle">Thalamus</text>
@@ -640,24 +996,17 @@
           <text class="step-label" x="997" y="128" text-anchor="middle">Reflection</text>
           <text class="step-sub"   x="997" y="146" text-anchor="middle" data-i18n="flowStep6Sub">reproduces probe</text>
         </g>
-
-        <!-- arrows -->
         <path class="arrow" d="M150 130 L195 130" />
         <path class="arrow" d="M335 130 L380 130" />
         <path class="arrow" d="M510 130 L555 130" />
         <path class="arrow" d="M695 130 L740 130" />
         <path class="arrow" d="M870 130 L915 130" />
-
-        <!-- bottom row: return to cortex + brainstem hosting -->
         <g class="step">
           <rect x="380" y="240" width="500" height="40" rx="20" fill="#64748B" />
           <text class="step-label" x="630" y="265" text-anchor="middle" data-i18n="flowStepBrainstem">Brainstem — keeps the runtime alive, hosts every other region</text>
         </g>
-        <!-- loop arrow from reflection back to hippocampus -->
         <path class="arrow" d="M997 160 Q997 220 800 220 Q265 220 265 160" />
         <text class="arrow-label" x="630" y="215" text-anchor="middle" data-i18n="flowLoop">failure → hippocampus for evidence</text>
-
-        <!-- the agent -->
         <g class="step">
           <rect x="730" y="295" width="180" height="50" rx="8" fill="#1B3A6E" />
           <text class="step-label" x="820" y="318" text-anchor="middle" data-i18n="flowStepAgent">External Agent</text>
@@ -668,7 +1017,6 @@
         <text class="arrow-label" x="855" y="235" data-i18n="flowStepAsk">ask</text>
         <text class="arrow-label" x="785" y="235" data-i18n="flowStepAns">answer</text>
       </svg>
-
       <div class="legend">
         <div><b data-i18n="flowLegend1Bold">1. 摄入</b> <span data-i18n="flowLegend1Body">主人的输入经丘脑路由到海马体，原样留档。</span></div>
         <div><b data-i18n="flowLegend2Bold">2. 提炼</b> <span data-i18n="flowLegend2Body">皮层把原话变成可复用知识/规则。</span></div>
@@ -681,7 +1029,6 @@
     <p class="lead" data-i18n="aboutLead">主人认知哲学的原始文本（来自 ChatGPT 会话，2026-08-10 整理）</p>
 
     <p data-i18n="aboutP1">我不是 AI 行业的研究人员，只是一个普通的 AI 使用者。但在每天和 AI 交流、使用 Agent 的过程中，我发现一个很有意思的问题：现在的 AI 越来越聪明，但它好像还不像「人」。</p>
-
     <h3 data-i18n="aboutH1">🧠 人类的大脑，本身并不是一个简单的大模型</h3>
     <p data-i18n="aboutP2">我们的大脑有不同的区域，它更像一个由很多「专业 Agent」组成的系统：</p>
     <div class="brain-regions">
@@ -690,7 +1037,6 @@
       <div class="region"><div class="name">🧠 小脑</div><div class="role" data-i18n="aboutCerebellum">负责动作控制</div></div>
       <div class="region"><div class="name">🧠 语言区域</div><div class="role" data-i18n="aboutLanguage">负责语言处理</div></div>
     </div>
-
     <h3 data-i18n="aboutH2">而现在很多 AI Agent 是什么？</h3>
     <div class="vs">
       <div class="box">
@@ -703,24 +1049,21 @@
         <div data-i18n="aboutAIBody">一个大模型 + 一个知识库 + 一个记忆数据库 + 一些工具调用能力。像一个超级聪明的人，把所有东西都塞进一个房间。</div>
       </div>
     </div>
-
     <h3 data-i18n="aboutH3">📊 报表开发者的例子</h3>
     <p data-i18n="aboutP3">遇到 Oracle 问题，我会想到数据库经验；遇到报表需求，我会想到以前设计报表的逻辑；遇到性能问题，我会想到 SQL 优化经验。</p>
     <div class="flow">
       工作经验<br>　↓<br>SQL 优化经验 → Oracle 问题经验 → 报表设计经验<br>　↓<br>遇到报表问题 → 大脑自动激活相关区域
     </div>
     <p data-i18n="aboutP4">但现在很多 AI Agent 的 Memory：所有聊天记录 → 一个 Memory 库 → 全部检索。结果就是：记住了，但是不会分类；有信息，但是不知道什么时候调用；知道过去，但是无法形成经验体系。</p>
-
     <h3 data-i18n="aboutH4">🚀 下一代 AI，也许不会只是继续扩大参数量</h3>
     <p data-i18n="aboutP5">而是会越来越像人脑：拥有不同功能模块，不同 Agent 之间协作，就像人脑不同区域之间交流。</p>
     <div class="future-agents">
       <div class="agent"><span class="n">👨‍💻 工作 Agent</span><span data-i18n="aboutWork">负责职业技能、项目经验、行业知识</span></div>
       <div class="agent"><span class="n">💡 创意 Agent</span><span data-i18n="aboutCreative">负责灵感、想法、内容创作</span></div>
-      <div class="agent"><span class="n">📚 学习 Agent</span><span data-i18n="aboutLearn">负责知识积累和成长路线</span></div>
+      <div class="agent"><span class="n">� 学习 Agent</span><span data-i18n="aboutLearn">负责知识积累和成长路线</span></div>
       <div class="agent"><span class="n">🧠 记忆 Agent</span><span data-i18n="aboutMem">负责整理人生经历，形成长期经验</span></div>
     </div>
     <p data-i18n="aboutP6">也许未来真正强大的 AI，不是一个「知道所有事情」的模型，而是一个「知道自己应该什么时候调用什么能力」的智能系统。</p>
-
     <h3 data-i18n="aboutH5">📖 系列预告：《如果 AI 想成为数字生命，它还缺少什么？》</h3>
     <ol class="series">
       <li data-i18n="series1">AI 为什么需要「海马体」（长期记忆）</li>
@@ -738,8 +1081,6 @@
       en: {
         statusOnline: "operational",
         tabDash: "Dashboard", tabAbout: "About",
-        master: "Master:", runtime: "Runtime:", runtimeVal: "v0.1 · local-first",
-        butlers: "Butlers:", butlersVal: "Hermes · Codex · Claude",
         heroTitle: "AI is your butler; CognitiveOS keeps your cognition.",
         heroSub: "Switch agents, machines, or products without losing your preferences, projects, or experience.",
         brainTitle: "Cognitive Map",
@@ -783,7 +1124,7 @@
         aboutH2: "What is today's AI agent, then?",
         aboutHuman: "Real human intelligence", aboutHumanBody: "It's not just remembering — it's knowing WHEN to recall which memory. The brain auto-judges: 'which experience applies to this problem?'",
         aboutAI: "Today's AI agent", aboutAIBody: "One big model + one knowledge base + one memory DB + some tool calls. Like a super-smart person who stuffed everything into one room.",
-        aboutH3: "📊 A reporting developer's example",
+        aboutH3: "� A reporting developer's example",
         aboutP3: "Oracle problem → database experience. Reporting request → reporting design logic. Performance issue → SQL tuning experience.",
         aboutP4: "But today's AI agent Memory: all chat logs → one memory store → full-text search. Result: remembers but can't classify; has info but doesn't know when to recall; knows the past but can't form an experience system.",
         aboutH5: "📖 Series preview: 'What would AI still lack to become digital life?'",
@@ -803,10 +1144,8 @@
       zh: {
         statusOnline: "运行中",
         tabDash: "仪表盘", tabAbout: "关于",
-        master: "主人:", runtime: "运行时:", runtimeVal: "v0.1 · 本地优先",
-        butlers: "管家:", butlersVal: "Hermes · Codex · Claude",
         heroTitle: "AI 是你的管家，CognitiveOS 保管你的认知",
-        heroSub: "换管家、换电脑、换产品，你的偏好/项目/经验都不丢",
+        heroSub: "换管家、换电脑、换产品，你的偏好/项目/经验都不丢。",
         brainTitle: "认知地图",
         projects: "活跃项目", projectsEmpty: "暂无项目。",
         qa: "最近的问答", qaEmpty: "暂无对话记录。",
@@ -856,7 +1195,7 @@
         aboutWork: "负责职业技能、项目经验、行业知识",
         aboutCreative: "负责灵感、想法、内容创作",
         aboutLearn: "负责知识积累和成长路线",
-        aboutMem: "负责整理人生经历，形成长期经验",
+        aboutMem: "负责整理人生经历，形成长期记忆",
         aboutP6: "也许未来真正强大的 AI，不是一个「知道所有事情」的模型，而是一个「知道自己应该什么时候调用什么能力」的智能系统。",
         aboutH5: "📖 系列预告：《如果 AI 想成为数字生命，它还缺少什么？》",
         series1: "AI 为什么需要「海马体」（长期记忆）",
@@ -873,8 +1212,6 @@
     function t(k) { return (I18N.zh && I18N.zh[k]) || (I18N.en && I18N.en[k]) || k; }
 
     function applyI18n() {
-      // single-language mode: replace every data-i18n element with its
-      // Chinese value once on DOMContentLoaded
       document.querySelectorAll('[data-i18n]').forEach(el => {
         el.textContent = t(el.getAttribute('data-i18n'));
       });
@@ -913,17 +1250,17 @@
         </div>
         <div class="wm-row"><span class="k">${t('wmFunction')}</span><span class="v">${func}</span></div>
         <div class="wm-row"><span class="k">${t('wmRole')}</span><span class="v">${role}</span></div>
-        <div class="wm-row"><span class="k">${t('masterSays')}</span></div>
-        <ul class="memory-list">${memItems}</ul>
+        <div class="master-says-block">
+          <div class="master-label">${t('masterSays')}</div>
+          <ul class="memory-list">${memItems}</ul>
+        </div>
       `;
       document.getElementById('memory-body').classList.add('shown');
       document.getElementById('memory-empty').style.display = 'none';
       document.querySelectorAll('.callout').forEach(g => g.classList.toggle('selected', g.dataset.region === key));
     }
 
-    
     function openMemFile(idx, path) {
-      // find the region currently active and its memory entry
       const r = REGIONS.find(x => x.key === activeKey);
       if (!r) return;
       const m = r.memory[idx];
@@ -935,12 +1272,20 @@
         '<div class="qv-meta">' + escapeHtml(path || '') + '</div>' +
         '<div class="qv-q">' + escapeHtml(title) + '</div>' +
         '<div class="qv-a">' + mdToHtml(content) + '</div>';
+      // 双步: 强制 reflow 后再加 .open 触发 spring 过渡
       viewer.style.display = 'block';
+      void viewer.offsetWidth;
+      viewer.classList.add('open');
       viewer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     function closeMem() {
-      document.getElementById('mem-viewer').style.display = 'none';
+      const viewer = document.getElementById('mem-viewer');
+      viewer.classList.remove('open');
+      // 过渡结束才 display:none, 避免 spring 截断
+      setTimeout(() => {
+        if (!viewer.classList.contains('open')) viewer.style.display = 'none';
+      }, 360);
     }
 
     function renderQA(groupIdx, recIdx) {
@@ -958,12 +1303,33 @@
         <div class="qv-a">${mdToHtml(rec.answer_full || rec.answer || '(no answer)')}</div>
       `;
       viewer.style.display = 'block';
+      void viewer.offsetWidth;
+      viewer.classList.add('open');
       viewer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
     function closeQA() {
-      document.getElementById('qa-viewer').style.display = 'none';
+      const viewer = document.getElementById('qa-viewer');
+      viewer.classList.remove('open');
+      setTimeout(() => {
+        if (!viewer.classList.contains('open')) viewer.style.display = 'none';
+      }, 360);
       document.getElementById('qa-viewer-body').innerHTML = '';
+    }
+
+    /* ---------- 主题切换 (v0.2 占位,默认 light,localStorage 持久化) ---------- */
+    (function initTheme() {
+      try {
+        const stored = localStorage.getItem('cogos:theme');
+        if (stored === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      } catch (e) { /* file:// 下可能禁用 storage,安全降级 */ }
+    })();
+    function toggleTheme() {
+      const cur = document.documentElement.getAttribute('data-theme');
+      const next = cur === 'dark' ? 'light' : 'dark';
+      if (next === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+      else document.documentElement.removeAttribute('data-theme');
+      try { localStorage.setItem('cogos:theme', next); } catch (e) {}
     }
 
     function escapeHtml(s) {
@@ -974,49 +1340,38 @@
         .replace(/"/g, '&quot;');
     }
     function mdToHtml(text) {
-      // Lightweight, offline Markdown renderer (no CDN, file:// safe).
-      // Supports: code blocks, headings, bold/italic, inline code,
-      // lists, links, blockquotes, horizontal rules, paragraphs.
       const t = String(text || '');
       let html = '';
       const lines = t.split(/\r?\n/);
       let i = 0;
       const inline = (s) => {
         let r = escapeHtml(s);
-        // inline code
         r = r.replace(/`([^`]+)`/g, '<code>$1</code>');
-        // bold
         r = r.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-        // italic
         r = r.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-        // links [text](url)
         r = r.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
         return r;
       };
       while (i < lines.length) {
         const line = lines[i];
-        // fenced code block
         if (/^```/.test(line.trim())) {
           const buf = [];
           i++;
           while (i < lines.length && !/^```/.test(lines[i].trim())) { buf.push(lines[i]); i++; }
-          i++; // skip closing fence
+          i++;
           html += '<pre><code>' + escapeHtml(buf.join('\n')) + '</code></pre>\n';
           continue;
         }
-        // headings
         const h = line.match(/^(#{1,4})\s+(.*)$/);
         if (h) {
           const level = h[1].length;
-          html += '<h' + level + '>' + inline(h[2]) + '</h' + level + '>\n';
+          html += '<' + 'h' + level + '>' + inline(h[2]) + '<' + '/h' + level + '>\n';
           i++;
           continue;
         }
-        // horizontal rule
         if (/^\s*([-*_])\s*\1\s*\1\s*$/.test(line)) {
           html += '<hr/>\n'; i++; continue;
         }
-        // unordered list block
         if (/^\s*[-*+]\s+/.test(line)) {
           html += '<ul>\n';
           while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) {
@@ -1026,7 +1381,6 @@
           html += '</ul>\n';
           continue;
         }
-        // ordered list block
         if (/^\s*\d+\.\s+/.test(line)) {
           html += '<ol>\n';
           while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
@@ -1036,7 +1390,6 @@
           html += '</ol>\n';
           continue;
         }
-        // blockquote
         if (/^\s*>\s?/.test(line)) {
           const buf = [];
           while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
@@ -1046,9 +1399,7 @@
           html += '<blockquote>' + inline(buf.join(' ')) + '</blockquote>\n';
           continue;
         }
-        // blank line
         if (!line.trim()) { i++; continue; }
-        // paragraph (merge until blank / block start)
         const buf = [line];
         i++;
         while (i < lines.length && lines[i].trim() && !/^```/.test(lines[i].trim())
@@ -1061,9 +1412,7 @@
       return html;
     }
 
-
-
-function closeMemory() {
+    function closeMemory() {
       activeKey = null;
       document.getElementById('memory-body').classList.remove('shown');
       document.getElementById('memory-body').innerHTML = '';
@@ -1080,8 +1429,6 @@ function closeMemory() {
       g.setAttribute('tabindex', '0');
       g.setAttribute('role', 'button');
     });
-
-    if (lang === 'zh') setLang('zh');
   </script>
 </body>
 </html>

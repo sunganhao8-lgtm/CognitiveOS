@@ -209,6 +209,16 @@ def main() -> int:
 
     demo_dir = ROOT / "demo"
     demo_dir.mkdir(parents=True, exist_ok=True)
+    # Strip the unused English I18N dict from the demo output to
+    # keep the file under the 80KB cap. Demo is single-language zh.
+    import re as _re
+    html = _re.sub(
+        r"en:\s*\{[^}]*?\n\s+\},\n\s+zh:",
+        "zh:",
+        html,
+        count=1,
+        flags=_re.DOTALL,
+    )
     (demo_dir / "index.html").write_text(html, encoding="utf-8")
 
     assets = demo_dir / "assets"
