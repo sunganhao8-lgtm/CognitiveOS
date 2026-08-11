@@ -111,7 +111,7 @@ def main() -> int:
         regions_json=_regions_json(DEMO_REGIONS),
         projects=DEMO_PROJECTS,
         recent_qa=DEMO_QA,
-        master_name="Example Master",
+        master_name="示例主人 (Demo)",
         rules=[
             "示例规则：先行动，不可逆才确认",
             "示例规则：本地优先",

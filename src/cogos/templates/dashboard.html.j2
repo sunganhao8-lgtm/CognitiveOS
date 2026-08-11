@@ -78,6 +78,36 @@
       border: 1px solid rgba(232,154,60,0.3);
     }
 
+    /* ---- hero positioning strip (first screen) ---- */
+    .hero {
+      padding: 30px 24px;
+      background: linear-gradient(120deg, #FFF8EC 0%, #FBE8CA 55%, #F6D8A8 100%);
+      border-bottom: 1px solid var(--line);
+      text-align: center;
+    }
+    .hero .hero-title {
+      font-size: 28px; font-weight: 700; color: var(--ink);
+      letter-spacing: 0.5px; line-height: 1.35;
+    }
+    .hero .hero-sub {
+      margin-top: 10px; font-size: 15px; color: #8A5A1E;
+    }
+
+    /* ---- pains strip (first screen: 3 pain cards) ---- */
+    .pains-strip {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 18px 24px 0;
+    }
+    .pains-strip .pains-grid {
+      grid-template-columns: repeat(3, 1fr);
+      background: var(--card-2);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    @media (max-width: 980px) { .pains-strip .pains-grid { grid-template-columns: 1fr; } }
+
     /* ---- main grid ---- */
     main.dash {
       display: grid;
@@ -328,6 +358,33 @@
       {% for rule in rules %}<span>{{ rule }}</span>{% endfor %}
     </div>
   </div>
+
+  <!-- ============ HERO: what is this / why care (first screen) ============ -->
+  <div class="hero">
+    <div class="hero-title" data-i18n="heroTitle">AI 是你的管家，CognitiveOS 保管你的认知</div>
+    <div class="hero-sub" data-i18n="heroSub">换管家、换电脑、换产品，你的偏好/项目/经验都不丢</div>
+  </div>
+
+  <!-- ============ PAINS STRIP: 3 pain cards on the first screen ============ -->
+  <section class="pains-strip">
+    <div class="pains-grid">
+      <div class="pain-card">
+        <div class="pain-emoji">😰</div>
+        <div class="pain-name" data-i18n="pain1Title">想换个 AI Agent，却不敢换</div>
+        <div class="pain-body" data-i18n="pain1Body">换新的 = 全部重来。你被"记忆锁定"在旧 Agent 上了。</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-emoji">🧠</div>
+        <div class="pain-name" data-i18n="pain2Title">换台电脑，等于失忆</div>
+        <div class="pain-body" data-i18n="pain2Body">新电脑的 Agent 不认识你。换电脑 = 失忆，从头再来。</div>
+      </div>
+      <div class="pain-card">
+        <div class="pain-emoji">🔒</div>
+        <div class="pain-name" data-i18n="pain3Title">Agent 的记忆是"它的"，不是"你的"</div>
+        <div class="pain-body" data-i18n="pain3Body">不用它了，积累就没了——换了管家，管家记得的事不是主人的事。</div>
+      </div>
+    </div>
+  </section>
 
   <!-- ============ DASHBOARD TAB ============ -->
   <div id="view-dash">
@@ -586,6 +643,8 @@
         tabDash: "Dashboard", tabAbout: "About",
         master: "Master:", runtime: "Runtime:", runtimeVal: "v0.1 · local-first",
         butlers: "Butlers:", butlersVal: "Hermes · Codex · Claude",
+        heroTitle: "AI is your butler; CognitiveOS keeps your cognition.",
+        heroSub: "Switch agents, machines, or products without losing your preferences, projects, or experience.",
         brainTitle: "Cognitive Map",
         projects: "Active projects", projectsEmpty: "No projects yet.",
         qa: "Recent Q&A", qaEmpty: "No conversations yet.",
@@ -648,6 +707,8 @@
         tabDash: "仪表盘", tabAbout: "关于",
         master: "主人:", runtime: "运行时:", runtimeVal: "v0.1 · 本地优先",
         butlers: "管家:", butlersVal: "Hermes · Codex · Claude",
+        heroTitle: "AI 是你的管家，CognitiveOS 保管你的认知",
+        heroSub: "换管家、换电脑、换产品，你的偏好/项目/经验都不丢",
         brainTitle: "认知地图",
         projects: "活跃项目", projectsEmpty: "暂无项目。",
         qa: "最近的问答", qaEmpty: "暂无对话记录。",
