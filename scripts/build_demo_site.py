@@ -81,6 +81,7 @@ def _regions_json(regions) -> str:
             "label_en": r.label_en, "label_zh": r.label_zh,
             "brain_en": r.brain_en, "brain_zh": r.brain_zh,
             "desc_en": r.desc_en, "desc_zh": r.desc_zh,
+            "role_en": r.role_en, "role_zh": r.role_zh,
             "memory": [{"title_en": m.title_en, "title_zh": m.title_zh, "path": m.path} for m in r.memory],
         }
         for r in regions

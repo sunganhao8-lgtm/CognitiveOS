@@ -384,14 +384,39 @@
       background: none; border: 0; line-height: 1;
     }
     .qa-viewer .qv-q {
-      font-weight: 700; color: var(--blue); font-size: 15px;
+      font-weight: 600; color: var(--blue); font-size: 15px;
       padding: 8px 12px; background: rgba(27,58,110,0.06);
       border-radius: 8px; margin: 0 0 12px;
-      white-space: pre-wrap;
     }
     .qa-viewer .qv-a {
-      color: #4A3A2C; font-size: 14px; white-space: pre-wrap;
-      padding: 4px 2px;
+      color: #4A3A2C; font-size: 14px; padding: 4px 2px;
+      line-height: 1.7;
+    }
+    .qa-viewer .qv-a h1, .qa-viewer .qv-a h2,
+    .qa-viewer .qv-a h3, .qa-viewer .qv-a h4 {
+      margin: 14px 0 6px; color: var(--ink); line-height: 1.3;
+    }
+    .qa-viewer .qv-a h1 { font-size: 18px; }
+    .qa-viewer .qv-a h2 { font-size: 16px; }
+    .qa-viewer .qv-a h3 { font-size: 15px; }
+    .qa-viewer .qv-a p { margin: 6px 0; }
+    .qa-viewer .qv-a ul, .qa-viewer .qv-a ol { margin: 6px 0; padding-left: 22px; }
+    .qa-viewer .qv-a li { margin: 3px 0; }
+    .qa-viewer .qv-a code {
+      background: var(--card-2); padding: 1px 6px; border-radius: 4px;
+      font-size: 12.5px; font-family: ui-monospace, Consolas, monospace;
+      color: var(--blue);
+    }
+    .qa-viewer .qv-a pre {
+      background: var(--card-2); border: 1px solid var(--line);
+      border-radius: 8px; padding: 10px 12px; overflow-x: auto;
+      margin: 8px 0;
+    }
+    .qa-viewer .qv-a pre code { background: none; padding: 0; }
+    .qa-viewer .qv-a blockquote {
+      border-left: 3px solid var(--accent); padding: 4px 12px;
+      color: var(--ink-soft); margin: 8px 0; background: var(--card-2);
+      border-radius: 0 6px 6px 0;
     }
     .qa-viewer .qv-meta {
       color: var(--ink-soft); font-size: 12px; margin-bottom: 10px;
@@ -527,7 +552,8 @@
           <ul class="qa-list">
             {% for q in g.records %}
             {% set q_text = q.question | replace('\n', ' ') %}
-            {% set q_short = q_text | truncate(70, True, '…') %}
+            {% set q_text2 = q_text | replace('**', '') | replace('`', '') %}
+            {% set q_short = q_text2 | truncate(70, True, '…') %}
             <li>
               <a href="javascript:void(0)" class="qa-item" data-idx="{{ loop.index0 }}"
                  data-group="{{ g_idx }}" title="{{ q.timestamp }}"
@@ -565,28 +591,6 @@
 
   <!-- ============ ABOUT TAB ============ -->
   <div class="about-wrap" id="view-about">
-    <div class="pains">
-      <h2 class="pains-title" data-i18n="painsTitle">这些痛点，你经历过吗？</h2>
-      <div class="pains-grid">
-        <div class="pain-card">
-          <div class="pain-emoji">😰</div>
-          <div class="pain-name" data-i18n="pain1Title">想换个 AI Agent，却不敢换</div>
-          <div class="pain-body" data-i18n="pain1Body">换新的 = 全部重来。你被"记忆锁定"在旧 Agent 上了。</div>
-        </div>
-        <div class="pain-card">
-          <div class="pain-emoji">🧠</div>
-          <div class="pain-name" data-i18n="pain2Title">换台电脑，等于失忆</div>
-          <div class="pain-body" data-i18n="pain2Body">新电脑的 Agent 不认识你。换电脑 = 失忆，从头再来。</div>
-        </div>
-        <div class="pain-card">
-          <div class="pain-emoji">🔒</div>
-          <div class="pain-name" data-i18n="pain3Title">Agent 的记忆是"它的"，不是"你的"</div>
-          <div class="pain-body" data-i18n="pain3Body">不用它了，积累就没了——换了管家，管家记得的事不是主人的事。</div>
-        </div>
-      </div>
-      <div class="pains-answer" data-i18n="painsAnswer">CognitiveOS 的答案：把"你的认知"从 Agent 里拿出来，放到你自己手里。</div>
-    </div>
-
     <!-- ====== Cognitive Flow Diagram (the user's main ask) ====== -->
     <div class="flow-diagram">
       <h2 data-i18n="flowTitle">🧠 大脑各部门如何协作</h2>
@@ -899,7 +903,7 @@
         const title = lang === 'zh' ? m.title_zh : m.title_en;
         const link = m.path
           ? `<a href="./${m.path}" target="_blank">${m.path}</a>`
-          : '<a class="placeholder">(path not set)</a>';
+          : '';
         return `<li>${title}${link}</li>`;
       }).join('');
       document.getElementById('memory-body').innerHTML = `
@@ -929,8 +933,8 @@
       const source = g.display || g.source;
       body.innerHTML = `
         <div class="qv-meta">${source} · ${rec.timestamp || ''} · ${t('qaSession')} ${rec.session_id || ''}</div>
-        <div class="qv-q">${escapeHtml(rec.question_full || rec.question || '')}</div>
-        <div class="qv-a">${escapeHtml(rec.answer_full || rec.answer || '(no answer)')}</div>
+        <div class="qv-q">${mdToHtml(rec.question_full || rec.question || '')}</div>
+        <div class="qv-a">${mdToHtml(rec.answer_full || rec.answer || '(no answer)')}</div>
       `;
       viewer.style.display = 'block';
       viewer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -948,6 +952,95 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
     }
+    function mdToHtml(text) {
+      // Lightweight, offline Markdown renderer (no CDN, file:// safe).
+      // Supports: code blocks, headings, bold/italic, inline code,
+      // lists, links, blockquotes, horizontal rules, paragraphs.
+      const t = String(text || '');
+      let html = '';
+      const lines = t.split(/\r?\n/);
+      let i = 0;
+      const inline = (s) => {
+        let r = escapeHtml(s);
+        // inline code
+        r = r.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // bold
+        r = r.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        // italic
+        r = r.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        // links [text](url)
+        r = r.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+        return r;
+      };
+      while (i < lines.length) {
+        const line = lines[i];
+        // fenced code block
+        if (/^```/.test(line.trim())) {
+          const buf = [];
+          i++;
+          while (i < lines.length && !/^```/.test(lines[i].trim())) { buf.push(lines[i]); i++; }
+          i++; // skip closing fence
+          html += '<pre><code>' + escapeHtml(buf.join('\n')) + '</code></pre>\n';
+          continue;
+        }
+        // headings
+        const h = line.match(/^(#{1,4})\s+(.*)$/);
+        if (h) {
+          const level = h[1].length;
+          html += '<h' + level + '>' + inline(h[2]) + '</h' + level + '>\n';
+          i++;
+          continue;
+        }
+        // horizontal rule
+        if (/^\s*([-*_])\s*\1\s*\1\s*$/.test(line)) {
+          html += '<hr/>\n'; i++; continue;
+        }
+        // unordered list block
+        if (/^\s*[-*+]\s+/.test(line)) {
+          html += '<ul>\n';
+          while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i])) {
+            html += '<li>' + inline(lines[i].replace(/^\s*[-*+]\s+/, '')) + '</li>\n';
+            i++;
+          }
+          html += '</ul>\n';
+          continue;
+        }
+        // ordered list block
+        if (/^\s*\d+\.\s+/.test(line)) {
+          html += '<ol>\n';
+          while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) {
+            html += '<li>' + inline(lines[i].replace(/^\s*\d+\.\s+/, '')) + '</li>\n';
+            i++;
+          }
+          html += '</ol>\n';
+          continue;
+        }
+        // blockquote
+        if (/^\s*>\s?/.test(line)) {
+          const buf = [];
+          while (i < lines.length && /^\s*>\s?/.test(lines[i])) {
+            buf.push(lines[i].replace(/^\s*>\s?/, ''));
+            i++;
+          }
+          html += '<blockquote>' + inline(buf.join(' ')) + '</blockquote>\n';
+          continue;
+        }
+        // blank line
+        if (!line.trim()) { i++; continue; }
+        // paragraph (merge until blank / block start)
+        const buf = [line];
+        i++;
+        while (i < lines.length && lines[i].trim() && !/^```/.test(lines[i].trim())
+               && !/^#{1,4}\s/.test(lines[i]) && !/^\s*[-*+]\s+/.test(lines[i])
+               && !/^\s*\d+\.\s+/.test(lines[i]) && !/^\s*>\s?/.test(lines[i])) {
+          buf.push(lines[i]); i++;
+        }
+        html += '<p>' + inline(buf.join(' ')) + '</p>\n';
+      }
+      return html;
+    }
+
+
 
 function closeMemory() {
       activeKey = null;
