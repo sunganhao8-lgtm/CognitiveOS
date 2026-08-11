@@ -64,7 +64,8 @@ for r in REGIONS:
     # Demo memory: no `path` field — demo should NOT link to real files,
     # because the demo is for strangers who do not have the repo.
     mem = tuple(
-        type(r.memory[0])(en, zh, "") for en, zh in demos.get(r.key, (("(demo)", "(示例)"),))
+        type(r.memory[0])(en, zh, "demo-file.md")
+        for en, zh in demos.get(r.key, (("(demo)", "(示例)"),))
     )
     DEMO_REGIONS.append(type(r)(
         key=r.key, color=r.color, ax=r.ax, ay=r.ay, lx=r.lx, ly=r.ly,
@@ -72,6 +73,34 @@ for r in REGIONS:
         brain_zh=r.brain_zh, desc_en=r.desc_en, desc_zh=r.desc_zh,
         role_en=r.role_en, role_zh=r.role_zh,
         memory=mem))
+
+
+def _demo_mem_content(title_zh: str) -> str:
+    """Demo placeholder content so visitors can experience the inline
+    file viewer even though demo memory has no real file paths."""
+    return f"""# {title_zh}
+
+## 这是什么
+
+这是 **CognitiveOS** 的演示记忆条目。在真实环境中，这里会显示主人在这个脑区反复强调的原则，以及对应的源文件内容。
+
+## 为什么可点击
+
+* 每条记忆都关联一个真实文件（如 `user/preferences.md`）
+* 点击后在页面内直接渲染 Markdown 预览
+* 不依赖网络，本地 `file://` 打开也能用
+
+## 代码块示例
+
+```python
+def hello():
+    return "CognitiveOS"
+```
+
+## 引用示例
+
+> 换管家、换电脑、换产品，你的偏好/项目/经验都不丢。
+"""
 
 
 def _regions_json(regions) -> str:
@@ -82,7 +111,15 @@ def _regions_json(regions) -> str:
             "brain_en": r.brain_en, "brain_zh": r.brain_zh,
             "desc_en": r.desc_en, "desc_zh": r.desc_zh,
             "role_en": r.role_en, "role_zh": r.role_zh,
-            "memory": [{"title_en": m.title_en, "title_zh": m.title_zh, "path": m.path} for m in r.memory],
+            "memory": [
+                {
+                    "title_en": m.title_en,
+                    "title_zh": m.title_zh,
+                    "path": m.path,
+                    "content": m.path if False else _demo_mem_content(m.title_zh),
+                }
+                for m in r.memory
+            ],
         }
         for r in regions
     ]

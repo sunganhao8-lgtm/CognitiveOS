@@ -421,6 +421,14 @@
     .qa-viewer .qv-meta {
       color: var(--ink-soft); font-size: 12px; margin-bottom: 10px;
     }
+
+    .memory-list a.mem-link {
+      display: inline-block; margin-left: 8px;
+      font-size: 11px; color: var(--blue);
+      text-decoration: underline dotted;
+      cursor: pointer;
+    }
+    .memory-list a.mem-link:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -586,6 +594,11 @@
     <div class="qa-viewer" id="qa-viewer" style="display:none">
       <button class="close" onclick="closeQA()" aria-label="close">×</button>
       <div class="qa-viewer-body" id="qa-viewer-body"></div>
+    </div>
+
+    <div class="qa-viewer" id="mem-viewer" style="display:none">
+      <button class="close" onclick="closeMem()" aria-label="close">×</button>
+      <div class="qa-viewer-body" id="mem-viewer-body"></div>
     </div>
 </div>
 
@@ -899,10 +912,10 @@
       const sys = lang === 'zh' ? r.label_zh : r.label_en;
       const func = lang === 'zh' ? r.desc_zh : r.desc_en;
       const role = lang === 'zh' ? r.role_zh : r.role_en;
-      const memItems = r.memory.map(m => {
+      const memItems = r.memory.map((m, i) => {
         const title = lang === 'zh' ? m.title_zh : m.title_en;
         const link = m.path
-          ? `<a href="./${m.path}" target="_blank">${m.path}</a>`
+          ? `<a href="javascript:void(0)" class="mem-link" onclick="openMemFile(${i}, '${m.path.replace(/'/g, "\\'")}')" title="${m.path}">${m.path}</a>`
           : '';
         return `<li>${title}${link}</li>`;
       }).join('');
@@ -922,6 +935,27 @@
     }
 
     
+    function openMemFile(idx, path) {
+      // find the region currently active and its memory entry
+      const r = REGIONS.find(x => x.key === activeKey);
+      if (!r) return;
+      const m = r.memory[idx];
+      if (!m) return;
+      const title = (lang === 'zh' ? m.title_zh : m.title_en) || path || '文件';
+      const content = m.content || '(内容未嵌入，请直接打开文件)';
+      const viewer = document.getElementById('mem-viewer');
+      document.getElementById('mem-viewer-body').innerHTML =
+        '<div class="qv-meta">' + escapeHtml(path || '') + '</div>' +
+        '<div class="qv-q">' + escapeHtml(title) + '</div>' +
+        '<div class="qv-a">' + mdToHtml(content) + '</div>';
+      viewer.style.display = 'block';
+      viewer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function closeMem() {
+      document.getElementById('mem-viewer').style.display = 'none';
+    }
+
     function renderQA(groupIdx, recIdx) {
       const groups = {{ qa_groups_json | safe }};
       const g = groups[groupIdx];

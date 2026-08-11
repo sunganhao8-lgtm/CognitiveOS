@@ -309,6 +309,22 @@ def render_dashboard(paths: Paths) -> Path:
     return out
 
 
+def _read_mem_content(rel_path: str) -> str:
+    """Read a workspace-relative .md file so the dashboard can render it
+    inline (no fetch — works over file://). Returns '' when missing."""
+    if not rel_path:
+        return ""
+    p = Path(rel_path)
+    if not p.exists():
+        return ""
+    try:
+        text = p.read_text(encoding="utf-8")
+    except OSError:
+        return ""
+    # cap at ~8KB so the HTML stays light; reader can open the real file
+    return text[:8000]
+
+
 def _regions_json(regions: tuple[Region, ...]) -> str:
     payload = [
         {
@@ -327,7 +343,12 @@ def _regions_json(regions: tuple[Region, ...]) -> str:
             "role_en": r.role_en,
             "role_zh": r.role_zh,
             "memory": [
-                {"title_en": m.title_en, "title_zh": m.title_zh, "path": m.path}
+                {
+                    "title_en": m.title_en,
+                    "title_zh": m.title_zh,
+                    "path": m.path,
+                    "content": _read_mem_content(m.path),
+                }
                 for m in r.memory
             ],
         }
