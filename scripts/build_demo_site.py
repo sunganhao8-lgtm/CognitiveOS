@@ -127,14 +127,14 @@ def _regions_json(regions) -> str:
 
 
 DEMO_PROJECTS = [
-    {"title": "Demo Project Alpha", "path": "#", "note": "example: an example project"},
-    {"title": "Demo Project Beta", "path": "#", "note": "example: another example"},
+    {"title": "示例项目 Alpha", "path": "#", "note": "示例：演示项目"},
+    {"title": "示例项目 Beta", "path": "#", "note": "示例：另一个演示项目"},
 ]
 
 DEMO_QA_GROUPS = [
     {
         "source": "hermes",
-        "display": "Hermes",
+        "display": "Hermes（本地管家）",
         "records": [
             {
                 "session_id": "demo", "question_id": 1, "timestamp": "2026-08-10",
@@ -161,7 +161,7 @@ DEMO_QA_GROUPS = [
     },
     {
         "source": "claude_code",
-        "display": "Claude Code",
+        "display": "Claude Code（编程 Agent）",
         "records": [
             {
                 "session_id": "demo-cc", "question_id": 10, "timestamp": "2026-08-09",
@@ -174,7 +174,7 @@ DEMO_QA_GROUPS = [
     },
     {
         "source": "codex",
-        "display": "Codex",
+        "display": "Codex（工程 Agent）",
         "records": [
             {
                 "session_id": "demo-cx", "question_id": 20, "timestamp": "2026-08-08",

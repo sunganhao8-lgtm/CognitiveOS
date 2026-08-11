@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -131,9 +131,9 @@
       font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase;
       color: var(--accent-deep); margin-bottom: 6px;
     }
-    .brain-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; }
+    .brain-wrap { position: relative; width: 100%; aspect-ratio: 1 / 1; overflow: visible; }
     .brain-wrap img.brain { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
-    .brain-wrap svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .brain-wrap svg.overlay { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
     .leader { fill: none; stroke-width: 1.8; opacity: 0.7; }
     .anchor { opacity: 0.9; }
     .callout text { cursor: pointer; }
@@ -440,18 +440,15 @@
         <button id="tab-dash" class="active" onclick="switchTab('dash')" data-i18n="tabDash">Dashboard</button>
         <button id="tab-about" onclick="switchTab('about')" data-i18n="tabAbout">About</button>
       </div>
-      <div class="lang-switch">
-        <button id="lang-en" class="active" onclick="setLang('en')">EN</button>
-        <button id="lang-zh" onclick="setLang('zh')">中文</button>
-      </div>
+      <!-- 语言切换已移除（只保留中文） -->
     </div>
   </header>
 
   <div class="identity">
     <div class="row">
-      <span><strong data-i18n="master">Master:</strong><span>{{ master_name }}</span></span>
-      <span><strong data-i18n="runtime">Runtime:</strong><span data-i18n="runtimeVal">v0.1 · local-first</span></span>
-      <span><strong data-i18n="butlers">Butlers:</strong><span data-i18n="butlersVal">Hermes · Codex · Claude</span></span>
+      <span><strong>主人:</strong><span>{{ master_name }}</span></span>
+      <span><strong>版本:</strong><span>v0.1 · 本地优先</span></span>
+      <span><strong>管家池:</strong><span>Hermes · Codex · Claude Code</span></span>
     </div>
     <div class="rules">
       {% for rule in rules %}<span>{{ rule }}</span>{% endfor %}
@@ -489,7 +486,7 @@
   <div id="view-dash">
     <main class="dash">
       <section class="brain-card">
-        <div class="title" data-i18n="brainTitle">Cognitive Map</div>
+        <div class="title" data-i18n="brainTitle">认知地图</div>
         <div class="brain-wrap">
           <img class="brain" src="assets/brain-source.svg" alt="" />
           <svg class="overlay" viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -504,14 +501,11 @@
               {% endif %}
               <circle class="anchor" cx="{{ r.ax }}" cy="{{ r.ay }}" r="14" fill="{{ r.color }}" />
               {% if r.lx < 200 %}
-              <text class="lbl" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
-              <text class="lbl zh-label" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
+              <text class="lbl" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_zh }}</text>
               {% elif r.lx > 800 %}
-              <text class="lbl" text-anchor="start" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
-              <text class="lbl zh-label" text-anchor="start" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
+              <text class="lbl" text-anchor="start" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_zh }}</text>
               {% else %}
-              <text class="lbl" text-anchor="middle" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_en }}</text>
-              <text class="lbl zh-label" text-anchor="middle" x="{{ r.lx }}" y="{{ r.ly - 8 }}" display="none">{{ r.label_zh }}</text>
+              <text class="lbl" text-anchor="middle" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_zh }}</text>
               {% endif %}
             </g>
             {% endfor %}
@@ -873,29 +867,22 @@
       },
     };
 
-    let lang = (navigator.language || 'en').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+    let lang = 'zh';
     let activeKey = null;
 
-    function t(k) { return (I18N[lang] && I18N[lang][k]) || I18N.en[k] || k; }
+    function t(k) { return (I18N.zh && I18N.zh[k]) || (I18N.en && I18N.en[k]) || k; }
 
-    function setLang(next) {
-      lang = next;
-      document.documentElement.lang = next === 'zh' ? 'zh-CN' : 'en';
-      document.getElementById('lang-en').classList.toggle('active', next === 'en');
-      document.getElementById('lang-zh').classList.toggle('active', next === 'zh');
+    function applyI18n() {
+      // single-language mode: replace every data-i18n element with its
+      // Chinese value once on DOMContentLoaded
       document.querySelectorAll('[data-i18n]').forEach(el => {
-        const k = el.getAttribute('data-i18n');
-        if (I18N[lang][k] !== undefined) el.textContent = t(k);
+        el.textContent = t(el.getAttribute('data-i18n'));
       });
-      document.querySelectorAll('.callout').forEach(g => {
-        const r = REGIONS.find(x => x.key === g.dataset.region);
-        if (!r) return;
-        const zh = next === 'zh';
-        g.querySelectorAll('.lbl')[0].setAttribute('display', zh ? 'none' : 'inline');
-        g.querySelectorAll('.lbl')[1].setAttribute('display', zh ? 'inline' : 'none');
-      });
+      document.documentElement.lang = 'zh-CN';
       if (activeKey) renderMemory(activeKey);
     }
+
+    document.addEventListener('DOMContentLoaded', applyI18n);
 
     function switchTab(tab) {
       document.getElementById('tab-dash').classList.toggle('active', tab === 'dash');

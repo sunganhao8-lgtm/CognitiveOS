@@ -116,7 +116,7 @@ REGIONS: tuple[Region, ...] = (
         key="hippocampus",
         color="#16A34A",
         ax=560, ay=520,
-        lx=900, ly=440,
+        lx=870, ly=440,
         label_en="Sources",
         label_zh="原始数据",
         brain_en="Hippocampus",
@@ -289,20 +289,20 @@ def render_dashboard(paths: Paths) -> Path:
     template = env.get_template("dashboard.html.j2")
 
     html = template.render(
-        regions=REGIONS,
-        regions_json=_regions_json(REGIONS),
-        projects=projects,
-        qa_groups=qa_groups,
-        qa_groups_json=json.dumps(qa_groups, ensure_ascii=False),
-        master_name="Lin's Cognitive Layer",
-        rules=[
-            "叫「品牌叫[REDACTED]」",
-            "AI 是核心杠杆",
-            "店铺处于筹备阶段",
-            "简历 隐私红线",
-            "hands-off 模式",
-        ],
-    )
+            regions=REGIONS,
+            regions_json=_regions_json(REGIONS),
+            projects=projects,
+            qa_groups=qa_groups,
+            qa_groups_json=json.dumps(qa_groups, ensure_ascii=False),
+            master_name="[REDACTED]",
+            rules=[
+                "品牌叫[REDACTED]",
+                "AI 是核心杠杆",
+                "店铺处于筹备阶段",
+                "简历 隐私红线",
+                "hands-off 模式",
+            ],
+        )
 
     out = paths.dashboard_index
     out.write_text(html, encoding="utf-8")
