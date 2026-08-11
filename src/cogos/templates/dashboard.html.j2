@@ -205,13 +205,16 @@
        HERO — 大标题 / 大脑图 / 右侧详情 三段 1:2:1 (用户反馈#1).
        ============================================================ */
     .hero {
-      padding: 36px 28px 12px;
+      padding: 28px 28px 20px;
       display: grid;
-      grid-template-columns: 1fr 2fr 1fr;
-      gap: 24px; align-items: start;
+      grid-template-columns: 1.2fr 2fr 1fr;
+      gap: 28px; align-items: center;
       max-width: 1500px; margin: 0 auto;
+      min-height: 200px;
     }
-    @media (max-width: 1100px) { .hero { grid-template-columns: 1fr; } }
+    @media (max-width: 1100px) { .hero { grid-template-columns: 1fr; min-height: 0; } }
+    .hero-center { display: flex; align-items: center; justify-content: center; }
+    .flow-mini { width: 100%; max-width: 600px; height: auto; }
 
     .hero-left {
       /* 左侧栏: 大标题 + 副标 */
@@ -805,7 +808,47 @@
       <h1 class="hero-title" data-i18n="heroTitle">AI 是你的管家，CognitiveOS 保管你的认知</h1>
       <p class="hero-sub" data-i18n="heroSub">换管家、换电脑、换产品，你的偏好/项目/经验都不丢。</p>
     </div>
-    <div class="hero-center"></div>
+    <div class="hero-center">
+        <svg class="flow-mini" viewBox="0 0 600 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <marker id="arr" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,0 L8,4 L0,8 z" fill="#C8B89A"/>
+            </marker>
+          </defs>
+          <g font="700 9px/1 -apple-system, PingFang SC, sans-serif" fill="#2B1B12" text-anchor="middle">
+            <g><rect x="6" y="22" width="80" height="44" rx="10" fill="#FAF6F0" stroke="#E4D9C9"/>
+              <text x="46" y="42">丘脑</text>
+              <text x="46" y="55" fill="#6B5B4E" font-size="7">接入</text>
+            </g>
+            <g><rect x="100" y="22" width="80" height="44" rx="10" fill="#FAF6F0" stroke="#E4D9C9"/>
+              <text x="140" y="42">海马体</text>
+              <text x="140" y="55" fill="#6B5B4E" font-size="7">留档</text>
+            </g>
+            <g><rect x="194" y="22" width="80" height="44" rx="10" fill="#FAF6F0" stroke="#E4D9C9"/>
+              <text x="234" y="42">皮层</text>
+              <text x="234" y="55" fill="#6B5B4E" font-size="7">提炼</text>
+            </g>
+            <g><rect x="288" y="22" width="80" height="44" rx="10" fill="#FAF6F0" stroke="#E4D9C9"/>
+              <text x="328" y="42">前额叶</text>
+              <text x="328" y="55" fill="#6B5B4E" font-size="7">路由</text>
+            </g>
+            <g><rect x="382" y="22" width="80" height="44" rx="10" fill="#FAF6F0" stroke="#E4D9C9"/>
+              <text x="422" y="42">胼胝体</text>
+              <text x="422" y="55" fill="#6B5B4E" font-size="7">交付</text>
+            </g>
+            <g><rect x="476" y="22" width="80" height="44" rx="10" fill="#FAF6F0" stroke="#E4D9C9"/>
+              <text x="516" y="42">Agent</text>
+              <text x="516" y="55" fill="#6B5B4E" font-size="7">执行</text>
+            </g>
+            <line x1="86" y1="44" x2="100" y2="44" stroke="#C8B89A" stroke-width="1.5" marker-end="url(#arr)"/>
+            <line x1="180" y1="44" x2="194" y2="44" stroke="#C8B89A" stroke-width="1.5" marker-end="url(#arr)"/>
+            <line x1="274" y1="44" x2="288" y2="44" stroke="#C8B89A" stroke-width="1.5" marker-end="url(#arr)"/>
+            <line x1="368" y1="44" x2="382" y2="44" stroke="#C8B89A" stroke-width="1.5" marker-end="url(#arr)"/>
+            <line x1="462" y1="44" x2="476" y2="44" stroke="#C8B89A" stroke-width="1.5" marker-end="url(#arr)"/>
+            <text x="300" y="86" fill="#9A8B7B" font-size="8" font-weight="500">主人发起一次提问时，7 个脑区按此顺序协同</text>
+          </g>
+        </svg>
+      </div>
     <div class="hero-right">
       <div class="tip">
         <b>使用提示</b>
