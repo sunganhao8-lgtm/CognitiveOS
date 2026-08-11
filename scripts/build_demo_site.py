@@ -93,11 +93,60 @@ DEMO_PROJECTS = [
     {"title": "Demo Project Beta", "path": "#", "note": "example: another example"},
 ]
 
-DEMO_QA = [
-    {"session_id": "demo", "question_id": 1, "question": "DEMO: how does CognitiveOS discover my agents?", "answer": "", "timestamp": "2026-08-10", "detail_link": "#"},
-    {"session_id": "demo", "question_id": 2, "question": "DEMO: what does the brain map do?", "answer": "", "timestamp": "2026-08-09", "detail_link": "#"},
-    {"session_id": "demo", "question_id": 3, "question": "DEMO: can I move my user/ layer to another machine?", "answer": "", "timestamp": "2026-08-08", "detail_link": "#"},
-    # placeholder URLs — demo shows what the dashboard WOULD look like with real data
+DEMO_QA_GROUPS = [
+    {
+        "source": "hermes",
+        "display": "Hermes",
+        "records": [
+            {
+                "session_id": "demo", "question_id": 1, "timestamp": "2026-08-10",
+                "question": "DEMO: how does CognitiveOS discover my agents?",
+                "answer": "It scans this machine for installed agents (Hermes, Claude Code, Codex) and shows what it found on the cognitive map.",
+                "question_full": "DEMO: how does CognitiveOS discover my agents?",
+                "answer_full": "It scans this machine for installed agents (Hermes, Claude Code, Codex) and shows what it found on the cognitive map.",
+            },
+            {
+                "session_id": "demo", "question_id": 2, "timestamp": "2026-08-09",
+                "question": "DEMO: can I move my user/ layer to another machine?",
+                "answer": "Yes — `cogos export-user` packs everything into one archive; `cogos import-user` restores it on the new machine.",
+                "question_full": "DEMO: can I move my user/ layer to another machine?",
+                "answer_full": "Yes — `cogos export-user` packs everything into one archive; `cogos import-user` restores it on the new machine.",
+            },
+            {
+                "session_id": "demo", "question_id": 3, "timestamp": "2026-08-08",
+                "question": "DEMO: what does the brain map do?",
+                "answer": "It is the cognitive map — each region is a real subsystem, click to see what it remembers.",
+                "question_full": "DEMO: what does the brain map do?",
+                "answer_full": "It is the cognitive map — each region is a real subsystem, click to see what it remembers.",
+            },
+        ],
+    },
+    {
+        "source": "claude_code",
+        "display": "Claude Code",
+        "records": [
+            {
+                "session_id": "demo-cc", "question_id": 10, "timestamp": "2026-08-09",
+                "question": "DEMO: please review the changes in TASK-001",
+                "answer": "Reviewed. The navigation bar is fixed; the layout no longer overflows on narrow screens.",
+                "question_full": "DEMO: please review the changes in TASK-001",
+                "answer_full": "Reviewed. The navigation bar is fixed; the layout no longer overflows on narrow screens.",
+            },
+        ],
+    },
+    {
+        "source": "codex",
+        "display": "Codex",
+        "records": [
+            {
+                "session_id": "demo-cx", "question_id": 20, "timestamp": "2026-08-08",
+                "question": "DEMO: which SQL pattern should I use?",
+                "answer": "ROW_NUMBER() with a 30-day window is the most portable; LATERAL is cleaner on 19c+.",
+                "question_full": "DEMO: which SQL pattern should I use?",
+                "answer_full": "ROW_NUMBER() with a 30-day window is the most portable; LATERAL is cleaner on 19c+.",
+            },
+        ],
+    },
 ]
 
 
@@ -110,7 +159,8 @@ def main() -> int:
         regions=DEMO_REGIONS,
         regions_json=_regions_json(DEMO_REGIONS),
         projects=DEMO_PROJECTS,
-        recent_qa=DEMO_QA,
+        qa_groups=DEMO_QA_GROUPS,
+        qa_groups_json=json.dumps(DEMO_QA_GROUPS, ensure_ascii=False),
         master_name="示例主人 (Demo)",
         rules=[
             "示例规则：先行动，不可逆才确认",

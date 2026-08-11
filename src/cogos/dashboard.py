@@ -242,23 +242,45 @@ def render_dashboard(paths: Paths) -> Path:
             link = f"./user/{rel_path}" if local_md.exists() else f"./user/projects/{rel_path}"
             projects.append({"title": title, "path": link, "note": note})
 
-    # Recent Q/A: most recent 6 entries from user/conversations/hermes-*.jsonl.
-    qa_records: list[dict] = []
+    # Recent Q/A: group by agent source (hermes / codex / claude_code),
+    # latest 3 per agent. Each entry carries the FULL question + answer
+    # text so the dashboard can render the conversation inline (no fetch
+    # needed — works over file://).
+    qa_groups: list[dict] = []
     conv_dir = user_dir / "conversations"
     if conv_dir.exists():
-        for f in sorted(conv_dir.glob("hermes-*.jsonl"), reverse=True):
+        for f in sorted(conv_dir.glob("*.jsonl")):
+            source = f.stem.split("-")[0]  # "hermes", "codex", ...
+            if source in ("details",):
+                continue
+            records: list[dict] = []
             for line in f.read_text(encoding="utf-8").splitlines():
                 if not line.strip():
                     continue
-                qa_records.append(json.loads(line))
-    qa_records.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
-    for r in qa_records:
-        sid = r.get("session_id", "")
-        qid = r.get("question_id", 0)
-        ts = r.get("timestamp", "")
-        # detail .md lives under user/conversations/details/
-        r["detail_link"] = f"./user/conversations/details/{ts[:10]}_{sid[:8]}_q{qid}.md"
-    recent_qa = qa_records[:6]
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                records.append(rec)
+            records.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
+            if not records:
+                continue
+            # embed full text (trimmed) so inline rendering works offline
+            for r in records[:3]:
+                r.setdefault("source", source)
+                r["question_full"] = r.get("question", "")[:1200]
+                r["answer_full"] = r.get("answer", "")[:2000]
+            qa_groups.append(
+                {
+                    "source": source,
+                    "display": {"hermes": "Hermes", "codex": "Codex", "claude_code": "Claude Code"}.get(
+                        source, source
+                    ),
+                    "records": records[:3],
+                }
+            )
+        # hermes first, then others
+        qa_groups.sort(key=lambda g: 0 if g["source"] == "hermes" else 1)
 
     env = Environment(
         loader=FileSystemLoader(str(TEMPLATES_DIR)),
@@ -270,7 +292,8 @@ def render_dashboard(paths: Paths) -> Path:
         regions=REGIONS,
         regions_json=_regions_json(REGIONS),
         projects=projects,
-        recent_qa=recent_qa,
+        qa_groups=qa_groups,
+        qa_groups_json=json.dumps(qa_groups, ensure_ascii=False),
         master_name="Lin's Cognitive Layer",
         rules=[
             "叫「品牌叫[REDACTED]」",

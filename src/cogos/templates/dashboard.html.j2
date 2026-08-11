@@ -330,7 +330,73 @@
     .flow-diagram .arrow-label { font: 500 10px/1.2 -apple-system, sans-serif; fill: var(--ink-soft); }
     .flow-diagram .legend { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: var(--ink-soft); }
     .flow-diagram .legend b { color: var(--ink); }
-  </style>
+  
+    /* ---- lower strip (projects + qa groups + commands) ---- */
+    .lower-strip {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) minmax(340px, 1.4fr) minmax(220px, 1fr);
+      gap: 16px;
+      padding: 16px 24px 20px;
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+    @media (max-width: 1100px) { .lower-strip { grid-template-columns: 1fr; } }
+
+    /* right column memory panel */
+    .right-col { min-width: 0; }
+    .memory-panel { min-height: 380px; display: flex; flex-direction: column; }
+    .memory-panel .body { flex: 1; overflow-y: auto; }
+    .memory-panel .close { align-self: flex-end; }
+
+    /* qa groups */
+    .qa-panel { max-height: 460px; overflow-y: auto; }
+    .qa-group { margin-bottom: 12px; }
+    .qa-group:last-child { margin-bottom: 0; }
+    .qa-group-head {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 6px;
+    }
+    .qa-agent {
+      font-size: 12px; font-weight: 700; letter-spacing: 0.4px;
+      color: var(--blue); text-transform: uppercase;
+      padding: 2px 10px; background: rgba(27,58,110,0.08);
+      border-radius: 999px;
+    }
+    .qa-count {
+      font-size: 11px; color: var(--ink-soft);
+      background: var(--card-2); padding: 1px 8px; border-radius: 999px;
+    }
+    .qa-list li a { cursor: pointer; }
+
+    /* inline QA viewer */
+    .qa-viewer {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin: 0 24px 24px;
+      max-width: 1500px;
+      margin-left: auto; margin-right: auto;
+      box-shadow: 0 6px 24px rgba(43,27,18,0.08);
+    }
+    .qa-viewer .close {
+      float: right; cursor: pointer; color: var(--ink-soft); font-size: 18px;
+      background: none; border: 0; line-height: 1;
+    }
+    .qa-viewer .qv-q {
+      font-weight: 700; color: var(--blue); font-size: 15px;
+      padding: 8px 12px; background: rgba(27,58,110,0.06);
+      border-radius: 8px; margin: 0 0 12px;
+      white-space: pre-wrap;
+    }
+    .qa-viewer .qv-a {
+      color: #4A3A2C; font-size: 14px; white-space: pre-wrap;
+      padding: 4px 2px;
+    }
+    .qa-viewer .qv-meta {
+      color: var(--ink-soft); font-size: 12px; margin-bottom: 10px;
+    }
+</style>
 </head>
 <body>
   <header>
@@ -420,62 +486,82 @@
         </div>
       </section>
 
+      <!-- right column: working memory (detail of the clicked region) -->
       <section class="right-col">
-        <div class="panel">
-          <h2 data-i18n="projects">Active projects <span class="count">{{ projects | length }}</span></h2>
-          {% if projects %}
-          <ul class="project-list">
-            {% for p in projects %}
-            <li><a href="{{ p.path }}">
-              <span>{{ p.title }}</span>
-              {% if p.note %}<span class="note">{{ p.note }}</span>{% endif %}
-            </a></li>
-            {% endfor %}
-          </ul>
-          {% else %}
-          <p style="color:var(--ink-soft);font-size:13px" data-i18n="projectsEmpty">No projects yet.</p>
-          {% endif %}
+        <div class="panel memory-panel" id="memory-panel">
+          <h2 data-i18n="memoryTitle">Working memory</h2>
+          <p class="empty" id="memory-empty" data-i18n="memoryEmpty">Click a region on the cognitive map to load its working memory.</p>
+          <div class="body" id="memory-body"></div>
         </div>
+      </section>
+    </main>
 
-        <div class="panel">
-          <h2 data-i18n="qa">Recent Q&amp;A <span class="count">{{ recent_qa | length }}</span></h2>
-          {% if recent_qa %}
+    <!-- lower strip: projects + per-agent conversations + commands -->
+    <div class="lower-strip">
+      <div class="panel">
+        <h2 data-i18n="projects">Active projects <span class="count">{{ projects | length }}</span></h2>
+        {% if projects %}
+        <ul class="project-list">
+          {% for p in projects %}
+          <li><a href="{{ p.path }}">
+            <span>{{ p.title }}</span>
+            {% if p.note %}<span class="note">{{ p.note }}</span>{% endif %}
+          </a></li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p style="color:var(--ink-soft);font-size:13px" data-i18n="projectsEmpty">No projects yet.</p>
+        {% endif %}
+      </div>
+
+      <div class="panel qa-panel">
+        <h2 data-i18n="qa">Recent Q&amp;A</h2>
+        {% if qa_groups %}
+        {% for g in qa_groups %}
+        {% set g_idx = loop.index0 %}
+        <div class="qa-group">
+          <div class="qa-group-head">
+            <span class="qa-agent">{{ g.display }}</span>
+            <span class="qa-count">{{ g.records | length }}</span>
+          </div>
           <ul class="qa-list">
-            {% for q in recent_qa %}
+            {% for q in g.records %}
             {% set q_text = q.question | replace('\n', ' ') %}
-            {% set q_short = q_text | truncate(90, True, '…') %}
+            {% set q_short = q_text | truncate(70, True, '…') %}
             <li>
-              <a href="{{ q.detail_link }}" target="_blank" title="{{ q.timestamp }}">
+              <a href="javascript:void(0)" class="qa-item" data-idx="{{ loop.index0 }}"
+                 data-group="{{ g_idx }}" title="{{ q.timestamp }}"
+                 onclick="renderQA({{ g_idx }}, {{ loop.index0 }})">
                 <span class="q">{{ q_short }}</span>
                 <span class="ts">{{ q.timestamp[:10] }}</span>
               </a>
             </li>
             {% endfor %}
           </ul>
-          {% else %}
-          <p style="color:var(--ink-soft);font-size:13px" data-i18n="qaEmpty">No conversations yet.</p>
-          {% endif %}
         </div>
+        {% endfor %}
+        {% else %}
+        <p style="color:var(--ink-soft);font-size:13px" data-i18n="qaEmpty">No conversations yet.</p>
+        {% endif %}
+      </div>
 
-        <div class="panel">
-          <h2 data-i18n="tools">Commands</h2>
-          <div class="tools">
-            <span><span class="label" data-i18n="tool1">brief</span>cogos brief --agent hermes</span>
-            <span><span class="label" data-i18n="tool2">fit</span>cogos persona fit --seed N</span>
-            <span><span class="label" data-i18n="tool3">verify</span>cogos verify</span>
-            <span><span class="label" data-i18n="tool4">export</span>cogos export-user --to file.tar.gz</span>
-          </div>
+      <div class="panel">
+        <h2 data-i18n="tools">Commands</h2>
+        <div class="tools">
+          <span><span class="label" data-i18n="tool1">brief</span>cogos brief --agent hermes</span>
+          <span><span class="label" data-i18n="tool2">fit</span>cogos persona fit --seed N</span>
+          <span><span class="label" data-i18n="tool3">verify</span>cogos verify</span>
+          <span><span class="label" data-i18n="tool4">export</span>cogos export-user --to file.tar.gz</span>
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
 
-    <section class="memory-strip" id="memory">
-      <button class="close" onclick="closeMemory()" aria-label="close">×</button>
-      <h2 data-i18n="memoryTitle">Working memory</h2>
-      <p class="empty" id="memory-empty" data-i18n="memoryEmpty">Click a region on the cognitive map to load its working memory.</p>
-      <div class="body" id="memory-body"></div>
-    </section>
-  </div>
+    <!-- inline QA viewer (renders the clicked conversation) -->
+    <div class="qa-viewer" id="qa-viewer" style="display:none">
+      <button class="close" onclick="closeQA()" aria-label="close">×</button>
+      <div class="qa-viewer-body" id="qa-viewer-body"></div>
+    </div>
+</div>
 
   <!-- ============ ABOUT TAB ============ -->
   <div class="about-wrap" id="view-about">
@@ -648,6 +734,7 @@
         brainTitle: "Cognitive Map",
         projects: "Active projects", projectsEmpty: "No projects yet.",
         qa: "Recent Q&A", qaEmpty: "No conversations yet.",
+        qaSession: "session",
         tools: "Commands",
         tool1: "brief", tool2: "fit", tool3: "verify", tool4: "export",
         memoryTitle: "Working memory",
@@ -712,6 +799,7 @@
         brainTitle: "认知地图",
         projects: "活跃项目", projectsEmpty: "暂无项目。",
         qa: "最近的问答", qaEmpty: "暂无对话记录。",
+        qaSession: "会话",
         tools: "可用命令",
         tool1: "入职", tool2: "拟合", tool3: "校验", tool4: "导出",
         memoryTitle: "工作记忆",
@@ -829,7 +917,39 @@
       document.querySelectorAll('.callout').forEach(g => g.classList.toggle('selected', g.dataset.region === key));
     }
 
-    function closeMemory() {
+    
+    function renderQA(groupIdx, recIdx) {
+      const groups = {{ qa_groups_json | safe }};
+      const g = groups[groupIdx];
+      if (!g) return;
+      const rec = g.records[recIdx];
+      if (!rec) return;
+      const viewer = document.getElementById('qa-viewer');
+      const body = document.getElementById('qa-viewer-body');
+      const source = g.display || g.source;
+      body.innerHTML = `
+        <div class="qv-meta">${source} · ${rec.timestamp || ''} · ${t('qaSession')} ${rec.session_id || ''}</div>
+        <div class="qv-q">${escapeHtml(rec.question_full || rec.question || '')}</div>
+        <div class="qv-a">${escapeHtml(rec.answer_full || rec.answer || '(no answer)')}</div>
+      `;
+      viewer.style.display = 'block';
+      viewer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function closeQA() {
+      document.getElementById('qa-viewer').style.display = 'none';
+      document.getElementById('qa-viewer-body').innerHTML = '';
+    }
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+function closeMemory() {
       activeKey = null;
       document.getElementById('memory-body').classList.remove('shown');
       document.getElementById('memory-body').innerHTML = '';
