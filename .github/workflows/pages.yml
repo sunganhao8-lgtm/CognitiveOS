@@ -29,6 +29,26 @@ jobs:
           pip install jinja2
           python scripts/build_demo_site.py
 
+      - name: Verify no real-data leaks into published artifact
+        run: |
+          # Defensive check: the public demo must never contain real-user
+          # data. We assert that the demo HTML does NOT include any of the
+          # canonical master profile markers (they live in user/manifest.md
+          # only). If this fails, somebody wired up real data into the demo.
+          if grep -qi "[REDACTED]" demo/index.html; then
+            echo "ERROR: demo/index.html contains master profile ('[REDACTED]'). Aborting." >&2
+            exit 1
+          fi
+          if grep -qi "[REDACTED]" demo/index.html; then
+            echo "ERROR: demo/index.html contains private brand name ('[REDACTED]'). Aborting." >&2
+            exit 1
+          fi
+          if grep -qi "上海[REDACTED]\|[REDACTED]" demo/index.html; then
+            echo "ERROR: demo/index.html contains private company name. Aborting." >&2
+            exit 1
+          fi
+          echo "privacy check passed: demo contains only fake data"
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

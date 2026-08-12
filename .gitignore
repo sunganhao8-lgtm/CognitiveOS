@@ -27,3 +27,6 @@ user/rules/*.json
 user/verify/
 # Generated per-QA detail .md files — derived from private conversations
 user/conversations/details/
+
+# Local symlinks to external skill libraries (e.g. emilkowalski/skills)
+.skills-emil/
