@@ -1,16 +1,16 @@
-"""Shared multi-agent workspace: layout, locks, and activity scan.
+"""Shared multi-Agent 工作区: layout, 锁们, 和 activity 扫描.
 
-P0 of docs/shared-workspace-design.md: every agent works inside one shared
-root directory while CognitiveOS keeps runtime state under ``<root>/.cogos/``::
+P0 的 docs/shared-工作区-design.md: 每个 Agent works inside one shared
+root 目录 while CognitiveOS keeps runtime state under ``<root>/.cogos/``::
 
     <root>/.cogos/
-    ├── tasks/        task registry (one JSON file per task)
-    ├── locks/        file locks (acquire / release / status)
-    └── messages/     cross-agent mailbox (TO_<agent_id>/)
+    ├── 任务们/        任务 registry (one JSON 文件 per 任务)
+    ├── 锁们/        文件 锁们 (获取 / 释放 / 状态)
+    └── 消息们/     cross-Agent mailbox (TO_<agent_id>/)
 
-This module owns the ``Workspace`` layout plus the ``workspace`` and ``lock``
-command groups. The task registry and the mailbox live in ``tasks.py`` and
-``inbox.py`` respectively.
+本模块 owns 该 ``工作区`` layout plus 该 ``工作区`` 和 ``锁``
+command groups. 任务 registry 和 该 mailbox live 在 ``任务们.py`` 和
+``收件箱.py`` respectively.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_WORKSPACE_ROOT = Path("D:/GitHub_Project/SharedWorkspace")
-"""Default shared root when neither ``--root`` nor ``$COGOS_WORKSPACE`` is given."""
+"""默认 shared root 当 neither ``--root`` nor ``$COGOS_WORKSPACE`` 是 given."""
 
 ENV_ROOT = "COGOS_WORKSPACE"
 ENV_AGENT = "COGOS_AGENT"
@@ -35,16 +35,16 @@ LOCK_SUFFIX = ".lock"
 
 
 class LockError(Exception):
-    """Raised when a lock cannot be released or inspected."""
+    """Raised 当 a 锁 不能 为 released 或 inspected."""
 
 
 class LockConflict(LockError):
-    """Raised when a lock is already held by another agent."""
+    """Raised 当 a 锁 是 already held 通过 another Agent."""
 
 
 @dataclass(frozen=True)
 class Workspace:
-    """A shared workspace root and its ``.cogos`` runtime directories."""
+    """A shared 工作区 root 和 its ``.cogos`` runtime 目录们."""
 
     root: Path
 
@@ -65,15 +65,15 @@ class Workspace:
         return self.cogos_dir / "messages"
 
     def ensure(self) -> None:
-        """Create every directory CognitiveOS writes to."""
+        """创建 每个 目录 CognitiveOS 写入 到."""
         for d in (self.cogos_dir, self.tasks_dir, self.locks_dir, self.messages_dir):
             d.mkdir(parents=True, exist_ok=True)
 
     def resolve_target(self, rel: str) -> Path:
-        """Normalize a workspace-relative path and make sure it stays inside the root.
+        """Normalize a 工作区-relative 路径 和 make sure it stays inside 该 root.
 
-        Rejects absolute paths, drive letters and ``..`` traversal so an agent
-        can never lock or reference a file outside the shared workspace.
+        Rejects absolute 路径们, drive letters 和 ``..`` traversal so 一个 Agent
+        可以 从不 锁 或 reference 一个文件 outside 该 shared 工作区.
         """
         if (
             not rel
@@ -81,15 +81,15 @@ class Workspace:
             or ":" in rel
             or Path(rel).is_absolute()
         ):
-            raise ValueError(f"invalid workspace-relative path: {rel!r}")
+            raise ValueError(f"无效的工作区相对路径：{rel!r}")
         parts = [p for p in rel.replace("\\", "/").split("/") if p]
         if not parts or any(p in (".", "..") for p in parts):
-            raise ValueError(f"invalid workspace-relative path: {rel!r}")
+            raise ValueError(f"无效的工作区相对路径：{rel!r}")
         return self.root.joinpath(*parts)
 
 
 def resolve_root(root: Path | None) -> Path:
-    """Pick the shared workspace root: ``--root`` flag, then ``$COGOS_WORKSPACE``,
+    """Pick 该 shared 工作区 root: ``--root`` flag, then ``$COGOS_WORKSPACE``,
     then the default location."""
     if root is not None:
         return Path(root).resolve()
@@ -100,20 +100,20 @@ def resolve_root(root: Path | None) -> Path:
 
 
 def default_agent() -> str:
-    """The agent id used when the caller does not say who they are."""
+    """Agent id 使用 当 该 caller 做 不 say who they 是."""
     return os.environ.get(ENV_AGENT) or "cogos"
 
 
 def now_iso(now: datetime | None = None) -> str:
-    """UTC ISO-8601 timestamp, seconds precision (injectable for tests)."""
+    """UTC ISO-8601 timestamp, seconds precision (injectable 用于 测试)."""
     return (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
 
 
 def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
-    """Write JSON atomically (tmp file + ``os.replace``).
+    """写入 JSON atomically (tmp 文件 + ``os.replace``).
 
-    Concurrent readers never see a half-written file, and ``os.replace`` is
-    safe on Windows even when the destination already exists.
+    Concurrent readers 从不 see a half-written 文件, 和 ``os.replace`` 是
+    safe 在 Windows even 当 该 destination already exists.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
@@ -122,7 +122,7 @@ def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def init_workspace(ws: Workspace) -> dict[str, Any]:
-    """Create the ``.cogos`` skeleton and report what exists."""
+    """创建 该 ``.cogos`` skeleton 和 report what exists."""
     ws.ensure()
     return {
         "root": str(ws.root),
@@ -130,13 +130,13 @@ def init_workspace(ws: Workspace) -> dict[str, Any]:
     }
 
 
-# --- file locks -------------------------------------------------------------
+# --- 文件 锁们 -------------------------------------------------------------
 
 
 def lock_file_for(ws: Workspace, rel: str) -> Path:
-    """Map a workspace-relative file path to its lock file under ``.cogos/locks/``.
+    """Map a 工作区-relative 文件 路径 到 its 锁 文件 under ``.cogos/锁们/``.
 
-    ``repo1/src/index.html`` -> ``.cogos/locks/repo1/src/index.html.lock``
+    ``repo1/src/index.html`` -> ``.cogos/锁们/repo1/src/index.html.锁``
     """
     target = ws.resolve_target(rel)
     parts = target.relative_to(ws.root).parts
@@ -151,10 +151,10 @@ def acquire_lock(
     force: bool = False,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Take an exclusive lock on a workspace-relative file.
+    """Take an exclusive 锁 在 a 工作区-relative 文件.
 
-    Raises :class:`LockConflict` when the lock is already held (unless
-    ``force`` is set, which breaks the existing lock first).
+    抛出 :class:`LockConflict` 当 该 锁 是 already held (unless
+    ``force`` 是 set, which breaks 该 existing 锁 第一).
     """
     ws.ensure()
     holder = holder or default_agent()
@@ -165,8 +165,8 @@ def acquire_lock(
         except (json.JSONDecodeError, OSError):
             existing = {}
         raise LockConflict(
-            f"lock on {rel!r} already held by {existing.get('holder', '?')} "
-            f"since {existing.get('acquired_at', '?')} (use --force to break)"
+            f"{rel!r} 上的锁已被 {existing.get('holder', '?')} 持有，"
+            f"自 {existing.get('acquired_at', '?')} 起（用 --force 强制破锁）"
         )
     lp.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -185,14 +185,14 @@ def release_lock(
     holder: str | None = None,
     force: bool = False,
 ) -> dict[str, Any]:
-    """Release a lock previously taken with :func:`acquire_lock`.
+    """释放 a 锁 previously taken 使用 :func:`acquire_lock`.
 
-    Only the holder may release, unless ``force`` is set.
+    Only 该 holder 可能 释放, unless ``force`` 是 set.
     """
     holder = holder or default_agent()
     lp = lock_file_for(ws, rel)
     if not lp.exists():
-        raise LockError(f"no lock on {rel!r}")
+        raise LockError(f"{rel!r} 上没有锁")
     if not force:
         try:
             existing = json.loads(lp.read_text(encoding="utf-8"))
@@ -200,14 +200,14 @@ def release_lock(
             existing = {}
         if existing.get("holder") != holder:
             raise LockError(
-                f"lock on {rel!r} is held by {existing.get('holder', '?')}, not {holder}"
+                f"{rel!r} 上的锁由 {existing.get('holder', '?')} 持有，不是 {holder}"
             )
     lp.unlink()
     return {"target": rel, "holder": holder, "released": True}
 
 
 def list_locks(ws: Workspace) -> list[dict[str, Any]]:
-    """List every lock currently held in the workspace."""
+    """列出 每个 锁 当前 held 在 该 工作区."""
     out: list[dict[str, Any]] = []
     if not ws.locks_dir.exists():
         return out
@@ -222,11 +222,11 @@ def list_locks(ws: Workspace) -> list[dict[str, Any]]:
     return out
 
 
-# --- activity scan (P1, simple implementation) ------------------------------
+# --- activity 扫描 (P1, simple implementation) ------------------------------
 
 
 def _git(repo: Path, *args: str) -> str | None:
-    """Run a git command inside a repo; return stdout or None on any failure."""
+    """运行 a git command inside a repo; 返回 stdout 或 None 在 任何 failure."""
     try:
         proc = subprocess.run(
             ["git", "-C", str(repo), *args],
@@ -238,7 +238,7 @@ def _git(repo: Path, *args: str) -> str | None:
 
 
 def _scan_repo(repo: Path, since_hours: int) -> dict[str, Any]:
-    """Infer one repo's recent activity: branch, last commit, dirty files and
+    """Infer one repo's recent activity: branch, 最后 commit, dirty 文件们 和
     files touched within the window (zero-invasion: reads git + mtimes only)."""
     cutoff = datetime.now(timezone.utc) - timedelta(hours=since_hours)
     recent: list[tuple[float, str]] = []
@@ -264,7 +264,7 @@ def _scan_repo(repo: Path, since_hours: int) -> dict[str, Any]:
 
 
 def scan_workspace(ws: Workspace, since_hours: int = 24) -> dict[str, Any]:
-    """Scan every git repository directly under the workspace root."""
+    """扫描 每个 git repository 直接 under 该 工作区 root."""
     repos: list[dict[str, Any]] = []
     if ws.root.exists():
         for child in sorted(ws.root.iterdir()):
@@ -275,7 +275,7 @@ def scan_workspace(ws: Workspace, since_hours: int = 24) -> dict[str, Any]:
     return {"since_hours": since_hours, "repos": repos}
 
 
-# --- CLI: cogos workspace ---------------------------------------------------
+# --- CLI: cogos 工作区 ---------------------------------------------------
 
 
 def _add_io(p: argparse.ArgumentParser) -> None:
@@ -305,7 +305,7 @@ def run_workspace(args: argparse.Namespace) -> int:
         if args.json:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         else:
-            print(f"Initialized shared workspace at {payload['root']}")
+            print(f"已初始化共享工作区：{payload['root']}")
             for d in payload["dirs"]:
                 print(f"  {d}")
         return 0
@@ -315,9 +315,9 @@ def run_workspace(args: argparse.Namespace) -> int:
         if args.json:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
             return 0
-        print(f"Scanning {ws.root} (activity within {payload['since_hours']}h)...")
+        print(f"正在扫描 {ws.root}（{payload['since_hours']} 小时内的活动）...")
         if not payload["repos"]:
-            print("(no git repositories found under the workspace root)")
+            print("（工作区根目录下未发现 git 仓库）")
             return 0
         for r in payload["repos"]:
             bits = [r["repo"]]
@@ -335,7 +335,7 @@ def run_workspace(args: argparse.Namespace) -> int:
     return 2
 
 
-# --- CLI: cogos lock --------------------------------------------------------
+# --- CLI: cogos 锁 --------------------------------------------------------
 
 
 def add_lock_parser(sub: argparse._SubParsersAction) -> None:
@@ -381,7 +381,7 @@ def run_lock(args: argparse.Namespace) -> int:
                     )
                 except Exception:
                     pass
-            print(f"error: {e}", file=sys.stderr)
+            print(f"出错：{e}", file=sys.stderr)
             return 1
         except ValueError as e:
             print(f"error: {e}", file=sys.stderr)
@@ -389,7 +389,7 @@ def run_lock(args: argparse.Namespace) -> int:
         if args.json:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         else:
-            print(f"locked {payload['target']} for {payload['holder']} at {payload['acquired_at']}")
+            print(f"已锁定 {payload['target']}（持有者：{payload['holder']}，时间：{payload['acquired_at']}）")
         return 0
 
     if args.lock_cmd == "release":
@@ -404,7 +404,7 @@ def run_lock(args: argparse.Namespace) -> int:
         if args.json:
             print(json.dumps(payload, ensure_ascii=False, indent=2))
         else:
-            print(f"released {payload['target']}")
+            print(f"已释放 {payload['target']} 的锁")
         return 0
 
     if args.lock_cmd == "status":
@@ -415,7 +415,7 @@ def run_lock(args: argparse.Namespace) -> int:
             print("(no locks held)")
         else:
             for lock in payload:
-                print(f"{lock['target']}  held by {lock.get('holder', '?')} since {lock.get('acquired_at', '?')}")
+                print(f"{lock['target']}  由 {lock.get('holder', '?')} 持有，自 {lock.get('acquired_at', '?')} 起")
         return 0
 
     return 2

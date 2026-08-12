@@ -1,22 +1,22 @@
 """User-level cognitive state.
 
-This module owns the *user* layer of CognitiveOS — the cognitive state
-that lives ABOVE any individual AI agent. It is what the user carries
-across machines and across agent products.
+本模块 owns 该 *user* layer 的 CognitiveOS — 该 cognitive state
+that lives ABOVE 任何 individual AI Agent. It 是 what 用户 carries
+across machines 和 across Agent products.
 
-Three properties that make this layer genuinely different from any
-agent's own memory:
+Three properties that make this layer genuinely 不同 来自 任何
+Agent's own 记忆:
 
-1. **Agent-agnostic.** No file in here is read by an agent at runtime.
-   It is not "Hermes's memory" — it is the user's memory.
-2. **Portable.** Drop ``cogos/user/`` onto another machine (or a USB)
-   and the same preferences, projects, and experience go with you.
-3. **Authored by the user.** Every file in here is either written by the
-   user directly, or written by a tool on the user's explicit request.
-   No silent auto-mutation.
+1. **Agent-agnostic.** 无文件 在 here 是 读取 通过 一个 Agent 在 runtime.
+   It 是 不 "Hermes's 记忆" — it 是 用户's 记忆.
+2. **Portable.** Drop ``cogos/user/`` onto another machine (或 a USB)
+   和 该 相同 preferences, projects, 和 experience go 使用 you.
+3. **Authored 通过 用户.** 每个 文件 在 here 是 either written 通过 该
+   user 直接, 或 written 通过 a tool 在 用户's explicit request.
+   无 silent auto-mutation.
 
-The layer is laid out as a wiki-style directory because that is what
-the user can read, edit, and grep directly. No database, no opaque blob.
+该 layer 是 laid out 作为 a wiki-style 目录 because 也就是说 what
+用户 可以 读取, edit, 和 grep 直接. 无 database, 无 opaque blob.
 """
 
 from __future__ import annotations
@@ -27,15 +27,15 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class UserLayer:
-    """Filesystem layout of the user-level cognitive state."""
+    """Filesystem layout 的 用户-level cognitive state."""
 
     root: Path
 
     @classmethod
     def default(cls) -> "UserLayer":
-        # ``user/`` lives inside the CognitiveOS project root so a single
-        # ``git clone`` (or rsync) carries it. v0.2+ may move it to
-        # ~/.cognitiveos/user to make it independent of any one project.
+        # ``user/`` lives inside 该 CognitiveOS project root so a single
+        # ``git clone`` (或 rsync) carries it. v0.2+ 可能 move it 到
+        # ~/.cognitiveos/user 到 make it independent 的 任何 one project.
         return cls(root=Path.cwd().resolve() / "user")
 
     @property

@@ -1,7 +1,7 @@
-"""End-to-end: replicate the master's decision via the verify pipeline.
+"""End-到-end: replicate 主人's decision via 该 verify pipeline.
 
-The script delegates judgment to cogos.verify.run_one so the same
-three-stage pipeline (keyword -> AMBIGUOUS -> semantic LLM) is used.
+该 script delegates judgment 到 cogos.verify.run_one so 该 相同
+three-stage pipeline (keyword -> AMBIGUOUS -> semantic LLM) 是 使用.
 """
 
 import json

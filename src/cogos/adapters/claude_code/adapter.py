@@ -1,15 +1,15 @@
-"""Claude Code adapter — second concrete Adapter in CognitiveOS.
+"""Claude Code Adapter — second concrete Adapter 在 CognitiveOS.
 
-Proves the agent-agnostic claim: Claude Code is discovered, harvested,
-and probed through the SAME interface as Hermes. No if-claude special
-cases anywhere else in the codebase.
+Proves Agent-agnostic claim: Claude Code 是 discovered, harvested,
+和 probed through 该 相同 interface 作为 Hermes. 无 if-claude special
+cases anywhere else 在 该 codebase.
 
-Discovery notes:
+Discovery 注意：
 - Claude Code keeps its state under ~/.claude (config, projects,
-  history) plus per-project .claude/ directories.
-- We only harvest the SAFE, user-authored subset: CLAUDE.md files
-  (project instructions) and the top-level settings. We NEVER harvest
-  conversations/raw history (private), credentials, or OAuth tokens.
+  history) plus per-project .claude/ 目录们.
+- We only harvest 该 SAFE, user-authored subset: CLAUDE.md 文件们
+  (project instructions) 和 该 top-level settings. We 从不 harvest
+  对话们/raw history (private), credentials, 或 OAuth tokens.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ class ClaudeCodeAdapter:
         }
 
     def harvest(self, sources_root: Path) -> HarvestResult:
-        """Copy CLAUDE.md + settings subset into sources/claude_code/."""
+        """Copy CLAUDE.md + settings subset into 来源们/claude_code/."""
         home = self.handle.paths.get("home")
         if home is None:
             return HarvestResult(agent_id=self.agent_id, copied_files=0, notes=["no home path"])
@@ -51,7 +51,7 @@ class ClaudeCodeAdapter:
         target.mkdir(parents=True, exist_ok=True)
         copied = 0
 
-        # Top-level config subset: settings.json + CLAUDE.md at home
+        # Top-level config subset: settings.json + CLAUDE.md 在 home
         for name in ("settings.json", "CLAUDE.md"):
             f = home / name
             if f.exists():
@@ -61,15 +61,15 @@ class ClaudeCodeAdapter:
                 except OSError:
                     pass
 
-        # Per-project CLAUDE.md files discovered via .claude dirs would
-        # be a huge scan — skip in v0.1, note it.
+        # Per-project CLAUDE.md 文件们 discovered via .claude dirs 将
+        # 为 a huge 扫描 — skip 在 v0.1, 注意 it.
         notes = [f"harvested from {home} (safe subset only)"]
         if not copied:
             notes.append("no files matched the safe subset")
         return HarvestResult(agent_id=self.agent_id, copied_files=copied, notes=notes)
 
     def execute(self, task, context) -> Result:
-        """v0.1 execute = shell out to `claude -p` (print mode)."""
+        """v0.1 执行 = shell out 到 `claude -p` (print mode)."""
         prompt = (
             f"You are being invoked as the Claude Code adapter of CognitiveOS.\n"
             f"Task domain: {task.domain}\n"
@@ -91,8 +91,8 @@ class ClaudeCodeAdapter:
     def _claude_query(self, prompt: str) -> str | None:
         import shutil as _sh
 
-        # Claude Code on Windows: the `claude` shim is a .cmd/.ps1 that
-        # needs a shell; resolve the native binary directly.
+        # Claude Code 在 Windows: 该 `claude` shim 是 a .cmd/.ps1 that
+        # needs a shell; resolve 该 native binary 直接.
         cli_candidates = [
             Path.home() / "AppData" / "Roaming" / "npm" / "node_modules" / "@anthropic-ai" / "claude-code" / "bin" / "claude.exe",
             Path.home() / "AppData" / "Roaming" / "npm" / "node_modules" / "@anthropic-ai" / "claude-code" / "bin" / "claude",

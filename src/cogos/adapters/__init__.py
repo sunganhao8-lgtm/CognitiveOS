@@ -1,17 +1,17 @@
-"""Agent adapters.
+"""Agent Adapters.
 
-An Adapter is the only thing in CognitiveOS that knows the *internal*
-layout of a specific agent. It exposes three capabilities:
+一个 Adapter 是 该 only thing 在 CognitiveOS that knows 该 *internal*
+layout 的 a 具体 Agent. It exposes three capabilities:
 
-* :meth:`Adapter.describe` — short summary used by the dashboard.
-* :meth:`Adapter.harvest` — copy the agent's raw data into
-  ``knowledge/sources/<agent_id>/``.
-* :meth:`Adapter.bootstrap_query` — ask the agent to help interpret the
-  local environment during the first CognitiveOS bootstrap.
+* :meth:`Adapter.describe` — short summary 被 ... 使用 该 dashboard.
+* :meth:`Adapter.harvest` — copy Agent's raw data into
+  ``knowledge/来源们/<agent_id>/``.
+* :meth:`Adapter.bootstrap_query` — ask Agent 到 help interpret 该
+  local environment during 第一个 CognitiveOS bootstrap.
 
-Adapters must never assume anything about *how* the agent runs. The
-Hermes adapter, for example, reads files directly because Hermes keeps
-everything on disk; a future Codex adapter might shell out to a CLI.
+Adapters 必须 从不 assume anything about *how* Agent 运行. 该
+Hermes Adapter, 例如, 读取 文件们 直接 because Hermes keeps
+everything 在 disk; a future Codex Adapter 可能 shell out 到 a CLI.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from ..paths import Paths
 
 @dataclass
 class HarvestResult:
-    """What an Adapter produced while harvesting an agent."""
+    """What 一个 Adapter produced while harvesting 一个 Agent."""
 
     agent_id: str
     copied_files: int
@@ -41,17 +41,17 @@ class Adapter(Protocol):
     def harvest(self, sources_root: Path) -> HarvestResult: ...
 
     def bootstrap_query(self, paths: Paths) -> str | None:
-        """Return a Markdown note produced *by* the agent, or None.
+        """返回 a Markdown 注意 produced *通过* Agent, 或 None.
 
-        For agents that don't expose a query API (Hermes today), this can
-        simply return None and CognitiveOS will fall back to a heuristic
-        bootstrap summary written from the harvested files.
+        用于 Agents that don't expose a query API (Hermes today), this 可以
+        simply 返回 None 和 CognitiveOS 将 fall back 到 a heuristic
+        bootstrap summary written 来自 该 harvested 文件们.
         """
         ...
 
 
 def load_adapter(handle: AgentHandle) -> Adapter | None:
-    """Pick the right adapter implementation for a given handle."""
+    """Pick 该 right Adapter implementation 用于 a given handle."""
     if handle.agent_id == "hermes":
         from .hermes.adapter import HermesAdapter
 

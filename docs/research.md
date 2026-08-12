@@ -1,12 +1,12 @@
 # Related Research
 
-## Agent Memory
+## Agent 记忆
 
 Research areas:
 
 - MemGPT / Letta
 - Mem0
-- Agentic Memory
+- Agentic 记忆
 
 ## Agent Framework
 
@@ -18,8 +18,8 @@ Research areas:
 
 Existing systems solve:
 
-"How can AI remember?"
+"How 可以 AI remember?"
 
 CognitiveOS explores:
 
-"How should AI organize cognition?"
+"How 应该 AI organize cognition?"

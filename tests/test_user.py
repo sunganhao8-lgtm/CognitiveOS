@@ -1,4 +1,4 @@
-"""Tests for cogos.user — UserLayer layout."""
+"""测试 用于 cogos.user — UserLayer layout."""
 
 from pathlib import Path
 

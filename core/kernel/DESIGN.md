@@ -1,14 +1,14 @@
 # Cognitive Kernel v0.1 — Design
 
-> Phase 2 of the CognitiveOS roadmap.
-> This document defines **what the Kernel is**, not how it is implemented.
-> No implementation code lives here yet; interfaces are sketches to be validated.
+> Phase 2 的 该 CognitiveOS roadmap.
+> This document defines **what 该 Kernel 是**, 不 how it 是 implemented.
+> 无 implementation code lives here yet; interfaces 是 sketches 到 为 validated.
 
 ## 1. Position
 
-The Kernel is the single entry point of CognitiveOS.
+该 Kernel 是 该 single entry point 的 CognitiveOS.
 
-Everything a user or an external system wants from CognitiveOS flows through the Kernel:
+Everything 用户 或 an external system wants 来自 CognitiveOS flows through 该 Kernel:
 
 ```
 User / External System
@@ -24,27 +24,27 @@ User / External System
         └──► External Agents   (Claude Code, Codex, OpenClaw, Hermes, MCP tools)
 ```
 
-The Kernel does not *do* the work of an agent. It **coordinates**:
-assemble context → decide → execute → reflect → remember.
+该 Kernel 做 不 *做* 该 work 的 一个 Agent. It **coordinates**:
+assemble context → decide → 执行 → reflect → remember.
 
-## 2. Goals for v0.1
+## 2. Goals 用于 v0.1
 
-1. Define **stable interfaces**, not implementations.
+1. Define **stable interfaces**, 不 implementations.
 2. Establish a minimal runnable flow:
    `task in → context assembly → routing → execution → reflection → memory write`
-3. Keep every subsystem **pluggable**: memory backends, routers, agent adapters can be swapped without touching the Kernel.
-4. Support multiple external agents behind one protocol (see `core/protocol/README.md`).
+3. Keep 每个 subsystem **pluggable**: 记忆 backends, routers, Agent Adapters 可以 为 swapped 不使用 touching 该 Kernel.
+4. Support multiple external Agents behind one protocol (see `core/protocol/README.md`).
 
-## 3. Non-Goals for v0.1
+## 3. Non-Goals 用于 v0.1
 
-- ❌ No storage engine implementation (memory backends land in v0.2 / v0.3).
-- ❌ No learned/ML router — v0.1 routing is explicit rule-based only.
-- ❌ No autonomous self-improvement loop — reflection stays manual/auditable.
-- ❌ No distributed or multi-process concerns — v0.1 is single-process.
+- ❌ 无 storage engine implementation (记忆 backends land 在 v0.2 / v0.3).
+- ❌ 无 learned/ML router — v0.1 routing 是 explicit 规则-based only.
+- ❌ 无 autonomous self-improvement loop — reflection stays manual/auditable.
+- ❌ 无 distributed 或 multi-process concerns — v0.1 是 single-process.
 
-> Architecture problem found while designing: do not put policy (what to do) inside the
-> Kernel; the Kernel only provides the *loop*. Policy belongs to the Router and to
-> agent-specific adapters. This keeps the Kernel small and testable.
+> Architecture problem found while designing: 不要 put policy (what 到 做) inside 该
+> Kernel; 该 Kernel only provides 该 *loop*. Policy belongs 到 该 Router 和 到
+> Agent-具体 Adapters. This keeps 该 Kernel small 和 testable.
 
 ## 4. Core Flow
 
@@ -80,7 +80,7 @@ User submits Task
 
 ## 5. Core Abstractions
 
-Python-style protocol sketches (actual language binding is a later decision):
+Python-style protocol sketches (actual language binding 是 a later decision):
 
 ```python
 class Task:
@@ -123,21 +123,21 @@ class Kernel:
     def run(self, task: Task) -> Result: ...
 ```
 
-## 6. Memory Contract (v0.1)
+## 6. 记忆 Contract (v0.1)
 
-CognitiveOS memory is **not only storage** (see `memory/README.md`). v0.1 defines the
+CognitiveOS 记忆 是 **不 only storage** (see `memory/README.md`). v0.1 defines 该
 contract; implementations come later.
 
-| Store          | Contents                              | Volatility | Written by            |
+| Store          | Contents                              | Volatility | Written 通过            |
 |----------------|---------------------------------------|------------|-----------------------|
-| short_term     | current task context                  | session    | Kernel (context build)|
+| short_term     | 当前 任务 context                  | session    | Kernel (context build)|
 | long_term      | stable knowledge / user preferences   | persistent | Kernel (confirmed)    |
-| episodic       | specific experiences (task records)   | persistent | Reflection hook       |
+| episodic       | 具体 experiences (任务 records)   | persistent | Reflection hook       |
 | semantic       | generalized knowledge extracted       | persistent | Reflection (dedup)    |
 
-Design rule: **a task may only *read* the stores listed in `required_memory`**
-(plus short_term). This is the v0.1 guard against the "all memory mixed together"
-problem — the same problem this project was born from.
+Design 规则: **一个任务 可能 only *读取* 该 stores listed 在 `required_memory`**
+(plus short_term). This 是 该 v0.1 guard against 该 "所有 记忆 mixed together"
+problem — 该 相同 problem this project 是 born 来自.
 
 ## 7. Agent Protocol (v0.1)
 
@@ -161,28 +161,28 @@ Response (CognitiveOS-side):
 }
 ```
 
-Full wire format lives in `core/protocol/` and must stay agent-agnostic.
+Full wire format lives 在 `core/protocol/` 和 必须 stay Agent-agnostic.
 
-## 8. Directory Mapping
+## 8. 目录 Mapping
 
-| Path              | Role in this design                              |
+| 路径              | Role 在本 design                              |
 |-------------------|--------------------------------------------------|
 | `core/kernel/`    | Kernel orchestration loop (this design)          |
-| `core/router/`    | Router contract + rule-based default             |
-| `core/state/`     | Runtime state of the Kernel loop                 |
+| `core/router/`    | Router contract + 规则-based 默认             |
+| `core/state/`     | Runtime state 的 该 Kernel loop                 |
 | `core/protocol/`  | Agent-agnostic request/response schemas          |
 | `memory/*`        | MemoryProvider implementations (v0.2+)           |
 | `agents/*`        | AgentAdapter implementations                     |
-| `reflection/`     | Post-task analysis pipeline (v0.3)               |
-| `tests/`          | Contract tests against the protocol sketches     |
+| `reflection/`     | Post-任务 analysis pipeline (v0.3)               |
+| `tests/`          | Contract 测试 against 该 protocol sketches     |
 
-## 9. Open Questions (for phase 3 and beyond)
+## 9. Open Questions (用于 phase 3 和 beyond)
 
-1. Python vs TypeScript as the primary binding? (Python is the assumed default.)
-2. Should `required_memory` be inferred automatically in later phases (semantic routing)?
-3. Where does the Planner live — inside the Kernel loop or as a separate subsystem?
-4. How do multiple Kernels (multi-user / multi-tenant) share one memory system?
-5. Is the reflection hook synchronous (blocks the result) or async (fire-and-forget)?
+1. Python vs TypeScript 作为 该 primary binding? (Python 是 该 assumed 默认.)
+2. 应该 `required_memory` 为 inferred 自动 在 later phases (semantic routing)?
+3. Where 做 该 Planner live — inside 该 Kernel loop 或 作为 a separate subsystem?
+4. How 做 multiple Kernels (multi-user / multi-tenant) share one 记忆 system?
+5. 是 该 reflection hook synchronous (blocks 结果) 或 async (fire-和-forget)?
 
-None of these block v0.1; they are tracked here so phase 3 does not silently pick
-answers without a decision record (see `docs/design-decisions.md`).
+None 的 these block v0.1; they 是 tracked here so phase 3 做 不 silently pick
+answers 不使用 a decision record (see `docs/design-decisions.md`).

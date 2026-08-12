@@ -2,18 +2,18 @@
 
 ## Problem
 
-Today's AI agents:
+Today's AI Agents:
 
-- Have fragmented memory
+- 有 fragmented 记忆
 - Lack long-term identity
-- Cannot share experiences
+- 不能 share experiences
 - Repeat similar mistakes
 
 ## Hypothesis
 
-Future AI systems may require:
+Future AI systems 可能 require:
 
-not only larger models,
+不 only larger models,
 
 but better cognitive architectures.
 
@@ -21,33 +21,33 @@ but better cognitive architectures.
 
 Human intelligence contains:
 
-- memory system
+- 记忆 system
 - planning system
 - specialized abilities
 - reflection mechanism
 
 CognitiveOS explores similar software abstractions.
 
-## What CognitiveOS Is
+## What CognitiveOS 是
 
-CognitiveOS is **local-first infrastructure** that:
+CognitiveOS 是 **local-第一 infrastructure** that:
 
-1. Discovers AI agents already installed on the user's machine.
-2. Lets one of them act as the **Bootstrap Agent** to interpret the local environment.
-3. Builds a **source-preserving, wiki-style knowledge base** with three layers:
+1. Discovers AI Agents already installed 在 用户's machine.
+2. Lets one 的 them act 作为 该 **Bootstrap Agent** 到 interpret 该 local environment.
+3. Builds a **来源-preserving, wiki-style knowledge base** 使用 three layers:
    `sources/ → normalized/ → wiki/`.
-4. Exposes the result through a self-contained **HTML Dashboard**.
+4. Exposes 结果 through a self-contained **HTML Dashboard**.
 
-## What CognitiveOS Is Not
+## What CognitiveOS 是 不
 
-- Not another AI agent.
-- Not a cloud service.
-- Not a single-agent plugin.
-- Not a paper-only research prototype.
-- Not a forced 1:1 brain-anatomy mapping.
+- 不 another AI Agent.
+- 不 a cloud service.
+- 不 a single-Agent plugin.
+- 不 a paper-only research prototype.
+- 不 a forced 1:1 brain-anatomy mapping.
 
-## Status
+## 状态
 
-Experimental / Research Project · v0.1 ships with a working Hermes
-adapter and bootstrap pipeline; other adapters are designed but not
+Experimental / Research Project · v0.1 ships 使用 a working Hermes
+Adapter 和 bootstrap pipeline; 其他 Adapters 是 designed but 不
 implemented yet.

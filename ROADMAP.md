@@ -3,7 +3,7 @@
 ## v0.1 Foundation
 
 - Project architecture
-- Memory abstraction
+- 记忆 abstraction
 - Agent protocol
 
 ## v0.2 Agent Integration

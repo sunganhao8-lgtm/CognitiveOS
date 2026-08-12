@@ -1,7 +1,7 @@
-"""Paths used by CognitiveOS.
+"""CognitiveOS 使用的路径。
 
-Everything is rooted under a single ``root`` directory so the project can
-live anywhere on disk. The default is the current working directory.
+所有内容都根在单个 ``root`` 目录之下，所以项目可以放在磁盘上任何
+位置。默认是当前工作目录。
 """
 
 from __future__ import annotations
@@ -12,10 +12,10 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class Paths:
-    """A bundle of every directory CognitiveOS cares about.
+    """CognitiveOS 关心的所有目录的合集。
 
-    Keeping them in one place makes it easy to override ``root`` for tests
-    and to print a clear status panel at the end of a bootstrap run.
+    把它们集中到一处，测试时方便覆盖 ``root``，bootstrap 末尾也方便
+    打一张清晰的状态面板。
     """
 
     root: Path
@@ -24,7 +24,7 @@ class Paths:
     def default(cls) -> "Paths":
         return cls(root=Path.cwd().resolve())
 
-    # --- top-level layout ---------------------------------------------------
+    # --- 顶层布局 ---------------------------------------------------
 
     @property
     def knowledge(self) -> Path:
@@ -44,15 +44,14 @@ class Paths:
 
     @property
     def dashboard(self) -> Path:
-        # Legacy folder — kept only so old scripts that wrote here still work.
-        # New dashboards go to ``index.html`` at the project root.
+        # 旧目录——留着只是为了兼容老脚本。新仪表盘写在项目根的
+        # ``index.html``。
         return self.root / "dashboard"
 
     @property
     def dashboard_index(self) -> Path:
-        # The single source of truth for the CognitiveOS UI lives at the
-        # project root so that ``file://`` links into ``knowledge/`` work
-        # without extra path arithmetic.
+        # CognitiveOS UI 的唯一真源在项目根，这样 ``file://`` 链接
+        # ``knowledge/`` 时不需要额外做路径运算。
         return self.root / "index.html"
 
     @property
@@ -63,16 +62,16 @@ class Paths:
     def config_file(self) -> Path:
         return self.root / "cogos.yaml"
 
-    # --- helpers ------------------------------------------------------------
+    # --- 辅助 ------------------------------------------------------------
 
     def ensure(self) -> None:
-        """Create every directory CognitiveOS writes to."""
+        """创建 CognitiveOS 写过的所有目录。"""
         for p in (
             self.knowledge,
             self.sources,
             self.normalized,
             self.wiki,
-            # dashboard/ is no longer required — index.html lives at the root.
+            # dashboard/ 不再需要——index.html 写在根。
             self.cache,
         ):
             p.mkdir(parents=True, exist_ok=True)

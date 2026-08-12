@@ -1,19 +1,18 @@
-"""Extract conversation memories from non-Hermes agents.
+"""从非 Hermes Agent 中抽取对话记忆。
 
-This module pulls *conversation history* out of other AI agents and
-writes it into the CognitiveOS ``user/conversations/`` store as QA
-pairs — the same shape the Hermes extractor produces. That is the
-"master's cognition" layer: memories that survive agent switches.
+本模块把*对话历史*从其他 AI Agent 中抽出来，写入 CognitiveOS 的
+``user/conversations/`` 存储，格式与 Hermes 抽取器一致——都是
+主人问答对。这是「主人的认知」层：跨 Agent 切换也能保留的记忆。
 
-Currently supported sources:
+当前支持的数据源：
 
-* Codex (``~/.codex/sessions/**/rollout-*.jsonl``): ``response_item``
-  records carry ``role: user`` / ``role: assistant`` messages.
-* Claude Code (``~/.claude/projects/**/*.jsonl``): ``user`` and
-  ``assistant`` records.
+* Codex（``~/.codex/sessions/**/rollout-*.jsonl``）：``response_item``
+  记录中含 ``role: user`` / ``role: assistant`` 消息。
+* Claude Code（``~/.claude/projects/**/*.jsonl``）：``user`` 和
+  ``assistant`` 记录。
 
-Both are read-only; we never modify agent files. We only store
-question → answer pairs (not tool traces), same as conversations.py.
+只读，不修改 Agent 文件；只保存「问题 → 答案」对（不保存工具调用
+轨迹），与 conversations.py 保持一致。
 """
 
 from __future__ import annotations

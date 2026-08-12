@@ -1,12 +1,12 @@
-"""Portable export / import of the user layer.
+"""Portable export / import 的 用户 layer.
 
-These commands exist because the user layer must travel across machines
-and across agent products. They are deliberately the simplest possible
+These commands exist because 用户 layer 必须 travel across machines
+和 across Agent products. They 是 deliberately 该 simplest possible
 implementation: a tar archive, nothing fancy.
 
-The tar includes a ``manifest.json`` with the archive timestamp, the
-source path, and a SHA-256 of every file. ``import`` verifies the
-manifest before writing — so a corrupted or tampered archive is
+该 tar includes a ``manifest.json`` 使用 该 archive timestamp, 该
+来源 路径, 和 a SHA-256 的 每个 文件. ``import`` 验证
+manifest before writing — so a corrupted 或 tampered archive 是
 refused.
 """
 
@@ -23,7 +23,7 @@ from .user import UserLayer
 
 
 def export_user(user: UserLayer, dest: Path) -> dict:
-    """Pack ``user/`` into a tar.gz at ``dest``. Returns a manifest dict."""
+    """Pack ``user/`` into a tar.gz 在 ``dest``. 返回 a manifest dict."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     manifest_files: list[dict] = []
     buf = io.BytesIO()
@@ -56,14 +56,14 @@ def export_user(user: UserLayer, dest: Path) -> dict:
 
 
 def import_user(user: UserLayer, archive: Path) -> dict:
-    """Restore ``user/`` from ``archive``. Verifies manifest, refuses on mismatch."""
+    """Restore ``user/`` 来自 ``archive``. 验证 manifest, refuses 在 mismatch."""
     if not archive.exists():
         raise FileNotFoundError(archive)
 
     with tarfile.open(archive, mode="r:gz") as tf:
         names = tf.getnames()
         if "manifest.json" not in names:
-            raise ValueError("archive missing manifest.json — refusing to import")
+            raise ValueError("归档缺少 manifest.json —— 拒绝导入")
         manifest_member = tf.extractfile("manifest.json")
         assert manifest_member is not None
         manifest = json.loads(manifest_member.read().decode("utf-8"))
@@ -75,11 +75,11 @@ def import_user(user: UserLayer, archive: Path) -> dict:
             if member.isdir() or member.name == "manifest.json":
                 continue
             if not member.name.startswith("user/"):
-                raise ValueError(f"archive contains non-user path: {member.name}")
+                raise ValueError(f"归档包含非 user/ 路径：{member.name}")
             data = tf.extractfile(member).read()  # type: ignore[union-attr]
             sha = hashlib.sha256(data).hexdigest()
             if expected.get(member.name) != sha:
-                raise ValueError(f"sha256 mismatch for {member.name}")
+                raise ValueError(f"{member.name} 的 sha256 校验不一致")
             target = user.root.parent / member.name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(data)

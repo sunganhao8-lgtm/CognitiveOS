@@ -2,22 +2,22 @@
 
 Goal:
 
-Allow different AI agents to communicate with CognitiveOS.
+Allow 不同 AI Agents 到 communicate 使用 CognitiveOS.
 
-Example:
+示例:
 
 Agent Request:
 
 {
- task: "coding",
+ 任务: "coding",
  domain: "oracle",
  required_memory: [
    "sql_experience"
  ]
 }
 
-CognitiveOS returns:
+CognitiveOS 返回:
 
-- agent selection
-- memory context
+- Agent selection
+- 记忆 context
 - execution plan

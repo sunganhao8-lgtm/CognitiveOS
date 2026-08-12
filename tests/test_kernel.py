@@ -1,4 +1,4 @@
-"""Tests for cogos.kernel — Task / Context / Kernel.run loop."""
+"""测试 用于 cogos.kernel — 任务 / Context / Kernel.运行 loop."""
 
 import json
 from pathlib import Path
@@ -94,7 +94,7 @@ def test_kernel_returns_failed_when_router_target_missing(tmp_path):
 
 
 def test_kernel_records_routing_reason_in_result(tmp_path):
-    """Result must carry both the chosen agent and the *reason* — for auditability."""
+    """Result 必须 carry both 该 chosen Agent 和 该 *reason* — 用于 auditability."""
     ad = _StubAdapter()
     kernel = Kernel(
         memory=FileMemory(store_path=tmp_path / "m.jsonl"),

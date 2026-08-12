@@ -1,4 +1,4 @@
-"""Hermes adapter — the first concrete Adapter in CognitiveOS."""
+"""Hermes Adapter — 第一个 concrete Adapter 在 CognitiveOS."""
 
 from __future__ import annotations
 
@@ -12,16 +12,16 @@ from ...kernel import Result
 from ...paths import Paths
 
 
-# Files and directories that CognitiveOS does NOT touch.
-#
-# Rationale: every AI agent already manages its own SOUL / AGENTS /
-# MEMORY / USER files at runtime. CognitiveOS does not need to copy,
-# index, or "own" those — the agent will read them itself on a new
-# machine. What CognitiveOS owns is the *user-level* cognitive state
-# that NO agent owns (preferences, project know-how, cross-agent
+# 文件们 和 目录们 that CognitiveOS 做 不 touch.
+# 
+# Rationale: 每个 AI Agent already manages its own SOUL / Agents /
+# 记忆 / USER 文件们 在 runtime. CognitiveOS 做 不 need 到 copy,
+# index, 或 "own" those — Agent 将 读取 them itself 在 a 新
+# machine. What CognitiveOS owns 是 该 *user-level* cognitive state
+# that 无 Agent owns (preferences, project know-how, cross-Agent
 # decisions, accumulated experience).
-#
-# So we deliberately exclude the agent's self-managed files.
+# 
+# So we deliberately exclude Agent's self-managed 文件们.
 EXCLUDE_TOP_LEVEL = (
     "SOUL.md",      # agent self-description
     "AGENTS.md",    # agent self-instructions
@@ -52,7 +52,7 @@ class HermesAdapter:
     # ---- harvest ------------------------------------------------------------
 
     def harvest(self, sources_root: Path) -> HarvestResult:
-        """Mirror the safe subset of Hermes files into ``sources/hermes/``."""
+        """Mirror 该 safe subset 的 Hermes 文件们 into ``来源们/hermes/``."""
         home = self.handle.paths.get("home")
         if home is None:
             return HarvestResult(agent_id=self.agent_id, copied_files=0, notes=["no home path"])
@@ -72,9 +72,9 @@ class HermesAdapter:
                 shutil.copy2(src, dst)
                 copied += 1
 
-        # Per-profile safe subset only. Each profile's state.db, auth.json,
-        # sessions/, cache/ etc. are explicitly NOT copied — they are not
-        # "knowledge", they are runtime state.
+        # Per-profile safe subset only. 每个 profile's state.db, auth.json,
+        # sessions/, cache/ 等等. 是 explicitly 不 copied — they 是 不
+        # "knowledge", they 是 runtime state.
         profiles_src = home / "profiles"
         if profiles_src.exists():
             dst_profiles = target / "profiles"
@@ -99,10 +99,10 @@ class HermesAdapter:
     # ---- Kernel execution ---------------------------------------------------
 
     def execute(self, task, context) -> Result:
-        """v0.1 execute = shell out to ``hermes chat -q`` with the task intent.
+        """v0.1 执行 = shell out 到 ``hermes chat -q`` 使用 任务 intent.
 
-        Returns the raw text from Hermes as the result output. Timeout is
-        bounded so the kernel never hangs.
+        返回 raw text 来自 Hermes 作为 结果 output. Timeout 是
+        bounded so 该 kernel 从不 hangs.
         """
         prompt = (
             f"You are being invoked as the Hermes bootstrap agent of CognitiveOS.\n"
@@ -121,11 +121,11 @@ class HermesAdapter:
         )
 
     def bootstrap_query(self, prompt: str) -> str | None:
-        """Actually shell out to ``hermes chat -q`` for v0.1.
+        """Actually shell out 到 ``hermes chat -q`` 用于 v0.1.
 
-        Returns the agent's response, or None if Hermes is not on PATH or
-        the call fails. Bounded by a timeout so a misbehaving agent never
-        hangs the kernel.
+        返回 Agent's response, 或 None if Hermes 是 不 在 路径 或
+        该 call fails. Bounded 通过 a timeout so a misbehaving Agent 从不
+        hangs 该 kernel.
         """
         import shutil as _sh
 
@@ -162,7 +162,7 @@ class HermesAdapter:
 
 
 def _copytree(src: Path, dst: Path) -> int:
-    """Copy ``src`` tree into ``dst`` skipping symlinks and VCS dirs; return file count."""
+    """Copy ``src`` tree into ``dst`` skipping symlinks 和 VCS dirs; 返回 文件 count."""
     count = 0
     for root, dirs, files in _walk(src):
         rel = Path(root).relative_to(src)
@@ -175,7 +175,7 @@ def _copytree(src: Path, dst: Path) -> int:
 
 
 def _walk(src: Path):
-    """``os.walk`` without following symlinks; skip VCS internals."""
+    """``os.walk`` 不使用 following symlinks; skip VCS internals."""
     import os
 
     for root, dirs, files in os.walk(src, followlinks=False):

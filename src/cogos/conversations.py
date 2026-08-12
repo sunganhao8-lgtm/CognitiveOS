@@ -1,22 +1,20 @@
-"""Conversation extraction.
+"""对话抽取。
 
-Reads Hermes's SQLite session store and extracts user → assistant
-question/answer pairs that can later be used for persona training.
+读取 Hermes 的 SQLite 会话存储，抽出主人→管家的问答对，供后续
+persona 训练使用。
 
-The extraction is deliberately conservative:
+抽取刻意保守：
 
-- Only the ``default`` profile's session DB is read (the main
-  conversation store).  Profiles like ``vidiator`` / ``researcher`` are
-  worker profiles and their conversations are not "the master's".
-- We only keep pairs where the user message is a *question* (ends with
-  a question mark — Chinese or ASCII), because those are the most
-  informative for training a persona: a question demands an answer that
-  matches how the master would reply.
-- We skip tool/compaction/system messages.
-- Output is written to ``user/conversations/`` as JSONL, one record per
-  question/answer pair, with provenance (session_id, message ids).
+- 只读 ``默认`` profile 的 session DB（主对话存储）。
+  像 ``vidiator`` / ``researcher`` 这种是 worker profile，里面的
+  对话不算「主人的」。
+- 只保留「主人问的问题」（以问号结尾——中文问号或英文问号），
+  因为问题最有训练价值：一个问题需要的就是主人风格的回答。
+- 跳过 tool / 压缩 / 系统消息。
+- 输出写到 ``user/对话们/`` 的 JSONL 文件，每行一条问答对，
+  含出处（session_id、消息 id）。
 
-The store is read-only; this module never writes to Hermes's DB.
+只读，**永远不写** Hermes 的 DB。
 """
 
 from __future__ import annotations
@@ -45,10 +43,9 @@ class QA:
 
 
 def extract_qa(db_path: Path, *, limit: int | None = None, min_len: int = 20) -> list[QA]:
-    """Extract question/answer pairs from a Hermes state.db.
+    """从 Hermes state.db 抽取问答对。
 
-    A pair is: a user message ending in a question mark, followed by the
-    next assistant text message in the same session.
+    一对 = 主人一条以问号结尾的消息 + 同会话下一条助手文本消息。
     """
     if not db_path.exists():
         return []
@@ -63,7 +60,7 @@ def extract_qa(db_path: Path, *, limit: int | None = None, min_len: int = 20) ->
         con.close()
 
     def _iso(ts_raw) -> str:
-        """Normalise whatever timestamp column shape we get into ISO."""
+        """把任何时间戳列形态归一为 ISO。"""
         if ts_raw is None:
             return ""
         if isinstance(ts_raw, (int, float)):
@@ -87,7 +84,7 @@ def extract_qa(db_path: Path, *, limit: int | None = None, min_len: int = 20) ->
                 continue
             if not QUESTION_RE.search(content):
                 continue
-            # Find the next assistant text message.
+            # 找下一条助手文本消息。
             answer = None
             for j in range(i + 1, len(msgs)):
                 if msgs[j][1] == "assistant":
@@ -115,7 +112,7 @@ def extract_qa(db_path: Path, *, limit: int | None = None, min_len: int = 20) ->
 
 
 def write_conversations(user: UserLayer, pairs: list[QA]) -> Path:
-    """Append extracted QA pairs to ``user/conversations/*.jsonl``."""
+    """追加抽出的问答对到 ``user/对话们/*.jsonl``。"""
     conv_dir = user.root / "conversations"
     conv_dir.mkdir(parents=True, exist_ok=True)
     out = conv_dir / f"hermes-{datetime.now(timezone.utc).strftime('%Y%m%d')}.jsonl"
@@ -137,7 +134,7 @@ def write_conversations(user: UserLayer, pairs: list[QA]) -> Path:
 
 
 def sample_conversations(user: UserLayer, *, k: int = 3) -> list[dict]:
-    """Return a few random QA records for inspection / testing."""
+    """随机返回几条问答记录，方便看 / 测试。"""
     import random
 
     conv_dir = user.root / "conversations"

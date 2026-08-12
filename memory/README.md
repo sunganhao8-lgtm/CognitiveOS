@@ -1,21 +1,21 @@
-# Memory System
+# 记忆 System
 
-CognitiveOS memory is not only storage.
+CognitiveOS 记忆 是 不 only storage.
 
 It includes:
 
-## Short Term Memory
+## Short Term 记忆
 
-Current task context
+当前 任务 context
 
-## Long Term Memory
+## Long Term 记忆
 
 Stable knowledge
 
-## Episodic Memory
+## Episodic 记忆
 
-Specific experiences
+具体 experiences
 
-## Semantic Memory
+## Semantic 记忆
 
 Generalized knowledge

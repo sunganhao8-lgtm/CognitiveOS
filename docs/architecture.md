@@ -7,7 +7,7 @@ User / External System
 │ Cognitive Kernel │  — orchestration loop (DESIGN.md)
 └─────────────────┘
         │
-        ├──► Memory System
+        ├──► 记忆 System
         ├──► Agent Router
         ├──► Reflection
         └──► External Agents
@@ -70,4 +70,4 @@ render_dashboard()    ── dashboard/index.html
 open browser
 ```
 
-Every layer is replaceable without touching the others.
+每个 layer 是 replaceable 不使用 touching 该 others.

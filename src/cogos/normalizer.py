@@ -1,12 +1,11 @@
-"""Normalizer.
+"""标准化器。
 
-Turns the per-agent raw harvests under ``knowledge/sources/`` into a
-single, agent-agnostic index under ``knowledge/normalized/``.
+把 ``knowledge/来源们/`` 下每个 Agent 的原始收割转成
+``knowledge/normalized/`` 里统一的、与 Agent 无关的索引。
 
-For v0.1 the normalizer is intentionally lightweight: it lists what was
-copied, where it came from, and lets the wiki layer pick it up. It does
-not (yet) parse Markdown or extract memory entries — those belong in
-later versions and depend on per-agent schemas that we don't have yet.
+v0.1 阶段标准化器故意做得很轻：只列出被拷过来的文件、来自哪，
+让 wiki 层去接。不（还）解析 Markdown、不抽取记忆条目——这
+些留给以后版本，依赖我们尚不掌握的各 Agent schema。
 """
 
 from __future__ import annotations
@@ -18,7 +17,7 @@ from .paths import Paths
 
 
 def build_normalized_index(paths: Paths) -> Path:
-    """Write ``knowledge/normalized/index.json`` describing every source."""
+    """写 ``knowledge/normalized/index.json`` 描述每个数据源。"""
     index_path = paths.normalized / "index.json"
     index_path.parent.mkdir(parents=True, exist_ok=True)
 
