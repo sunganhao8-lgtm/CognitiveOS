@@ -1,16 +1,16 @@
-"""Shared multi-Agent 工作区: layout, 锁们, 和 activity 扫描.
+"""Shared multi-agent workspace: layout, locks, and activity scan.
 
-P0 的 docs/shared-工作区-design.md: 每个 Agent works inside one shared
-root 目录 while CognitiveOS keeps runtime state under ``<root>/.cogos/``::
+P0 of docs/shared-workspace-design.md: every agent works inside one shared
+root directory while CognitiveOS keeps runtime state under ``<root>/.cogos/``::
 
     <root>/.cogos/
-    ├── 任务们/        任务 registry (one JSON 文件 per 任务)
-    ├── 锁们/        文件 锁们 (获取 / 释放 / 状态)
-    └── 消息们/     cross-Agent mailbox (TO_<agent_id>/)
+    ├── tasks/        task registry (one JSON file per task)
+    ├── locks/        file locks (acquire / release / status)
+    └── messages/     cross-agent mailbox (TO_<agent_id>/)
 
-本模块 owns 该 ``工作区`` layout plus 该 ``工作区`` 和 ``锁``
-command groups. 任务 registry 和 该 mailbox live 在 ``任务们.py`` 和
-``收件箱.py`` respectively.
+This module owns the ``Workspace`` layout plus the ``workspace`` and ``lock``
+command groups. The task registry and the mailbox live in ``tasks.py`` and
+``inbox.py`` respectively.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_WORKSPACE_ROOT = Path("D:/GitHub_Project/SharedWorkspace")
-"""默认 shared root 当 neither ``--root`` nor ``$COGOS_WORKSPACE`` 是 given."""
+"""Default shared root when neither ``--root`` nor ``$COGOS_WORKSPACE`` is given."""
 
 ENV_ROOT = "COGOS_WORKSPACE"
 ENV_AGENT = "COGOS_AGENT"
@@ -35,16 +35,16 @@ LOCK_SUFFIX = ".lock"
 
 
 class LockError(Exception):
-    """Raised 当 a 锁 不能 为 released 或 inspected."""
+    """Raised when a lock cannot be released or inspected."""
 
 
 class LockConflict(LockError):
-    """Raised 当 a 锁 是 already held 通过 another Agent."""
+    """Raised when a lock is already held by another agent."""
 
 
 @dataclass(frozen=True)
 class Workspace:
-    """A shared 工作区 root 和 its ``.cogos`` runtime 目录们."""
+    """A shared workspace root and its ``.cogos`` runtime directories."""
 
     root: Path
 
@@ -65,15 +65,15 @@ class Workspace:
         return self.cogos_dir / "messages"
 
     def ensure(self) -> None:
-        """创建 每个 目录 CognitiveOS 写入 到."""
+        """Create every directory CognitiveOS writes to."""
         for d in (self.cogos_dir, self.tasks_dir, self.locks_dir, self.messages_dir):
             d.mkdir(parents=True, exist_ok=True)
 
     def resolve_target(self, rel: str) -> Path:
-        """Normalize a 工作区-relative 路径 和 make sure it stays inside 该 root.
+        """Normalize a workspace-relative path and make sure it stays inside the root.
 
-        Rejects absolute 路径们, drive letters 和 ``..`` traversal so 一个 Agent
-        可以 从不 锁 或 reference 一个文件 outside 该 shared 工作区.
+        Rejects absolute paths, drive letters and ``..`` traversal so an agent
+        can never lock or reference a file outside the shared workspace.
         """
         if (
             not rel
@@ -84,12 +84,12 @@ class Workspace:
             raise ValueError(f"无效的工作区相对路径：{rel!r}")
         parts = [p for p in rel.replace("\\", "/").split("/") if p]
         if not parts or any(p in (".", "..") for p in parts):
-            raise ValueError(f"无效的工作区相对路径：{rel!r}")
+            raise ValueError(f"invalid workspace-relative path: {rel!r}")
         return self.root.joinpath(*parts)
 
 
 def resolve_root(root: Path | None) -> Path:
-    """Pick 该 shared 工作区 root: ``--root`` flag, then ``$COGOS_WORKSPACE``,
+    """Pick the shared workspace root: ``--root`` flag, then ``$COGOS_WORKSPACE``,
     then the default location."""
     if root is not None:
         return Path(root).resolve()
@@ -100,20 +100,20 @@ def resolve_root(root: Path | None) -> Path:
 
 
 def default_agent() -> str:
-    """Agent id 使用 当 该 caller 做 不 say who they 是."""
+    """The agent id used when the caller does not say who they are."""
     return os.environ.get(ENV_AGENT) or "cogos"
 
 
 def now_iso(now: datetime | None = None) -> str:
-    """UTC ISO-8601 timestamp, seconds precision (injectable 用于 测试)."""
+    """UTC ISO-8601 timestamp, seconds precision (injectable for tests)."""
     return (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
 
 
 def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
-    """写入 JSON atomically (tmp 文件 + ``os.replace``).
+    """Write JSON atomically (tmp file + ``os.replace``).
 
-    Concurrent readers 从不 see a half-written 文件, 和 ``os.replace`` 是
-    safe 在 Windows even 当 该 destination already exists.
+    Concurrent readers never see a half-written file, and ``os.replace`` is
+    safe on Windows even when the destination already exists.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
@@ -122,7 +122,7 @@ def atomic_write_json(path: Path, payload: dict[str, Any]) -> None:
 
 
 def init_workspace(ws: Workspace) -> dict[str, Any]:
-    """创建 该 ``.cogos`` skeleton 和 report what exists."""
+    """Create the ``.cogos`` skeleton and report what exists."""
     ws.ensure()
     return {
         "root": str(ws.root),
@@ -130,13 +130,13 @@ def init_workspace(ws: Workspace) -> dict[str, Any]:
     }
 
 
-# --- 文件 锁们 -------------------------------------------------------------
+# --- file locks -------------------------------------------------------------
 
 
 def lock_file_for(ws: Workspace, rel: str) -> Path:
-    """Map a 工作区-relative 文件 路径 到 its 锁 文件 under ``.cogos/锁们/``.
+    """Map a workspace-relative file path to its lock file under ``.cogos/locks/``.
 
-    ``repo1/src/index.html`` -> ``.cogos/锁们/repo1/src/index.html.锁``
+    ``repo1/src/index.html`` -> ``.cogos/locks/repo1/src/index.html.lock``
     """
     target = ws.resolve_target(rel)
     parts = target.relative_to(ws.root).parts
@@ -151,10 +151,10 @@ def acquire_lock(
     force: bool = False,
     now: datetime | None = None,
 ) -> dict[str, Any]:
-    """Take an exclusive 锁 在 a 工作区-relative 文件.
+    """Take an exclusive lock on a workspace-relative file.
 
-    抛出 :class:`LockConflict` 当 该 锁 是 already held (unless
-    ``force`` 是 set, which breaks 该 existing 锁 第一).
+    Raises :class:`LockConflict` when the lock is already held (unless
+    ``force`` is set, which breaks the existing lock first).
     """
     ws.ensure()
     holder = holder or default_agent()
@@ -165,8 +165,8 @@ def acquire_lock(
         except (json.JSONDecodeError, OSError):
             existing = {}
         raise LockConflict(
-            f"{rel!r} 上的锁已被 {existing.get('holder', '?')} 持有，"
-            f"自 {existing.get('acquired_at', '?')} 起（用 --force 强制破锁）"
+            f"lock on {rel!r} already held by {existing.get('holder', '?')} "
+            f"since {existing.get('acquired_at', '?')} (use --force to break)"
         )
     lp.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -185,9 +185,9 @@ def release_lock(
     holder: str | None = None,
     force: bool = False,
 ) -> dict[str, Any]:
-    """释放 a 锁 previously taken 使用 :func:`acquire_lock`.
+    """Release a lock previously taken with :func:`acquire_lock`.
 
-    Only 该 holder 可能 释放, unless ``force`` 是 set.
+    Only the holder may release, unless ``force`` is set.
     """
     holder = holder or default_agent()
     lp = lock_file_for(ws, rel)
@@ -200,14 +200,14 @@ def release_lock(
             existing = {}
         if existing.get("holder") != holder:
             raise LockError(
-                f"{rel!r} 上的锁由 {existing.get('holder', '?')} 持有，不是 {holder}"
+                f"lock on {rel!r} is held by {existing.get('holder', '?')}, not {holder}"
             )
     lp.unlink()
     return {"target": rel, "holder": holder, "released": True}
 
 
 def list_locks(ws: Workspace) -> list[dict[str, Any]]:
-    """列出 每个 锁 当前 held 在 该 工作区."""
+    """List every lock currently held in the workspace."""
     out: list[dict[str, Any]] = []
     if not ws.locks_dir.exists():
         return out
@@ -222,11 +222,11 @@ def list_locks(ws: Workspace) -> list[dict[str, Any]]:
     return out
 
 
-# --- activity 扫描 (P1, simple implementation) ------------------------------
+# --- activity scan (P1, simple implementation) ------------------------------
 
 
 def _git(repo: Path, *args: str) -> str | None:
-    """运行 a git command inside a repo; 返回 stdout 或 None 在 任何 failure."""
+    """Run a git command inside a repo; return stdout or None on any failure."""
     try:
         proc = subprocess.run(
             ["git", "-C", str(repo), *args],
@@ -238,7 +238,7 @@ def _git(repo: Path, *args: str) -> str | None:
 
 
 def _scan_repo(repo: Path, since_hours: int) -> dict[str, Any]:
-    """Infer one repo's recent activity: branch, 最后 commit, dirty 文件们 和
+    """Infer one repo's recent activity: branch, last commit, dirty files and
     files touched within the window (zero-invasion: reads git + mtimes only)."""
     cutoff = datetime.now(timezone.utc) - timedelta(hours=since_hours)
     recent: list[tuple[float, str]] = []
@@ -264,7 +264,7 @@ def _scan_repo(repo: Path, since_hours: int) -> dict[str, Any]:
 
 
 def scan_workspace(ws: Workspace, since_hours: int = 24) -> dict[str, Any]:
-    """扫描 每个 git repository 直接 under 该 工作区 root."""
+    """Scan every git repository directly under the workspace root."""
     repos: list[dict[str, Any]] = []
     if ws.root.exists():
         for child in sorted(ws.root.iterdir()):
@@ -275,7 +275,7 @@ def scan_workspace(ws: Workspace, since_hours: int = 24) -> dict[str, Any]:
     return {"since_hours": since_hours, "repos": repos}
 
 
-# --- CLI: cogos 工作区 ---------------------------------------------------
+# --- CLI: cogos workspace ---------------------------------------------------
 
 
 def _add_io(p: argparse.ArgumentParser) -> None:
@@ -335,7 +335,7 @@ def run_workspace(args: argparse.Namespace) -> int:
     return 2
 
 
-# --- CLI: cogos 锁 --------------------------------------------------------
+# --- CLI: cogos lock --------------------------------------------------------
 
 
 def add_lock_parser(sub: argparse._SubParsersAction) -> None:
@@ -381,7 +381,7 @@ def run_lock(args: argparse.Namespace) -> int:
                     )
                 except Exception:
                     pass
-            print(f"出错：{e}", file=sys.stderr)
+            print(f"error: {e}", file=sys.stderr)
             return 1
         except ValueError as e:
             print(f"error: {e}", file=sys.stderr)

@@ -12,7 +12,7 @@
 
 ## 核心机制（3 层）
 
-### 第 1 层：共享工作目录（Shared 工作区）
+### 第 1 层：共享工作目录（Shared Workspace）
 
 所有 Agent 的工作目录指向**同一个根**：
 
@@ -32,7 +32,7 @@
 - CognitiveOS 在 `.cogos/` 下维护**任务状态 + 锁 + 消息**，这些是 git 之外的运行时状态
 - Hermes/Codex/Claude Code 通过环境变量 `COGOS_WORKSPACE` 获知共享根
 
-### 第 2 层：任务注册表 + 进度追踪（任务 Registry）
+### 第 2 层：任务注册表 + 进度追踪（Task Registry）
 
 ```json
 // .cogos/tasks/TASK-001.json
@@ -80,8 +80,8 @@
 | Agent | 工作目录共享 | 执行方式 | 状态上报 | 收信 |
 |---|---|---|---|---|
 | Hermes | 天然支持（cogos 就在项目里） | cogos CLI | `cogos task update` | `cogos inbox check` |
-| Claude Code | `claude -p` + `--dangerously-skip-permissions`（受限） | Adapter | 任务完成后由 CognitiveOS 扫描 git log 自动更新 | 启动时注入收件箱检查 |
-| Codex | `codex exec --workdir <shared>` | Adapter | 同上 | 同上 |
+| Claude Code | `claude -p` + `--dangerously-skip-permissions`（受限） | adapter | 任务完成后由 CognitiveOS 扫描 git log 自动更新 | 启动时注入收件箱检查 |
+| Codex | `codex exec --workdir <shared>` | adapter | 同上 | 同上 |
 | MiniMax Code | **有 GUI，无 CLI** → 只共享磁盘目录，对话不落本地 | 暂无执行通道 | 无法自动上报（GUI 手动） | 无法自动收信 |
 
 ## 进度追踪的两种模式
@@ -98,9 +98,9 @@
 
 ## 实施阶段
 
-- **P0（基础）**：`cogos workspace init` 建共享目录骨架 + `cogos task` 命令（创建/更新/列出/显示）+ `cogos inbox` 命令（发送/检查）——Hermes 先接入
+- **P0（基础）**：`cogos workspace init` 建共享目录骨架 + `cogos task` 命令（create/update/list/show）+ `cogos inbox` 命令（send/check）——Hermes 先接入
 - **P1（被动追踪）**：`cogos workspace scan` 扫 git log 推断各 Agent 进度 → dashboard 显示"各 Agent 当前在做什么"
-- **P2（Claude/Codex 接入）**：Adapter 加 `--workdir` + 启动时收件箱注入；完成时自动更新任务状态
+- **P2（Claude/Codex 接入）**：adapter 加 `--workdir` + 启动时收件箱注入；完成时自动更新任务状态
 - **P3（PR 级协作）**：任务注册表加 PR URL；Hermes 审查指令自动变成 `review_request` 消息发到 Claude Code 收件箱；git 分支策略（每任务一分支，一个 PR）
 
 ## 风险与对策

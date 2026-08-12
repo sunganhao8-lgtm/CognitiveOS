@@ -1,7 +1,7 @@
-"""命令行入口。
+"""Command-line entry point.
 
-``pyproject.toml`` 里 ``cogos`` 指向本模块。要保持精简：解析命令、
-分发到函数、打印结果。
+This module is what ``pyproject.toml`` points ``cogos`` at. It must stay
+small: parse the command, dispatch to a function, print a result.
 """
 
 from __future__ import annotations
@@ -35,48 +35,48 @@ from .workspace import add_workspace_parser, run_workspace, add_lock_parser, run
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="cogos", description="CognitiveOS CLI")
-    parser.add_argument("--root", type=Path, default=None, help="项目根（默认：当前目录）")
+    parser.add_argument("--root", type=Path, default=None, help="Project root (default: cwd)")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    p_bootstrap = sub.add_parser("bootstrap", help="运行引导流程")
-    p_bootstrap.add_argument("--no-browser", action="store_true", help="不要打开仪表盘")
+    p_bootstrap = sub.add_parser("bootstrap", help="Run the bootstrap pipeline")
+    p_bootstrap.add_argument("--no-browser", action="store_true", help="Don't open the dashboard")
 
-    p_status = sub.add_parser("status", help="显示上一次的引导报告")
+    p_status = sub.add_parser("status", help="Show last bootstrap report")
 
-    p_export = sub.add_parser("export-user", help="把 user/ 层打包为 tar.gz")
-    p_export.add_argument("--to", type=Path, required=True, help="目标 .tar.gz 路径")
+    p_export = sub.add_parser("export-user", help="Export the user/ layer to a tar.gz")
+    p_export.add_argument("--to", type=Path, required=True, help="Destination .tar.gz path")
 
-    p_import = sub.add_parser("import-user", help="从 tar.gz 恢复 user/ 层")
-    p_import.add_argument("--from", dest="src", type=Path, required=True, help="源 .tar.gz 路径")
+    p_import = sub.add_parser("import-user", help="Import the user/ layer from a tar.gz")
+    p_import.add_argument("--from", dest="src", type=Path, required=True, help="Source .tar.gz path")
 
-    p_brief = sub.add_parser("brief", help="为指定 Agent 渲染管家入职 brief")
+    p_brief = sub.add_parser("brief", help="Render a butler induction brief for a specific agent")
     p_brief.add_argument(
         "--agent",
         choices=["hermes", "codex", "claude", "raw"],
         default="raw",
-        help="目标 Agent 格式（默认：raw markdown）",
+        help="Target agent format (default: raw markdown)",
     )
 
-    p_persona = sub.add_parser("persona", help="训练 / 查看主人人格模型")
+    p_persona = sub.add_parser("persona", help="Train / inspect the user persona model")
     persona_sub = p_persona.add_subparsers(dest="persona_cmd", required=True)
 
-    p_ptrain = persona_sub.add_parser("fit", help="跑一轮 persona 拟合（与主人历史答案做语义匹配打分）")
-    p_ptrain.add_argument("--seed", type=int, default=None, help="随机种子，便于复现")
+    p_ptrain = persona_sub.add_parser("fit", help="Run one persona-fitting round (semantic match against master's past answer)")
+    p_ptrain.add_argument("--seed", type=int, default=None, help="Random seed for reproducibility")
 
-    p_plist = persona_sub.add_parser("list", help="列出可用的经验")
+    p_plist = persona_sub.add_parser("list", help="List available experiences")
 
-    p_pshow = persona_sub.add_parser("show", help="显示当前 persona 模型")
+    p_pshow = persona_sub.add_parser("show", help="Show the current persona model")
 
-    p_plog = persona_sub.add_parser("log", help="查看最近的训练样本")
+    p_plog = persona_sub.add_parser("log", help="Show recent training samples")
     p_plog.add_argument("--last", type=int, default=5)
 
-    p_verify = sub.add_parser("verify", help="跑复刻校验：把铁律抛给当前 Agent 并报告违反情况")
-    p_verify.add_argument("--seed", type=int, default=None, help="可选种子，便于复现")
+    p_verify = sub.add_parser("verify", help="Run reproduction tests: throw iron rules at the current agent and report breaches")
+    p_verify.add_argument("--seed", type=int, default=None, help="Optional seed for reproducibility")
 
-    p_ingest = sub.add_parser("ingest", help="从其他 Agent（Codex / Claude Code）抽取对话记忆到 user/conversations/")
-    p_ingest.add_argument("--limit", type=int, default=None, help="每个数据源最多抽取多少对")
+    p_ingest = sub.add_parser("ingest", help="Extract conversation memories from other agents (Codex / Claude Code) into user/conversations/")
+    p_ingest.add_argument("--limit", type=int, default=None, help="Max pairs per source")
 
     add_task_parser(sub)
     add_inbox_parser(sub)
@@ -94,7 +94,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "status":
         last = paths.cache / "last_report.json"
         if not last.exists():
-            print("暂无上一次的 bootstrap 记录。", file=sys.stderr)
+            print("No previous bootstrap run recorded.", file=sys.stderr)
             return 1
         print(last.read_text(encoding="utf-8"))
         return 0
@@ -124,22 +124,22 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.persona_cmd == "show":
             mp = user.root / "persona" / "model.md"
-            print(mp.read_text(encoding="utf-8") if mp.exists() else "（model.md 还不存在——先跑 `cogos persona fit`）")
+            print(mp.read_text(encoding="utf-8") if mp.exists() else "(model.md does not exist yet — run `cogos persona fit` to start)")
             return 0
         if args.persona_cmd == "log":
             log = user.root / "persona" / "drivel.jsonl"
             if not log.exists():
-                print("（暂无样本）")
+                print("(no samples yet)")
                 return 0
             lines = log.read_text(encoding="utf-8").splitlines()[-args.last:]
             for line in lines:
                 rec = json.loads(line)
                 print(f"[{rec['timestamp']}] q{rec['question_id']} score={rec.get('semantic_score', '?')}")
-                print(f"    问：{rec['question'][:100].replace(chr(10), ' ')}")
-                print(f"    管家：{rec['butler_answer'][:100].replace(chr(10), ' ')}")
-                print(f"    主人：{rec['master_answer'][:100].replace(chr(10), ' ')}")
+                print(f"    Q: {rec['question'][:100].replace(chr(10), ' ')}")
+                print(f"    butler: {rec['butler_answer'][:100].replace(chr(10), ' ')}")
+                print(f"    master: {rec['master_answer'][:100].replace(chr(10), ' ')}")
                 if rec.get("diff_note"):
-                    print(f"    差异：{rec['diff_note']}")
+                    print(f"    diff: {rec['diff_note']}")
                 print()
             return 0
         if args.persona_cmd == "fit":
@@ -147,38 +147,39 @@ def main(argv: list[str] | None = None) -> int:
 
             qa = pick_random_qa(user, seed=args.seed)
             if qa is None:
-                print("user/conversations/ 下还没有对话。先跑抽取器。", file=sys.stderr)
+                print("No conversations under user/conversations/. Run the extractor first.", file=sys.stderr)
                 return 1
             persona = build_persona_block(user)
             prompt = (
-                "# 主人人格\n\n" + persona +
-                "\n\n# 问题\n\n" + qa.question +
-                "\n\n# 任务\n\n" + (
-                    "请以主人自己的口吻和优先级回答这个问题——3-6 行、符合主人风格。"
-                    "这是人格预测任务，不是客服任务。"
+                "# MASTER PERSONA\n\n" + persona +
+                "\n\n# QUESTION\n\n" + qa.question +
+                "\n\n# TASK\n\n" + (
+                    "Answer this question AS the master would answer it — in their "
+                    "voice and priorities. 3-6 lines, their style. This is a persona "
+                    "prediction task, not a help-desk task."
                 )
             )
             if shutil.which("hermes") is None:
-                print("hermes CLI 不在 PATH 上", file=sys.stderr)
+                print("hermes CLI not on PATH", file=sys.stderr)
                 return 1
 
-            # 第一阶段：管家以主人身份回答（不展示 ground truth）。
+            # Stage 1: butler answers as the master (no ground truth shown).
             t0 = time.time()
             proc1 = subprocess.run(
                 ["hermes", "chat", "-q", prompt, "-t", "terminal,file", "--max-turns", "1", "-Q"],
                 capture_output=True, text=True, timeout=120, encoding="utf-8",
             )
             if proc1.returncode != 0:
-                print(f"hermes 第一阶段失败：{proc1.stderr[:200]}", file=sys.stderr)
+                print(f"hermes stage-1 failed: {proc1.stderr[:200]}", file=sys.stderr)
                 return 2
             butler_answer = proc1.stdout.strip()
 
-            # 第二阶段：与主人真实答案做语义匹配打分。
+            # Stage 2: semantic-match scoring against the master's actual answer.
             eval_prompt = (
-                "给下面两段答案的语义匹配程度打分。\n\n"
-                f"管家（主人人格）：\n{butler_answer}\n\n"
-                f"主人真实历史：\n{qa.answer[:1500]}\n\n"
-                '只回 JSON：{"score": 0.0-1.0, "note": "一句话"}'
+                "Score semantic match between these two answers.\n\n"
+                f"BUTLER (master persona):\n{butler_answer}\n\n"
+                f"MASTER ACTUAL HISTORY:\n{qa.answer[:1500]}\n\n"
+                'Reply with ONLY JSON: {"score": 0.0-1.0, "note": "one line"}'
             )
             proc2 = subprocess.run(
                 ["hermes", "chat", "-q", eval_prompt, "-t", "terminal,file", "--max-turns", "1", "-Q"],
@@ -186,12 +187,12 @@ def main(argv: list[str] | None = None) -> int:
             )
             elapsed = time.time() - t0
             if proc2.returncode != 0:
-                print(f"hermes 第二阶段失败：{proc2.stderr[:200]}", file=sys.stderr)
+                print(f"hermes stage-2 failed: {proc2.stderr[:200]}", file=sys.stderr)
                 return 2
-            # 从 eval 响应里抠 JSON。
+            # Parse JSON from eval response.
             import re
             m = re.search(r"\{[^{}]*\"score\"[^{}]*\}", proc2.stdout)
-            score, note = 0.5, "（未能解析）"
+            score, note = 0.5, "(unparsed)"
             if m:
                 try:
                     parsed = json.loads(m.group(0))
@@ -228,9 +229,9 @@ def main(argv: list[str] | None = None) -> int:
         seeded = seed_generated_rules(user)
         rules = load_rules(user)
         if not rules:
-            print("user/rules/ 下还没有规则。请先创建 user/rules/R001.json 再跑。")
+            print("No rules under user/rules/. Create one as user/rules/R001.json and re-run.")
             return 4
-        print(f"正在跑 {len(rules)} 条复刻探针...\n")
+        print(f"Running {len(rules)} reproduction probe(s)...\n")
         results: list[dict] = []
         passes = 0
         for r in rules:
@@ -242,23 +243,23 @@ def main(argv: list[str] | None = None) -> int:
             if res.verdict == "PASS":
                 passes += 1
             print(f"[{mark}] {r.id} ({elapsed:.1f}s)")
-            print(f"  探针：    {res.probe}")
-            print(f"  回应：    {res.agent_response[:160].replace(chr(10), ' ')}{'...' if len(res.agent_response) > 160 else ''}")
-            print(f"  详情：    {res.detail}")
+            print(f"  probe:    {res.probe}")
+            print(f"  response: {res.agent_response[:160].replace(chr(10), ' ')}{'...' if len(res.agent_response) > 160 else ''}")
+            print(f"  detail:   {res.detail}")
             print()
             results.append({"id": r.id, "verdict": res.verdict, "detail": res.detail})
         total = len(rules)
-        print(f"汇总：{passes}/{total} 条规则通过")
+        print(f"summary: {passes}/{total} rules held")
         return 0 if passes == total else 3
 
     if args.cmd == "ingest":
         user = UserLayer(root=paths.root / "user")
         result = ingest_agent_memories(user, limit_per_source=args.limit)
         if not result:
-            print("其他 Agent 里没找到对话记忆。")
+            print("No conversation memories found in other agents.")
         else:
             for source, count in result.items():
-                print(f"{source}：抽到 {count} 对问答 -> user/conversations/")
+                print(f"{source}: extracted {count} QA pairs -> user/conversations/")
         return 0
 
     if args.cmd == "task":

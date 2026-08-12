@@ -1,107 +1,97 @@
-# Architecture Decisions
+# 架构决策记录（ADR）
 
-本文件 records key design decisions 用于 CognitiveOS.
+本文件记录 CognitiveOS 的关键设计决策。
 
-每个 decision 应该 describe:
+每个决策应说明：
 
-- Context
-- Options considered
-- Decision
-- Consequences
-
----
-
-## DEC-001 — Package layout: `src/cogos/`
-
-**Context.** We needed a clear namespace 用于 CognitiveOS code 也就是说
-distinct 来自 该 project's 目录 name.
-
-**Decision.** 所有 runtime code lives under `src/cogos/`. 该 CLI entry
-point `cogos` 是 exposed via `pyproject.toml` `[project.scripts]`.
-
-**Consequences.** 测试 可以 import `cogos` cleanly, 和 `pip install -e .`
-makes 该 command available system-wide.
+- 背景（Context）
+- 考虑的选项（Options considered）
+- 决策（Decision）
+- 影响（Consequences）
 
 ---
 
-## DEC-002 — Agent discovery 是 一个列表 probes, 不 a switch statement
+## DEC-001 — 包布局：`src/cogos/`
 
-**Context.** Adding a 新 Agent (Codex, Claude Code, OpenClaw, …) 必须
-不 require editing a central dispatcher.
+**背景。** 我们需要一个清晰的命名空间来放 CognitiveOS 代码，
+与项目目录名区分开。
 
-**Decision.** 每个 Agent 是 discovered 通过 a small `Probe` function 在
-`cogos.probes`. `discovery.discover()` 运行 每个 probe 和 unions 该
-results.
+**决策。** 所有运行时代码放在 `src/cogos/` 下。CLI 入口 `cogos`
+通过 `pyproject.toml` 的 `[project.scripts]` 暴露。
 
-**Consequences.** Adding a 新 Adapter = one 新 probe + one Adapter
-模块. 无 central code 是 touched.
-
----
-
-## DEC-003 — Adapters 是 该 only place that knows Agent internals
-
-**Context.** Agents store their state 在 wildly 不同 ways.
-
-**Decision.** A single `Adapter` protocol (`describe / harvest /
-bootstrap_query`) hides every implementation detail.
-
-**Consequences.** Discovery, normalization, 和 该 dashboard 从不
-import 一个 Agent-具体 模块. Replacing 该 Hermes Adapter 使用 a
-Codex Adapter 需要 无 changes outside `cogos/adapters/<agent>/`.
+**影响。** 测试可以干净地 `import cogos`；`pip install -e .`
+让命令在系统级可用。
 
 ---
 
-## DEC-004 — Three-layer knowledge base (来源们 / normalized / wiki)
+## DEC-002 — Agent 发现是一组探针（probes），不是 switch 语句
 
-**Context.** 用户 explicitly required raw data 到 remain traceable
-和 该 structure itself 到 convey meaning.
+**背景。** 新增一个 Agent（Codex、Claude Code、OpenClaw……）不能要求
+去改一个中央分发器。
 
-**Decision.** 每个 harvested 文件 是 stored verbatim under
-`knowledge/sources/<agent>/`. A normalizer produces
-`knowledge/normalized/index.json`. A wiki renderer produces one Markdown
-page per Agent under `knowledge/wiki/`.
+**决策。** 每个 Agent 通过 `cogos.probes` 下的一个小 `Probe` 函数被发现。
+`discovery.discover()` 运行所有探针并合并结果。
 
-**Consequences.** 任何 wiki page 可以 为 traced back 到 a 来源 文件 通过
-following 路径 recorded 在 its frontmatter. 无 piece 的 knowledge
-exists 不使用 provenance.
+**影响。** 新增一个 Adapter = 一个探针 + 一个 Adapter 模块。中央代码零改动。
 
 ---
 
-## DEC-005 — Hermes whitelist 在 v0.1 (无 caches, 无 auth, 无 sessions)
+## DEC-003 — Adapter 是唯一知道 Agent 内部细节的地方
 
-**Context.** A naive "copy everything" harvest picked up `state.db`,
-`auth.json`, session JSONLs, cache 目录们, 和 该 profiles
-`.git/` history. These 是 runtime state 和 credentials, 不 knowledge.
+**背景。** 每个 Agent 的存储方式差异极大。
 
-**Decision.** `HermesAdapter.SAFE_TOP_LEVEL` 和
-`SAFE_PROFILE_FILES` 是 explicit whitelists. Cache, auth, sessions,
-state.db, logs, 和 `.git/` 是 从不 copied.
+**决策。** 一个统一的 `Adapter` 协议（`describe / harvest / bootstrap_query`）
+隐藏所有实现细节。
 
-**Consequences.** Bootstrap reports `~1600` 技能 文件们 plus a handful
-的 `*.md` / `config.yaml`. 用户 可以 audit 该 harvested set
-quickly, 和 无 credentials ever leave 该 Hermes 安装.
+**影响。** 发现层、归一化层和仪表盘从不 import 任何 Agent 专属模块。
+把 Hermes Adapter 换成 Codex Adapter，`cogos/adapters/<agent>/` 之外零改动。
 
 ---
 
-## DEC-006 — Dashboard 是 local HTML, 无 framework
+## DEC-004 — 三层知识库（sources / normalized / wiki）
 
-**Context.** 用户 asked 用于 a self-contained, local-第一 interface
-that an AI Agent 可以 rewrite easily.
+**背景。** 用户明确要求原始数据可追溯，且结构本身要有意义。
 
-**Decision.** `dashboard/index.html` 是 rendered 来自 a Jinja2 template
-plus a single embedded `<style>` block. 无 React, 无 Vue, 无 CDN.
+**决策。** 每个收割到的文件原样存放在 `knowledge/sources/<agent>/`。
+归一化器产出 `knowledge/normalized/index.json`。wiki 渲染器为每个 Agent
+生成一个 Markdown 页面，放在 `knowledge/wiki/`。
 
-**Consequences.** 该 dashboard works offline, 是 one 文件, 和 可以 为
-regenerated 或 hand-edited 不使用 a build step.
+**影响。** 任何 wiki 页面都能通过 frontmatter 里记录的路径回到源文件。
+没有任何知识片段是"无出处"的。
 
 ---
 
-## DEC-007 — Single-process v0.1
+## DEC-005 — v0.1 Hermes 白名单（无缓存、无认证、无会话）
 
-**Context.** Distributed 和 multi-process concerns 是 out 的 scope.
+**背景。** 一次"全部复制"式的收割会把 `state.db`、`auth.json`、
+会话 JSONL、缓存目录和 profiles 的 `.git/` 历史都收进来。
+这些是运行时状态和凭据，不是知识。
 
-**Decision.** v0.1 是 single-process. 该 bootstrap pipeline 运行 top 到
-bottom 在 one Python invocation.
+**决策。** `HermesAdapter.SAFE_TOP_LEVEL` 和 `SAFE_PROFILE_FILES`
+是显式白名单。缓存、认证、会话、state.db、日志和 `.git/` 从不复制。
 
-**Consequences.** Simpler debugging, simpler reasoning about state, 和
-zero infrastructure dependencies. Multi-process 是 a v1.x concern.
+**影响。** Bootstrap 报告约 1600 个技能文件加少量 `*.md` / `config.yaml`。
+用户可以快速审计收割集合；凭据永远不会离开 Hermes 安装目录。
+
+---
+
+## DEC-006 — 仪表盘是本地 HTML，无框架
+
+**背景。** 用户要求一个自包含、本地优先、AI Agent 容易改写的界面。
+
+**决策。** `dashboard/index.html` 由 Jinja2 模板加单个内嵌 `<style>` 块渲染。
+无 React、无 Vue、无 CDN。
+
+**影响。** 仪表盘离线可用、是单个文件、可以在没有构建步骤的情况下
+重新生成或手工编辑。
+
+---
+
+## DEC-007 — v0.1 单进程
+
+**背景。** 分布式和多进程问题超出 v0.1 范围。
+
+**决策。** v0.1 是单进程的。bootstrap 流水线在一次 Python 调用里从上到下跑完。
+
+**影响。** 调试更简单、状态推理更简单、零基础设施依赖。
+多进程是 v1.x 的事。

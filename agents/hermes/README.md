@@ -1,18 +1,18 @@
 # Hermes Integration
 
-Hermes Agent (通过 Nous Research) 是 a 一般-purpose AI Agent framework that 运行 在 该 terminal, messaging platforms, 和 IDEs.
+Hermes Agent (by Nous Research) is a general-purpose AI agent framework that runs in the terminal, messaging platforms, and IDEs.
 
-Future CognitiveOS integration 使用 Hermes 将 live here.
+Future CognitiveOS integration with Hermes will live here.
 
-Hermes 是 relevant 到 CognitiveOS because it already provides:
+Hermes is relevant to CognitiveOS because it already provides:
 
-- Persistent 记忆 across sessions
+- Persistent memory across sessions
 - Multi-profile isolation
-- 技能-based procedural 记忆
-- Gateway support 用于 messaging platforms
+- Skill-based procedural memory
+- Gateway support for messaging platforms
 - Model-agnostic provider routing
 
-在 CognitiveOS terms, Hermes 可以 act 作为 both:
+In CognitiveOS terms, Hermes can act as both:
 
-- A consumer (一个 Agent that CognitiveOS routes 任务们 到)
-- A reference implementation (its 记忆 + 技能们 design informs our 记忆 abstractions)
+- A consumer (an agent that CognitiveOS routes tasks to)
+- A reference implementation (its memory + skills design informs our memory abstractions)

@@ -1,33 +1,33 @@
-"""Persona fitting — semantic-match training against 主人's past answers.
+"""Persona fitting — semantic-match training against the master's past answers.
 
-This 是 该 training loop 用户 actually described:
+This is the training loop the user actually described:
 
-1. Take a real **question 主人 asked 该 butler 在 该 past**.
-2. Give that question 到 该 *当前* butler (via Hermes CLI), along
-   使用 主人's persona model (preferences, style, manifest).
-3. 该 butler answers **作为 主人 将 answer 该 question** —
-   不 作为 主人's past butler answered, but 作为 主人 himself
-   将 有 responded.
-4. Compare 该 butler's answer 到 what 主人 **actually said**
+1. Take a real **question the master asked the butler in the past**.
+2. Give that question to the *current* butler (via Hermes CLI), along
+   with the master's persona model (preferences, style, manifest).
+3. The butler answers **as the master would answer the question** —
+   not as the master's past butler answered, but as the master himself
+   would have responded.
+4. Compare the butler's answer to what the master **actually said**
    (their real historical reply) using semantic similarity.
-5. Score 该 match. 写入 该 sample 到 ``user/persona/samples/`` 和
-   该 running log 到 ``user/persona/drivel.jsonl``.
+5. Score the match. Write the sample to ``user/persona/samples/`` and
+   the running log to ``user/persona/drivel.jsonl``.
 
-该 score 是 computed 通过 该 相同 LLM, but 该 *reference* 是 该
-master's real words — 不 该 butler's own earlier prediction. 也就是说
-键 difference 来自 上一个 (self-rewarding) design: there 是
-a ground-truth reference 在 该 loop, so 该 score 是 a semantic match
-against reality, 不 a self-evaluation.
+The score is computed by the same LLM, but the *reference* is the
+master's real words — not the butler's own earlier prediction. That is
+the key difference from the previous (self-rewarding) design: there is
+a ground-truth reference in the loop, so the score is a semantic match
+against reality, not a self-evaluation.
 
 Reward definition (0.0–1.0):
 
-* >= 0.8 : 该 butler's persona reply semantically matches 该
+* >= 0.8 : the butler's persona reply semantically matches the
   master's real answer.
-* 0.4–0.8: partial match — tone 或 intent right, details off.
-* < 0.4  : 该 butler's persona reply 做 不 sound like 主人.
+* 0.4–0.8: partial match — tone or intent right, details off.
+* < 0.4  : the butler's persona reply does not sound like the master.
 
-A high score means 该 persona model 是 a good fit. A low score means
-该 persona model needs updating (see ``maybe_update_model``).
+A high score means the persona model is a good fit. A low score means
+the persona model needs updating (see ``maybe_update_model``).
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ class FitSample:
 
 
 # ---------------------------------------------------------------------------
-# 加载中 historical QA pairs
+# Loading historical QA pairs
 # ---------------------------------------------------------------------------
 
 
@@ -104,23 +104,23 @@ def pick_random_qa(user: UserLayer, *, seed: int | None = None) -> QAItem | None
 # ---------------------------------------------------------------------------
 
 
-PERSONA_FIT_PROMPT = """You 是 a butler fitting yourself 到 a 具体 master.
-You 是 given (A) 主人's persona, 和 (B) a real question 主人
-once asked a 上一个 butler.
+PERSONA_FIT_PROMPT = """You are a butler fitting yourself to a specific master.
+You are given (A) the master's persona, and (B) a real question the master
+once asked a previous butler.
 
-Your job: answer that question **该 way 主人 himself 将 answer
-it** — 在 their voice, their priorities, their decision style. This 是
-不 about answering 作为 a helpful assistant. It 是 about predicting 该
+Your job: answer that question **the way the master himself would answer
+it** — in their voice, their priorities, their decision style. This is
+NOT about answering as a helpful assistant. It is about predicting the
 master's own reply.
 
-Then, after your persona answer, rate how well it matches 主人's
-actual historical answer, which you 将 为 shown AFTER you 写入 yours.
+Then, after your persona answer, rate how well it matches the master's
+actual historical answer, which you will be shown AFTER you write yours.
 
-## 主人'S PERSONA
+## THE MASTER'S PERSONA
 
 {persona}
 
-## 该 QUESTION 主人 ASKED
+## THE QUESTION THE MASTER ASKED
 
 {question}
 
@@ -129,22 +129,23 @@ actual historical answer, which you 将 为 shown AFTER you 写入 yours.
 """
 
 
-EVAL_PROMPT = """给下面两段答案的语义匹配程度打分。
+EVAL_PROMPT = """Now rate the semantic match between the butler's persona
+answer and the master's actual historical answer.
 
-Butler's persona answer（主人会怎么说）：
+Butler's persona answer (what the master would say):
 
 {butler_answer}
 
-Master's actual historical answer（主人真实历史答案）：
+Master's actual historical answer:
 
 {master_answer}
 
-分数范围 0.0（完全不同）到 1.0（含义、语气、意图完全一致）。
-打分要严。
+Score the semantic match from 0.0 (totally different) to 1.0 (identical
+meaning, tone, and intent).
 
-只回一个 JSON 对象，不要其他文字：
+Reply with ONLY a JSON object, no prose:
 
-{{"score": 0.85, "注意": "一句话说明匹配或偏离点"}}
+{{"score": 0.85, "note": "one line about what matched or diverged"}}
 """
 
 
@@ -175,7 +176,7 @@ def record_fit_sample(user: UserLayer, sample: FitSample) -> Path:
 
 
 def maybe_update_model(user: UserLayer, sample: FitSample) -> bool:
-    """Append a delta 到 model.md 当 该 persona fit 是 weak."""
+    """Append a delta to model.md when the persona fit is weak."""
     if sample.semantic_score >= 0.7:
         return False
 

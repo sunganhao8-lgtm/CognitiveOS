@@ -1,53 +1,49 @@
-# CognitiveOS Vision
+# CognitiveOS 愿景
 
-## Problem
+## 问题
 
-Today's AI Agents:
+现在的 AI Agent：
 
-- 有 fragmented 记忆
-- Lack long-term identity
-- 不能 share experiences
-- Repeat similar mistakes
+- 记忆碎片化（每个 Agent 各记各的）
+- 缺乏长期身份（换产品 = 从头再来）
+- 不能跨 Agent 分享经验
+- 反复犯类似的错误（"记得"不等于"不会再犯"）
 
-## Hypothesis
+## 假设
 
-Future AI systems 可能 require:
+未来的 AI 系统也许需要的**不只是更大的模型**，
+而是更好的**认知架构**——就像人脑不只是神经元多，而是有分工。
 
-不 only larger models,
+## 灵感
 
-but better cognitive architectures.
+人类智能包含：
 
-## Inspiration
+- 记忆系统（海马体）
+- 规划系统（前额叶）
+- 专业能力（不同脑区各司其职）
+- 反思机制（复盘、校验）
 
-Human intelligence contains:
+CognitiveOS 探索与之对应的软件抽象。
 
-- 记忆 system
-- planning system
-- specialized abilities
-- reflection mechanism
+## CognitiveOS 是什么
 
-CognitiveOS explores similar software abstractions.
+CognitiveOS 是**本地优先的基础设施**，它：
 
-## What CognitiveOS 是
+1. 发现用户机器上已安装的 AI Agent。
+2. 让其中一个 Agent 担任 **Bootstrap Agent**，解读本地环境。
+3. 构建一个**保留来源、wiki 风格的知识库**，分三层：
+   `sources/ → normalized/ → wiki/`
+4. 通过一个**自包含的 HTML 仪表盘**展示结果。
 
-CognitiveOS 是 **local-第一 infrastructure** that:
+## CognitiveOS 不是什么
 
-1. Discovers AI Agents already installed 在 用户's machine.
-2. Lets one 的 them act 作为 该 **Bootstrap Agent** 到 interpret 该 local environment.
-3. Builds a **来源-preserving, wiki-style knowledge base** 使用 three layers:
-   `sources/ → normalized/ → wiki/`.
-4. Exposes 结果 through a self-contained **HTML Dashboard**.
-
-## What CognitiveOS 是 不
-
-- 不 another AI Agent.
-- 不 a cloud service.
-- 不 a single-Agent plugin.
-- 不 a paper-only research prototype.
-- 不 a forced 1:1 brain-anatomy mapping.
+- ❌ 不是另一个 AI Agent。
+- ❌ 不是云服务。
+- ❌ 不是某个 Agent 的插件。
+- ❌ 不只是论文里的研究原型。
+- ❌ 不是强行一一映射大脑解剖结构。
 
 ## 状态
 
-Experimental / Research Project · v0.1 ships 使用 a working Hermes
-Adapter 和 bootstrap pipeline; 其他 Adapters 是 designed but 不
-implemented yet.
+实验性 / 研究项目 · v0.1 已交付可用的 Hermes Adapter 和 bootstrap
+流水线；其他 Adapter 已设计但尚未实现。

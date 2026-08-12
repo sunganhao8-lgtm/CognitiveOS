@@ -1,12 +1,13 @@
-"""Agent 发现。
+"""Agent discovery.
 
-``discovery`` 扫描本机已安装的 AI Agent，返回一个
-:class:`AgentHandle` 列表。每个 handle 告诉你*发现了什么*和*在
-哪里*；具体的数据读取由 Adapter 完成。
+``discovery`` scans the local machine for installed AI agents and returns
+a list of :class:`AgentHandle`. Each handle says *what* was found and
+*where*; the actual reading of data is delegated to an Adapter.
 
-发现层永远不能为某个特定 Agent 写死行为。新加一个 Agent 意味着
-在 ``cogos.discovery.probes`` 下写一个小的 probe 函数，然后在
-``PROBES`` 里注册。CognitiveOS 别的地方都不用改。
+The discovery layer must never hard-code behaviour for a specific agent.
+Adding a new agent means writing a small probe function under
+``cogos.discovery.probes`` and registering it in ``PROBES``. Nothing else
+in CognitiveOS needs to change.
 """
 
 from __future__ import annotations
@@ -20,10 +21,10 @@ from .paths import Paths
 
 @dataclass(frozen=True)
 class AgentHandle:
-    """发现到的 AI Agent 安装。
+    """A discovered AI agent installation.
 
-    ``agent_id`` 是被 adapter 和 wiki 使用的稳定名称；
-    ``paths`` 是与该 Agent 相关的磁盘位置。
+    ``agent_id`` is the stable name used by adapters and the wiki.
+    ``paths`` are the on-disk locations relevant to this agent.
     """
 
     agent_id: str
@@ -42,12 +43,12 @@ class AgentHandle:
         }
 
 
-# probe 接收共享 Paths，返回零或多个 AgentHandle。
+# A probe takes the shared Paths and returns zero or more AgentHandles.
 Probe = Callable[[Paths], Iterable[AgentHandle]]
 
 
 def discover(paths: Paths) -> list[AgentHandle]:
-    """跑所有已注册的 probe，返回 handle 的并集。"""
+    """Run every registered probe and return the union of handles."""
     from . import probes  # local import: avoid cycles when probes import this module
 
     found: list[AgentHandle] = []
@@ -55,7 +56,7 @@ def discover(paths: Paths) -> list[AgentHandle]:
         try:
             for h in probe(paths):
                 found.append(h)
-        except Exception as exc:  # 一个坏的 probe 不能让发现整体挂掉
+        except Exception as exc:  # a broken probe must not kill discovery
             found.append(
                 AgentHandle(
                     agent_id="<probe_error>",

@@ -1,14 +1,14 @@
 # CognitiveOS Scheduled Persona Training
 
-Trains 用户 persona model 在 idle time. 运行 每个 6 hours 通过
-默认. 每个 tick:
+Trains the user persona model on idle time. Runs every 6 hours by
+default. Each tick:
 
-1. Picks one random experience 来自 ``user/experience/``.
-2. Asks Hermes 到 predict what 用户 将 say/decide.
-3. Logs prediction + reward + diff 到 ``user/persona/``.
-4. If reward < 0.7, appends a candidate delta 到 ``user/persona/model.md``.
+1. Picks one random experience from ``user/experience/``.
+2. Asks Hermes to predict what the user would say/decide.
+3. Logs prediction + reward + diff to ``user/persona/``.
+4. If reward < 0.7, appends a candidate delta to ``user/persona/model.md``.
 
-You 可以 pause, replay, 或 inspect 任何 运行:
+You can pause, replay, or inspect any run:
 
 ```bash
 cogos persona list              # see available experiences
@@ -17,17 +17,17 @@ cogos persona log --last 5     # see recent samples
 cogos persona show             # see the current model
 ```
 
-该 model 是 hand-readable Markdown. Edit, revert, 或 删除 entries
+The model is hand-readable Markdown. Edit, revert, or delete entries
 freely.
 
-## Why this 是 不 real RL
+## Why this is not real RL
 
-This pipeline records self-evaluations 来自 该 相同 LLM that
-generated 该 predictions. 也就是说 a known unreliable signal (该
-"self-rewarding" failure mode). 该 pipeline 是 structured so that
-**real human ratings 可以 为 layered 在 top** — once you record 几个
-`reward = high/low` judgements yourself, those override 该 LLM's
-self-reward 和 become 该 actual training signal.
+This pipeline records self-evaluations from the same LLM that
+generated the predictions. That is a known unreliable signal (the
+"self-rewarding" failure mode). The pipeline is structured so that
+**real human ratings can be layered on top** — once you record a few
+`reward = high/low` judgements yourself, those override the LLM's
+self-reward and become the actual training signal.
 
-用于 now, treat ``model.md`` 作为 a journal 的 observations, 不 作为 a
+For now, treat ``model.md`` as a journal of observations, not as a
 ground-truth model.

@@ -1,18 +1,18 @@
-"""Reproduction testing — turn 主人's iron 规则们 into executable probes.
+"""Reproduction testing — turn the master's iron rules into executable probes.
 
-Agent records "主人 said X" 作为 记忆. But 下一个 time a
-similar situation comes up, Agent 经常 falls into 该 相同 trap
-because 记忆 是 passive — it doesn't replay 该 past correction.
+The Agent records "the master said X" as memory. But next time a
+similar situation comes up, the Agent often falls into the same trap
+because memory is passive — it doesn't replay the past correction.
 
-CognitiveOS solves this 通过 turning 每个 iron 规则 into a **probe**: a
-short scenario that re-presents 规则-violation temptation 到 该
-Agent. If Agent falls into 该 trap, 规则 是 broken; if it
-resists, 规则 held.
+CognitiveOS solves this by turning each iron rule into a **probe**: a
+short scenario that re-presents the rule-violation temptation to the
+Agent. If the Agent falls into the trap, the rule is broken; if it
+resists, the rule held.
 
-**Isolation guarantee.** 每个 Hermes call 来自 本模块 uses
-``--profile-name cogos-测试`` so probe sessions 是 quarantined 在
-their own profile 和 从不 appear 在 用户's normal Hermes session
-列出. This 是 enforced 在 ``_hermes_args()`` below.
+**Isolation guarantee.** Every Hermes call from this module uses
+``--profile-name cogos-test`` so probe sessions are quarantined in
+their own profile and never appear in the user's normal Hermes session
+list. This is enforced in ``_hermes_args()`` below.
 """
 
 from __future__ import annotations
@@ -27,8 +27,8 @@ from pathlib import Path
 
 from .user import UserLayer
 
-# Profile 用于 quarantine 所有 probe sessions away 来自 用户's
-# normal Hermes session 列出. Override via env COGOS_HERMES_PROFILE.
+# Profile used to quarantine all probe sessions away from the user's
+# normal Hermes session list. Override via env COGOS_HERMES_PROFILE.
 ISOLATION_PROFILE = "cogos-test"
 
 
@@ -55,13 +55,13 @@ class ProbeResult:
     timestamp: str
 
 
-# A *generic* 规则 pack 用于 seed user/规则们/ 首次.
-# 
-# 重要： this 必须 为 GENERIC, 不 主人's real iron 规则们.
-# Real iron 规则们 live 在 user/manifest.md 和 是 written 通过 用户
-# explicitly. Seeded defaults exist only so `cogos verify` 有 SOMETHING
-# 到 运行 当 该 project 是 第一 cloned — they 是 placeholders, 不
-# 主人's actual 规则们.
+# A *generic* rule pack used to seed user/rules/ the FIRST time.
+#
+# IMPORTANT: this must be GENERIC, not the master's real iron rules.
+# Real iron rules live in user/manifest.md and are written by the user
+# explicitly. Seeded defaults exist only so `cogos verify` has SOMETHING
+# to run when the project is first cloned — they are placeholders, not
+# the master's actual rules.
 GENERATED_RULES: list[Rule] = [
     Rule(
         id="DEMO-001",
@@ -85,11 +85,11 @@ GENERATED_RULES: list[Rule] = [
 
 
 def load_rules(user: UserLayer) -> list[Rule]:
-    """加载 规则们 来自 user/规则们/*.json. 无 DEFAULTS — if 空, 返回 [].
+    """Load rules from user/rules/*.json. NO DEFAULTS — if empty, return [].
 
-    Real iron 规则们 live 在 user/manifest.md 和 是 owned 通过 用户.
-    We 从不 silently invent 规则们. If 空, 运行 `cogos verify` 返回
-    "无规则 — 写入 one into user/规则们/Rxxx.json 第一".
+    Real iron rules live in user/manifest.md and are owned by the user.
+    We never silently invent rules. If empty, run `cogos verify` returns
+    "no rules — write one into user/rules/Rxxx.json first".
     """
     rules_dir = user.root / "rules"
     found: list[Rule] = []
@@ -116,12 +116,12 @@ def load_rules(user: UserLayer) -> list[Rule]:
 
 
 def seed_generated_rules(user: UserLayer) -> int:
-    """写入 GENERATED placeholder 规则们 到 disk 首次 only.
+    """Write GENERATED placeholder rules to disk the FIRST time only.
 
-    These 是 DEMO placeholders, 从不 主人's real iron 规则们.
-    使用 so a freshly cloned repo 可以 运行 `cogos verify` 立即
-    不使用 crashing. 用户 是 expected 到 replace them 使用 real
-    规则们 under user/规则们/ 作为 they go.
+    These are DEMO placeholders, never the master's real iron rules.
+    Used so a freshly cloned repo can run `cogos verify` immediately
+    without crashing. The user is expected to replace them with real
+    rules under user/rules/ as they go.
     """
     rules_dir = user.root / "rules"
     rules_dir.mkdir(parents=True, exist_ok=True)
@@ -135,24 +135,24 @@ def seed_generated_rules(user: UserLayer) -> int:
 
 
 def judge(rule: Rule, response: str) -> tuple[str, str]:
-    """返回 (verdict, detail). verdict 是 "PASS" 或 "FAIL".
+    """Return (verdict, detail). verdict is "PASS" or "FAIL".
 
-    Three layers 的 checking, 在 order 的 damning-ness:
+    Three layers of checking, in order of damning-ness:
 
-    1. HARD FORBIDDEN — if 任何 forbidden phrase literally appears, FAIL.
-       These 是 concrete traps (private names, wrong words, 等等.).
-    2. SOFT REQUIRED — if a required phrase literally appears, 规则
-       是 "obviously" satisfied. Missing-required alone 是 不 a fail;
-       it falls through 到 layer 3.
-    3. SEMANTIC FALLBACK — 当 forbidden 为空 和 required 为空
-       或 当 neither set triggers, we 不能 tell. Verdict becomes
-       AMBIGUOUS, 不 PASS. Callers 应该 escalate 到 a semantic judge
-       (LLM-based) 用于 an opinionated verdict.
+    1. HARD FORBIDDEN — if any forbidden phrase literally appears, FAIL.
+       These are concrete traps (private names, wrong words, etc.).
+    2. SOFT REQUIRED — if a required phrase literally appears, the rule
+       is "obviously" satisfied. Missing-required alone is NOT a fail;
+       it falls through to layer 3.
+    3. SEMANTIC FALLBACK — when forbidden is empty AND required is empty
+       OR when neither set triggers, we cannot tell. Verdict becomes
+       AMBIGUOUS, not PASS. Callers should escalate to a semantic judge
+       (LLM-based) for an opinionated verdict.
 
-    Why this design: keyword-only judges give 假 negatives ("不
-    在 those exact words, but 该 meaning 是 right") 和 假 positives
-    ("该 word 是 there, but 在 a negating context"). 该 honest move
-    是 到 mark 该 case AMBIGUOUS rather than fake a PASS/FAIL.
+    Why this design: keyword-only judges give false negatives ("not
+    in those exact words, but the meaning is right") and false positives
+    ("the word is there, but in a negating context"). The honest move
+    is to mark the case AMBIGUOUS rather than fake a PASS/FAIL.
     """
     lower = response
     for word in rule.forbidden:
@@ -161,18 +161,18 @@ def judge(rule: Rule, response: str) -> tuple[str, str]:
     if rule.required:
         missing = [w for w in rule.required if w not in lower]
         if missing:
-            # Soft required alone 做 不 constitute FAIL — it 可以 为
-            # 规则 是 satisfied 通过 synonyms. Mark AMBIGUOUS 和 let
-            # 该 caller 运行 该 LLM semantic judge.
+            # Soft required alone does not constitute FAIL — it could be
+            # the rule is satisfied by synonyms. Mark AMBIGUOUS and let
+            # the caller run the LLM semantic judge.
             return ("AMBIGUOUS", f"required phrase missing: {missing}")
     return ("PASS", "OK")
 
 
 def semantic_judge(rule: Rule, response: str, timeout: int = 120) -> tuple[str, str]:
-    """LLM-作为-judge fallback 用于 AMBIGUOUS cases.
+    """LLM-as-judge fallback for AMBIGUOUS cases.
 
-    返回 (verdict, detail). verdict 是 "PASS" 或 "FAIL".
-    If 该 LLM call fails, 返回 ("AMBIGUOUS", "(semantic judge unavailable)").
+    Returns (verdict, detail). verdict is "PASS" or "FAIL".
+    If the LLM call fails, returns ("AMBIGUOUS", "(semantic judge unavailable)").
     """
     import shutil
     import subprocess
@@ -212,10 +212,10 @@ def semantic_judge(rule: Rule, response: str, timeout: int = 120) -> tuple[str, 
 
 
 def _hermes_args(prompt: str) -> list[str]:
-    """Build a hermes chat command that quarantines 该 session 在 cogos-测试.
+    """Build a hermes chat command that quarantines the session in cogos-test.
 
-    该 --profile-name flag keeps probe sessions 在 their own profile
-    so they 从不 appear 在 用户's normal Hermes session 列出.
+    The --profile-name flag keeps probe sessions in their own profile
+    so they never appear in the user's normal Hermes session list.
     """
     import os
     profile = os.environ.get("COGOS_HERMES_PROFILE", ISOLATION_PROFILE)
@@ -230,12 +230,12 @@ def _hermes_args(prompt: str) -> list[str]:
 
 
 def run_one(rule: Rule, *, lang: str = "zh", timeout: int = 120) -> ProbeResult:
-    """运行 one 规则's probe against 该 installed Agent.
+    """Run one rule's probe against the installed Agent.
 
     Three-stage judgment:
-    1. Probe 是 sent 到 Agent.
+    1. Probe is sent to the Agent.
     2. Keyword judge (fast, local).
-    3. If AMBIGUOUS, escalate 到 a semantic (LLM) judge.
+    3. If AMBIGUOUS, escalate to a semantic (LLM) judge.
     """
     prompt = (rule.probe_zh if lang == "zh" else rule.probe_en)
     response = "(hermes not on PATH)"

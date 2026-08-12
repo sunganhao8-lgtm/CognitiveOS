@@ -2,11 +2,11 @@
 
 Purpose:
 
-Allow AI 到 learn 来自 上一个 任务们.
+Allow AI to learn from previous tasks.
 
 Workflow:
 
-任务 completed
+Task completed
 
 ↓
 
@@ -14,11 +14,11 @@ Analyze result
 
 ↓
 
-提取 experience
+Extract experience
 
 ↓
 
-更新 记忆
+Update memory
 
 ↓
 

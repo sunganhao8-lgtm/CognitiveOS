@@ -1,16 +1,16 @@
-"""运行 a single 任务 through CognitiveOS Kernel v0.1 (real execution).
+"""Run a single task through CognitiveOS Kernel v0.1 (real execution).
 
-This script proves 该 kernel loop end-到-end:
+This script proves the kernel loop end-to-end:
 
-1. Discover Hermes 在 本机.
-2. Build a Kernel 使用 one HermesAdapter.
-3. Construct 一个任务 在 该 ``oracle`` domain (oracle_issues 记忆 key).
-4. Kernel assembles context, routes, 执行 (via Hermes), reflects,
-   和 写入 an episodic 记忆 entry.
-5. Everything 是 dumped 到 ``.cogos/router_demo.json`` so 用户 可以
-   inspect 该 actual decision trail.
+1. Discover Hermes on this machine.
+2. Build a Kernel with one HermesAdapter.
+3. Construct a Task in the ``oracle`` domain (oracle_issues memory key).
+4. Kernel assembles context, routes, executes (via Hermes), reflects,
+   and writes an episodic memory entry.
+5. Everything is dumped to ``.cogos/router_demo.json`` so the user can
+   inspect the actual decision trail.
 
-运行:
+Run:
 
     PYTHONPATH=src python scripts/run_router_demo.py
 """
@@ -22,7 +22,7 @@ import sys
 import time
 from pathlib import Path
 
-# Make 该 在-tree cogos package importable 当 运行 来自 该 repo root.
+# Make the in-tree cogos package importable when run from the repo root.
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
@@ -65,7 +65,7 @@ def main() -> int:
 
     kernel = kernel_from_paths(paths, adapters, domain_map={"oracle": "hermes", "coding": "hermes"})
 
-    # 3. Construct 任务 (real one 来自 用户's domain)
+    # 3. Construct the Task (real one from the user's domain)
     print("\n[3/5] Constructing Task: oracle schema issue ...")
     task = Task(
         id="demo-001",
@@ -83,7 +83,7 @@ def main() -> int:
     print(f"      task.intent    = {task.intent[:80]}...")
     print(f"      task.req_memory= {task.required_memory}")
 
-    # 4. 运行
+    # 4. Run
     print("\n[4/5] Kernel.run(task) ...")
     t0 = time.time()
     result = kernel.run(task)
@@ -93,7 +93,7 @@ def main() -> int:
     print(f"      routing_reason = {result.routing_reason}")
     print(f"      elapsed        = {elapsed:.2f}s")
 
-    # 5. Persist + 显示
+    # 5. Persist + show
     print("\n[5/5] Writing demo report ...")
     report_path = paths.cache / "router_demo.json"
     report = {

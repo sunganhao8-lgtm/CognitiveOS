@@ -1,9 +1,9 @@
 """Wiki generator.
 
-每个 wiki page 是 a single Markdown 文件 under ``knowledge/wiki/`` 使用
-YAML frontmatter that records where 该 knowledge came 来自. 该 pages
-themselves 是 short 在 prose 用于 v0.1 — 该 goal 是 到 give 用户 a
-navigable, 来源-traceable view 的 *what CognitiveOS now knows*.
+Each wiki page is a single Markdown file under ``knowledge/wiki/`` with
+YAML frontmatter that records where the knowledge came from. The pages
+themselves are short on prose for v0.1 — the goal is to give the user a
+navigable, source-traceable view of *what CognitiveOS now knows*.
 """
 
 from __future__ import annotations
@@ -14,41 +14,41 @@ from .paths import Paths
 
 
 INDEX_PAGE = """---
-标题: CognitiveOS Wiki
+title: CognitiveOS Wiki
 type: index
 updated_at: {updated_at}
 ---
 
 # CognitiveOS Wiki
 
-This wiki 是 generated 来自 该 raw 来源们 under
-[`knowledge/来源们/`](../来源们/). 每个 page below traces back 到
-one 或 more 来源 文件们.
+This wiki is generated from the raw sources under
+[`knowledge/sources/`](../sources/). Every page below traces back to
+one or more source files.
 
-## Agents discovered 在本 运行
+## Agents discovered in this run
 
 {agent_list}
 """
 
 
 AGENT_PAGE = """---
-标题: {agent_id}
-type: Agent
-source_dir: 来源们/{agent_id}/
+title: {agent_id}
+type: agent
+source_dir: sources/{agent_id}/
 file_count: {file_count}
 updated_at: {updated_at}
 ---
 
 # {agent_title}
 
-文件们 harvested 来自 this Agent into `来源们/{agent_id}/`:
+Files harvested from this agent into `sources/{agent_id}/`:
 
 {file_list}
 """
 
 
 def build_wiki(paths: Paths) -> int:
-    """(Re)build 该 wiki; 返回 该 number 的 pages written."""
+    """(Re)build the wiki; return the number of pages written."""
     wiki_root = paths.wiki
     wiki_root.mkdir(parents=True, exist_ok=True)
 

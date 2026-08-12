@@ -1,11 +1,11 @@
-"""测试 用于 该 shared-工作区 P0: 任务 registry, 收件箱, 文件 锁们, CLI.
+"""Tests for the shared-workspace P0: task registry, inbox, file locks, CLI.
 
-Covers docs/shared-工作区-design.md P0 scope:
-  - 工作区 init / 扫描 + root resolution
-  - 任务 创建 / 更新 / 列出 / 显示 (registry 作为 .cogos/任务们/*.json)
-  - 收件箱 发送 / 检查 (persistent mailbox 文件们, 读取 state)
-  - 文件 锁 获取 / 释放 / conflict handling
-  - end-到-end CLI wiring (所有 commands support --json)
+Covers docs/shared-workspace-design.md P0 scope:
+  - workspace init / scan + root resolution
+  - task create / update / list / show (registry as .cogos/tasks/*.json)
+  - inbox send / check (persistent mailbox files, read state)
+  - file lock acquire / release / conflict handling
+  - end-to-end CLI wiring (all commands support --json)
 """
 
 import json
@@ -45,7 +45,7 @@ def ws(tmp_path):
     return w
 
 
-# --- 工作区 init / root resolution --------------------------------------
+# --- workspace init / root resolution --------------------------------------
 
 
 def test_init_creates_skeleton(ws):
@@ -86,7 +86,7 @@ def test_resolve_target_rejects_traversal(ws):
         w.resolve_target("/abs/path")
 
 
-# --- 任务 registry ----------------------------------------------------------
+# --- task registry ----------------------------------------------------------
 
 
 def test_task_create_roundtrip(ws):
@@ -100,7 +100,7 @@ def test_task_create_roundtrip(ws):
     assert t.progress == 10
     assert len(t.history) == 1
     assert t.history[0]["msg"] == "claude_code: 开始任务"
-    # persisted 在 disk 作为 one JSON 文件
+    # persisted on disk as one JSON file
     f = ws.tasks_dir / "TASK-001.json"
     assert f.exists()
     data = json.loads(f.read_text(encoding="utf-8"))
@@ -169,7 +169,7 @@ def test_task_list_filters(ws):
     assert [t.id for t in list_tasks(ws, assignee="claude_code")] == ["TASK-002", "TASK-003"]
 
 
-# --- 收件箱 ------------------------------------------------------------------
+# --- inbox ------------------------------------------------------------------
 
 
 def test_inbox_send_check_roundtrip(ws):
@@ -206,7 +206,7 @@ def test_inbox_unread_only_and_mark_read(ws):
     checked = check_inbox(ws, to="hermes", mark_read=True)
     assert all(m.read for m in checked)
     assert check_inbox(ws, to="hermes", unread_only=True) == []
-    # 该 读取 flag 是 persisted 在 disk
+    # the read flag is persisted on disk
     data = json.loads(next((ws.messages_dir / "TO_hermes").glob("*.json")).read_text(encoding="utf-8"))
     assert data["read"] is True
 
@@ -225,7 +225,7 @@ def test_inbox_rejects_unknown_type(ws):
         send_message(ws, to="hermes", content="x", type="carrier_pigeon")
 
 
-# --- 文件 锁们 -------------------------------------------------------------
+# --- file locks -------------------------------------------------------------
 
 
 def test_lock_acquire_release(ws):
@@ -270,7 +270,7 @@ def test_lock_rejects_absolute_target(ws):
         acquire_lock(ws, "C:/Windows/system32", holder="hermes")
 
 
-# --- 工作区 扫描 (P1 simple) ---------------------------------------------
+# --- workspace scan (P1 simple) ---------------------------------------------
 
 
 def test_scan_empty_workspace(ws):
@@ -298,7 +298,7 @@ def test_scan_skips_cogos_and_hidden_dirs(tmp_path):
     assert scan_workspace(w)["repos"] == []
 
 
-# --- CLI end-到-end ---------------------------------------------------------
+# --- CLI end-to-end ---------------------------------------------------------
 
 
 def _out(capsys) -> str:
@@ -378,7 +378,7 @@ def test_cli_inbox_flow(tmp_path, capsys):
     assert msgs[0]["task_id"] == "TASK-001"
     assert msgs[0]["read"] is False
 
-    # mark-读取 + unread-only roundtrip
+    # mark-read + unread-only roundtrip
     assert main(["inbox", "check", "--root", str(root), "--to", "claude_code", "--mark-read"]) == 0
     _out(capsys)  # discard human-readable output
     assert main(["inbox", "check", "--root", str(root), "--to", "claude_code", "--unread-only", "--json"]) == 0
@@ -402,7 +402,7 @@ def test_cli_lock_flow(tmp_path, capsys):
 
     assert main(["lock", "acquire", "repo1/src/index.html", "--root", str(root),
                  "--holder", "claude_code"]) == 1  # conflict
-    assert "已被" in capsys.readouterr().err
+    assert "already held" in capsys.readouterr().err
 
     assert main(["lock", "status", "--root", str(root), "--json"]) == 0
     assert json.loads(_out(capsys))[0]["holder"] == "hermes"

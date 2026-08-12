@@ -1,19 +1,21 @@
-"""Cognitive Kernel —— 编排主循环。
+"""Cognitive Kernel — the orchestration loop.
 
-这是 ``core/kernel/DESIGN.md`` 中所描述循环的第一个具体实现。
-刻意保持小而单任务，多进程 / 并发路由明确不在 v0.1 范围内（DEC-007）。
+This is the first concrete implementation of the loop described in
+``core/kernel/DESIGN.md``. It is deliberately small and runs a single
+task at a time; multi-process and concurrent routing are explicitly out
+of scope for v0.1 (DEC-007).
 
-Kernel 不亲自做 Agent 的活。它只负责协调：
+The kernel does not do the work of an agent. It coordinates:
 
-1. **上下文装配** —— 调 MemoryProvider，捞 ``任务.required_memory``
-   列出的 keys。
-2. **路由** —— 调 Router 选一个 AgentAdapter。
-3. **执行** —— 调选中 Adapter 的 ``执行``。
-4. **反思** —— 写一条简单观察记录。
-5. **写记忆** —— 追加一条 episodic 记录。
+1. **Context assembly** — call the MemoryProvider to gather entries
+   whose keys are listed in ``task.required_memory``.
+2. **Routing** — call the Router to pick an AgentAdapter.
+3. **Execution** — call the chosen adapter's ``execute``.
+4. **Reflection** — emit a simple observation record.
+5. **Memory write** — append an episodic entry.
 
-Adapter 是可插拔的；目前只有 Hermes Adapter 实现了
-``执行`` 和 ``bootstrap_query``，见 ``cogos.Adapters.hermes``。
+Adapters are pluggable; today only the Hermes adapter implements
+``execute`` and ``bootstrap_query`` — see ``cogos.adapters.hermes``.
 """
 
 from __future__ import annotations
@@ -86,12 +88,12 @@ class AgentAdapter(Protocol):
 
 
 # ---------------------------------------------------------------------------
-# 默认 implementations (v0.1)
+# Default implementations (v0.1)
 # ---------------------------------------------------------------------------
 
 
 class FileMemory:
-    """v0.1 用的极简 JSON-line 记忆存储，位于 ``.cogos/记忆.jsonl``。"""
+    """Trivial JSON-line memory store under ``.cogos/memory.jsonl``."""
 
     def __init__(self, store_path: Path) -> None:
         self.store_path = store_path
@@ -121,10 +123,10 @@ class FileMemory:
 
 
 class DomainRouter:
-    """v0.1 的基于规则的路由器。
+    """Rule-based router for v0.1.
 
-    选第一个 ``handles`` 含本任务 domain 的 Adapter。
-    都不匹配则回退到第一个（fail-open）。
+    Picks the first registered adapter whose ``handles`` includes the
+    task's domain. If none matches, picks the first adapter (fail-open).
     """
 
     def __init__(self, adapters: list[AgentAdapter], *, domain_map: dict[str, str] | None = None) -> None:
@@ -135,7 +137,7 @@ class DomainRouter:
         if not self.adapters:
             return RouteDecision(agent_id="<none>", reason="no adapters", confidence=0.0)
 
-        # 显式 domain map 优先。
+        # Explicit domain map wins.
         target_id = self.domain_map.get(task.domain)
         if target_id and target_id in self.adapters:
             return RouteDecision(
@@ -144,7 +146,7 @@ class DomainRouter:
                 confidence=0.95,
             )
 
-        # 否则选第一个 Adapter（v0.1 规则：Hermes 兜底全部）。
+        # Otherwise, pick the first adapter (v0.1 rule: Hermes handles all).
         first_id = next(iter(self.adapters))
         return RouteDecision(
             agent_id=first_id,
@@ -170,38 +172,38 @@ class Kernel:
         self.router = router
         self.adapters = {a.agent_id: a for a in adapters}
 
-    # --- 对外主循环 -----------------------------------------------------
+    # --- public loop -----------------------------------------------------
 
     def run(self, task: Task) -> Result:
-        # 1. 上下文装配
+        # 1. Context assembly
         context = Context(task=task, memory_entries=self.memory.read(list(task.required_memory)))
 
-        # 2. 路由
+        # 2. Routing
         decision = self.router.decide(task, context)
         adapter = self.adapters.get(decision.agent_id)
         if adapter is None:
             return Result(
                 task_id=task.id,
                 status="failed",
-                output=f"路由器选了 '{decision.agent_id}'，但没有对应的 adapter",
+                output=f"router selected '{decision.agent_id}' but no adapter is registered",
             )
 
-        # 3. 执行
+        # 3. Execution
         result = adapter.execute(task, context)
         result.routed_to = decision.agent_id
         result.routing_reason = decision.reason
 
-        # 4. 反思（v0.1 每轮只记一条）
+        # 4. Reflection (single observation per run for v0.1)
         observation = {
             "task_id": task.id,
             "domain": task.domain,
             "agent": decision.agent_id,
             "status": result.status,
-            "note": f"kernel 为 domain '{task.domain}' 选了 {decision.agent_id}",
+            "note": f"kernel selected {decision.agent_id} for domain '{task.domain}'",
         }
         result.observations.append(observation["note"])
 
-        # 5. 写记忆（episodic）
+        # 5. Memory write (episodic)
         self.memory.write(
             {
                 "task_id": task.id,
@@ -218,12 +220,12 @@ class Kernel:
 
 
 # ---------------------------------------------------------------------------
-# Helpers 用于 callers
+# Helpers for callers
 # ---------------------------------------------------------------------------
 
 
 def kernel_from_paths(paths: Paths, adapters: list[AgentAdapter], *, domain_map: dict[str, str] | None = None) -> Kernel:
-    """Build a Kernel wired against 该 project's local 路径们."""
+    """Build a Kernel wired against the project's local paths."""
     memory = FileMemory(paths.cache / "memory.jsonl")
     router = DomainRouter(adapters, domain_map=domain_map)
     return Kernel(memory=memory, router=router, adapters=adapters)

@@ -1,12 +1,12 @@
-"""Codex Adapter — third concrete Adapter 在 CognitiveOS.
+"""Codex adapter — third concrete Adapter in CognitiveOS.
 
-Codex 是 OpenAI's Agent CLI (codex-cli). It stores its config under
-~/.codex/. We harvest 该 SAFE subset (config.toml) 和 执行 via
-`codex exec` (non-interactive) so CognitiveOS 可以 route 任务们 到 it
-精确地 like it routes 到 Hermes / Claude Code.
+Codex is OpenAI's agent CLI (codex-cli). It stores its config under
+~/.codex/. We harvest the SAFE subset (config.toml) and execute via
+`codex exec` (non-interactive) so CognitiveOS can route tasks to it
+exactly like it routes to Hermes / Claude Code.
 
-Safe-subset principle: we 从不 harvest 对话 history, OAuth
-tokens, 或 auth.json.
+Safe-subset principle: we never harvest conversation history, OAuth
+tokens, or auth.json.
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ class CodexAdapter:
         )
 
     def execute(self, task, context) -> Result:
-        """v0.1 执行 = shell out 到 `codex exec`."""
+        """v0.1 execute = shell out to `codex exec`."""
         prompt = (
             f"Task domain: {task.domain}\n"
             f"Task intent: {task.intent}\n"

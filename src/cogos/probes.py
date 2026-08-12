@@ -1,8 +1,8 @@
 """Discovery probes.
 
-每个 probe looks 用于 one 具体 AI Agent 在 该 local machine. Probes
-是 intentionally tiny: if a probe 将 need more than ~30 lines 到
-locate 一个 Agent, 该 rest belongs 在 一个 Adapter.
+Each probe looks for one specific AI agent on the local machine. Probes
+are intentionally tiny: if a probe would need more than ~30 lines to
+locate an agent, the rest belongs in an Adapter.
 """
 
 from __future__ import annotations
@@ -17,11 +17,11 @@ from cogos.paths import Paths
 
 
 def _hermes_home() -> Path | None:
-    """Locate 该 Hermes installation 目录.
+    """Locate the Hermes installation directory.
 
-    Hermes follows 该 convention documented 在 its own README:
-    ``%LOCALAPPDATA%\\hermes`` 在 Windows, ``~/.local/share/hermes``
-    elsewhere, 或 whatever ``HERMES_HOME`` points 到.
+    Hermes follows the convention documented in its own README:
+    ``%LOCALAPPDATA%\\hermes`` on Windows, ``~/.local/share/hermes``
+    elsewhere, or whatever ``HERMES_HOME`` points to.
     """
 
     env = os.environ.get("HERMES_HOME")
@@ -74,7 +74,7 @@ def probe_hermes(paths: Paths) -> list[AgentHandle]:
 
 
 def probe_claude_code(paths: Paths) -> list[AgentHandle]:
-    """Look 用于 Claude Code under ~/.claude (its config/home dir)."""
+    """Look for Claude Code under ~/.claude (its config/home dir)."""
     import os
 
     # Claude Code keeps its state under ~/.claude
@@ -107,7 +107,7 @@ def probe_claude_code(paths: Paths) -> list[AgentHandle]:
 
 
 def probe_codex(paths: Paths) -> list[AgentHandle]:
-    """Look 用于 Codex under ~/.codex (its config/home dir)."""
+    """Look for Codex under ~/.codex (its config/home dir)."""
     import os
 
     home = Path(os.path.expanduser("~")) / ".codex"

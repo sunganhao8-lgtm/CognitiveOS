@@ -1,10 +1,10 @@
-"""任务 registry 用于 该 shared multi-Agent 工作区.
+"""Task registry for the shared multi-agent workspace.
 
-每个 任务 是 one JSON 文件 under ``<root>/.cogos/任务们/<id>.json`` (see
-docs/shared-工作区-design.md). Agents report progress 使用
-``cogos 任务 更新``; 任何 Agent 可以 ask "what 是 everyone doing" 使用
-``cogos 任务 列出``. 所有 写入 是 atomic so concurrent 更新 从不
-corrupt 一个任务 文件.
+Each task is one JSON file under ``<root>/.cogos/tasks/<id>.json`` (see
+docs/shared-workspace-design.md). Agents report progress with
+``cogos task update``; any agent can ask "what is everyone doing" with
+``cogos task list``. All writes are atomic so concurrent updates never
+corrupt a task file.
 """
 
 from __future__ import annotations
@@ -33,20 +33,20 @@ _NUMERIC_ID_RE = re.compile(r"TASK-(\d+)")
 
 
 class TaskError(Exception):
-    """Base error 用于 任务 registry."""
+    """Base error for the task registry."""
 
 
 class TaskNotFound(TaskError):
-    """Raised 当 一个任务 id 做 不 exist."""
+    """Raised when a task id does not exist."""
 
 
 class TaskExists(TaskError):
-    """Raised 当 创建中 一个任务 whose id 是 already taken."""
+    """Raised when creating a task whose id is already taken."""
 
 
 @dataclass
 class Task:
-    """A single 任务 在 该 shared registry."""
+    """A single task in the shared registry."""
 
     id: str
     title: str
@@ -78,7 +78,7 @@ def _clamp_progress(progress: int) -> int:
 
 
 def next_task_id(ws: Workspace) -> str:
-    """Auto-generate ``任务-001``, ``任务-002``, ... after 该 highest existing id."""
+    """Auto-generate ``TASK-001``, ``TASK-002``, ... after the highest existing id."""
     highest = 0
     if ws.tasks_dir.exists():
         for p in ws.tasks_dir.glob("TASK-*.json"):
@@ -108,12 +108,12 @@ def create_task(
     actor: str | None = None,
     now: datetime | None = None,
 ) -> Task:
-    """创建 一个任务 和 写入 it 到 该 registry. 抛出 TaskExists 在 id clash."""
+    """Create a task and write it to the registry. Raises TaskExists on id clash."""
     ws.ensure()
     actor = actor or default_agent()
     tid = task_id or next_task_id(ws)
     if not _TASK_ID_RE.fullmatch(tid):
-        raise TaskError(f"无效的任务 id：{tid!r}（只能使用字母、数字、点、下划线、连字符）")
+        raise TaskError(f"invalid task id: {tid!r} (use letters, digits, . _ -)")
     if task_file(ws, tid).exists():
         raise TaskExists(f"任务 {tid} 已存在")
     if status not in STATUSES:
@@ -154,10 +154,10 @@ def update_task(
     actor: str | None = None,
     now: datetime | None = None,
 ) -> Task:
-    """更新 任何 subset 的 一个任务's fields 和 append a history entry.
+    """Update any subset of a task's fields and append a history entry.
 
-    每个 写入 goes through 该 registry 文件 使用 ``updated_at`` bumped, so
-    任何 Agent 可以 see 在 a glance how fresh 该 state 是.
+    Every write goes through the registry file with ``updated_at`` bumped, so
+    any agent can see at a glance how fresh the state is.
     """
     ws.ensure()
     task = show_task(ws, task_id)
@@ -201,7 +201,7 @@ def update_task(
 
 
 def list_tasks(ws: Workspace, status: str | None = None, assignee: str | None = None) -> list[Task]:
-    """列出 所有 任务们, optionally filtered 通过 状态 / assignee, sorted 通过 id."""
+    """List all tasks, optionally filtered by status / assignee, sorted by id."""
     if not ws.tasks_dir.exists():
         return []
     out: list[Task] = []
@@ -220,7 +220,7 @@ def list_tasks(ws: Workspace, status: str | None = None, assignee: str | None = 
 
 
 def show_task(ws: Workspace, task_id: str) -> Task:
-    """读取 one 任务; 抛出 TaskNotFound 当 it 做 不 exist."""
+    """Read one task; raises TaskNotFound when it does not exist."""
     p = task_file(ws, task_id)
     if not p.exists():
         raise TaskNotFound(f"在 {ws.tasks_dir} 中找不到任务 {task_id}")
@@ -332,7 +332,7 @@ def run_task(args: argparse.Namespace) -> int:
         if args.json:
             print(json.dumps([t.to_dict() for t in tasks], ensure_ascii=False, indent=2))
         elif not tasks:
-            print("（暂无任务）")
+            print("(no tasks)")
         else:
             for t in tasks:
                 print(

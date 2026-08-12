@@ -1,12 +1,12 @@
-"""Portable export / import 的 用户 layer.
+"""Portable export / import of the user layer.
 
-These commands exist because 用户 layer 必须 travel across machines
-和 across Agent products. They 是 deliberately 该 simplest possible
+These commands exist because the user layer must travel across machines
+and across agent products. They are deliberately the simplest possible
 implementation: a tar archive, nothing fancy.
 
-该 tar includes a ``manifest.json`` 使用 该 archive timestamp, 该
-来源 路径, 和 a SHA-256 的 每个 文件. ``import`` 验证
-manifest before writing — so a corrupted 或 tampered archive 是
+The tar includes a ``manifest.json`` with the archive timestamp, the
+source path, and a SHA-256 of every file. ``import`` verifies the
+manifest before writing — so a corrupted or tampered archive is
 refused.
 """
 
@@ -23,7 +23,7 @@ from .user import UserLayer
 
 
 def export_user(user: UserLayer, dest: Path) -> dict:
-    """Pack ``user/`` into a tar.gz 在 ``dest``. 返回 a manifest dict."""
+    """Pack ``user/`` into a tar.gz at ``dest``. Returns a manifest dict."""
     dest.parent.mkdir(parents=True, exist_ok=True)
     manifest_files: list[dict] = []
     buf = io.BytesIO()
@@ -56,7 +56,7 @@ def export_user(user: UserLayer, dest: Path) -> dict:
 
 
 def import_user(user: UserLayer, archive: Path) -> dict:
-    """Restore ``user/`` 来自 ``archive``. 验证 manifest, refuses 在 mismatch."""
+    """Restore ``user/`` from ``archive``. Verifies manifest, refuses on mismatch."""
     if not archive.exists():
         raise FileNotFoundError(archive)
 

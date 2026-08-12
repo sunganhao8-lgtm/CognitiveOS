@@ -1,13 +1,13 @@
 # CognitiveOS v0.1 — Quick Start
 
-This walks you through 第一个 end-到-end 运行.
+This walks you through the first end-to-end run.
 
 ## Prerequisites
 
 - Python 3.10+
-- 在 least one 的: Hermes, Claude Code, Codex, OpenClaw installed locally
+- At least one of: Hermes, Claude Code, Codex, OpenClaw installed locally
 
-## 安装
+## Install
 
 ```bash
 git clone <repo>
@@ -34,42 +34,42 @@ Expected output (truncated):
 }
 ```
 
-After it finishes, your 默认 browser opens 该 dashboard.
+After it finishes, your default browser opens the dashboard.
 
 ## Where things go
 
-| 路径                            | What it contains                            |
+| Path                            | What it contains                            |
 |---------------------------------|---------------------------------------------|
-| `knowledge/sources/<agent>/`    | Raw 文件们 harvested 来自 每个 Agent         |
-| `knowledge/normalized/`         | Cross-Agent index                           |
+| `knowledge/sources/<agent>/`    | Raw files harvested from each agent         |
+| `knowledge/normalized/`         | Cross-agent index                           |
 | `knowledge/wiki/`               | Human-readable Markdown wiki                |
 | `dashboard/index.html`          | Self-contained HTML dashboard               |
-| `.cogos/last_report.json`       | Machine-readable report 的 最后一个 运行     |
+| `.cogos/last_report.json`       | Machine-readable report of the last run     |
 
 ## Re-running
 
-`cogos bootstrap` 是 idempotent. 该 来源们 tree 是 refreshed 在
-place, normalized 和 wiki layers 是 recomputed, 和 该 dashboard 是
+`cogos bootstrap` is idempotent. The sources tree is refreshed in
+place, normalized and wiki layers are recomputed, and the dashboard is
 re-rendered.
 
-## Inspecting what 是 harvested
+## Inspecting what was harvested
 
 ```bash
 ls knowledge/sources/hermes/
 ls knowledge/sources/hermes/profiles/
 ```
 
-## 状态 不使用 bootstrapping
+## Status without bootstrapping
 
 ```bash
 cogos status
 ```
 
-Prints 该 JSON 的 该 most recent bootstrap 运行.
+Prints the JSON of the most recent bootstrap run.
 
-## 下一个 steps
+## Next steps
 
-- 添加 more Adapters (Claude Code, Codex, OpenClaw)
-- Extend 该 normalizer 到 parse 每个 Agent's 记忆 文件 format
-- Wire 该 Kernel DESIGN into a runtime loop
-- Replace 该 dashboard template 使用 a richer one 当 v0.2 lands
+- Add more adapters (Claude Code, Codex, OpenClaw)
+- Extend the normalizer to parse each agent's memory file format
+- Wire the Kernel DESIGN into a runtime loop
+- Replace the dashboard template with a richer one when v0.2 lands

@@ -1,14 +1,15 @@
-"""引导流程。
+"""Bootstrap pipeline.
 
-``bootstrap`` 是 CognitiveOS 在 v0.1 阶段唯一需要的编排流程。
-它按顺序跑四步，最后打印状态面板：
+``bootstrap`` is the *only* orchestration CognitiveOS needs in v0.1.
+It runs four steps, in order, and prints a status panel at the end:
 
-1. **发现**本机已安装的 Agent。
-2. **挑选**第一个可用的 adapter 作为 Bootstrap Agent。
-3. **收割**Bootstrap Agent 的原始数据到 ``knowledge/sources/``。
-4. **标准化并汇总**为 wiki 页面。
+1. **Discover** installed agents on this machine.
+2. **Pick** the first available adapter as the Bootstrap Agent.
+3. **Harvest** the Bootstrap Agent's raw data into ``knowledge/sources/``.
+4. **Normalize & summarise** that data into a wiki page.
 
-仪表盘渲染器会在流程末尾被调用，确保 HTML 永远反映最新的知识库。
+The dashboard renderer is invoked at the end of this pipeline so the
+HTML always reflects the freshly produced knowledge base.
 """
 
 from __future__ import annotations
@@ -43,7 +44,7 @@ class BootstrapReport:
 
 
 def run(paths: Paths | None = None, *, open_browser: bool = True) -> BootstrapReport:
-    """执行完整的引导流程并返回报告。"""
+    """Execute the full bootstrap pipeline and return a report."""
     paths = paths or Paths.default()
     paths.ensure()
 
@@ -69,7 +70,7 @@ def run(paths: Paths | None = None, *, open_browser: bool = True) -> BootstrapRe
         harvested_files += result.copied_files
         harvest_notes.extend(result.notes)
 
-    # Normalized + wiki 都是派生视图，每次都重新计算。
+    # Normalized + wiki are derived views, always recomputed.
     build_normalized_index(paths)
     wiki_pages = build_wiki(paths)
 
@@ -88,14 +89,15 @@ def run(paths: Paths | None = None, *, open_browser: bool = True) -> BootstrapRe
         dashboard=str(dashboard_path),
     )
 
-    # 把报告写一份在 wiki 旁边，方便 dashboard 显示 "上次运行"。
+    # Persist the report next to the wiki so the dashboard can show "last run".
     (paths.cache / "last_report.json").write_text(
         _json_dumps(report.to_dict()), encoding="utf-8"
     )
 
-    # 首次 bootstrap 时保证主人层骨架存在。我们不会自动往里塞数据——
-    # ``user/`` 下的每个文件都由主人（或显式的 cogos 命令）写，
-    # 永远不会被静默覆盖。
+    # Make sure the user-layer skeleton exists on first bootstrap. We do
+    # NOT auto-populate it — every file inside ``user/`` is authored by
+    # the user (or by an explicit cogos command) and never silently
+    # overwritten.
     user = UserLayer(root=paths.root / "user")
     user.ensure()
     _ensure_user_readme(user)
@@ -135,7 +137,7 @@ def _open_in_browser(path: Path) -> None:
     try:
         webbrowser.open(url)
     except Exception:
-        # 在无 GUI 的服务器上只打印 URL。
+        # On headless servers we just print the URL.
         print(f"Dashboard: {url}", file=sys.stderr)
 
 
