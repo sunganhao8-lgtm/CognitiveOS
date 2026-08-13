@@ -1,12 +1,14 @@
 """Retrieval + context building — the Retrieve and Apply steps.
 
-Retriever: FTS5 (trigram) search over the Cognitive Store with per-type
-caps, domain match and recency boost. NO embeddings in v0 — the interface
-keeps room for them later.
+Phase 2/3A/3B: keyword retrieval (FTS5) + bounded context builder.
+Phase 3C: the Retrieval Engine — three-layer model from the frozen contract
+(docs/cognitive-retrieval.md):
 
-ContextBuilder: assembles the retrieved items into a bounded SYSTEM CONTEXT
-block. Hard budget (default 4000 chars); per-section caps; truncation is
-recorded so the trace can report it. NEVER dumps all memory into a prompt.
+    Eligibility (hard filter) → Relevance (keyword + semantic, RRF)
+    → Priority (scope + confidence + recency + confirmation)
+
+Every RetrievedItem carries why_retrieved so any injected cognition can
+answer "why was it found / why was it injected?".
 """
 
 from __future__ import annotations
@@ -17,6 +19,12 @@ from typing import Iterable
 from .store import SearchHit, Store
 
 DEFAULT_BUDGET = 4000
+RRF_K = 60
+#: semantic channel floor: below this cosine, a memory is NOT a semantic hit
+#: (§24 — "semantic similarity > 0" alone never qualifies an injection).
+#: bge-family models sit ~0.5-0.6 for relevant zh pairs; unrelated text
+#: typically lands 0.2-0.45.
+MIN_SIMILARITY = 0.5
 SECTION_CAPS = {
     "preferences": 600,
     "rules": 600,
@@ -41,6 +49,264 @@ PER_TYPE_LIMITS = {
     "project_note": 1,
     "skill": 2,
 }
+
+
+# ---------------------------------------------------------------------------
+# Phase 3C — Retrieval Engine contract types
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class RetrievalRequest:
+    task_text: str
+    domain: str = "general"
+    scope: str = "global"
+    scope_id: str = ""
+    execution_id: str = ""
+    agent_id: str = ""
+
+
+@dataclass
+class RetrievedItem:
+    memory_id: str
+    retrieval_method: str = "keyword"  # keyword | semantic | hybrid
+    keyword_rank: int | None = None
+    semantic_rank: int | None = None
+    similarity: float | None = None
+    rrf_score: float = 0.0
+    confidence: float | None = None
+    scope: str = "global"
+    scope_match: bool = False
+    status: str = ""
+    version: int = 1
+    why_retrieved: str = ""
+    content: str = ""
+    subtype: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "memory_id": self.memory_id,
+            "retrieval_method": self.retrieval_method,
+            "keyword_rank": self.keyword_rank,
+            "semantic_rank": self.semantic_rank,
+            "similarity": self.similarity,
+            "rrf_score": self.rrf_score,
+            "confidence": self.confidence,
+            "scope": self.scope,
+            "scope_match": self.scope_match,
+            "status": self.status,
+            "version": self.version,
+            "why_retrieved": self.why_retrieved,
+        }
+
+
+def _scope_match(request: RetrievalRequest, ent: dict) -> bool:
+    """Does this cognition's scope apply to the task's scope?"""
+    if request.scope == "global":
+        return ent.get("scope", "global") == "global"
+    if ent.get("scope") == "global":
+        return True  # global cognition applies everywhere
+    if ent.get("scope") == request.scope:
+        return not request.scope_id or ent.get("scope_id", "") == request.scope_id
+    return False
+
+
+def _scope_priority(request: RetrievalRequest, ent: dict) -> int:
+    """Scope-based priority: exact project/task match > global > other."""
+    s = ent.get("scope", "global")
+    if request.scope != "global" and s == request.scope and ent.get("scope_id", "") == request.scope_id:
+        return 3
+    if request.scope != "global" and s == request.scope:
+        return 3
+    if s == "global":
+        return 2
+    return 1
+
+
+def eligibility_filter(store: Store, request: RetrievalRequest, hits: list[SearchHit]) -> list[SearchHit]:
+    """① Eligibility (hard filter, BEFORE scoring — contract §3).
+
+    store.search already excludes candidate/temporary/superseded/rejected/
+    suppressed (subtype/status level). Here we additionally drop conflicted
+    entries (they must never inject as ordinary cognitions) and entries
+    whose scope cannot apply to the task.
+    """
+    out: list[SearchHit] = []
+    for h in hits:
+        ent = store.entity(h.ent_id)
+        if ent is None:
+            continue
+        if ent.get("status") == "conflicted":
+            continue
+        out.append(h)
+    return out
+
+
+def semantic_rank_items(
+    store: Store, provider, request: RetrievalRequest, eligible_ids: list[str],
+    *, min_similarity: float = MIN_SIMILARITY,
+) -> dict[str, tuple[int, float]]:
+    """② semantic channel: cosine over the eligible set.
+
+    Returns id → (rank, similarity) for entries ABOVE the similarity floor.
+    Missing vectors are embedded on the fly (eligible set is small) and
+    cached into the store — embedding is derived data, so write-through is
+    safe.
+    """
+    if provider is None or not eligible_ids:
+        return {}
+    from . import embedding as emb
+
+    vecs = store.vectors_for(eligible_ids, model=provider.name)
+    missing = [eid for eid in eligible_ids if eid not in vecs]
+    if missing:
+        contents = store.eligible_content(missing)
+        try:
+            new_vecs = provider.embed([contents.get(mid, "") for mid in missing])
+            for mid, vec in zip(missing, new_vecs):
+                store.upsert_vector(
+                    mid,
+                    content_hash=emb.content_hash(contents.get(mid, "")),
+                    model=provider.name,
+                    dimension=provider.dimension,
+                    vector=emb.pack_vector(vec),
+                )
+                vecs[mid] = vec
+        except Exception:
+            pass  # degrade: semantic channel skips what it can't embed
+    try:
+        q_vec = provider.embed([request.task_text])[0]
+    except Exception:
+        return {}
+    scored = [(mid, emb.cosine(q_vec, v)) for mid, v in vecs.items()]
+    scored = [(mid, sim) for mid, sim in scored if sim >= min_similarity]
+    scored.sort(key=lambda t: t[1], reverse=True)
+    return {mid: (i + 1, round(sim, 4)) for i, (mid, sim) in enumerate(scored)}
+
+
+def rrf(keyword_rank: int | None, semantic_rank: int | None, *, k: int = RRF_K) -> float:
+    """Reciprocal Rank Fusion (contract §3): Σ 1/(k + rank)."""
+    score = 0.0
+    if keyword_rank is not None:
+        score += 1.0 / (k + keyword_rank)
+    if semantic_rank is not None:
+        score += 1.0 / (k + semantic_rank)
+    return round(score, 6)
+
+
+def retrieve_ranked(
+    store: Store,
+    provider,
+    request: RetrievalRequest,
+    *,
+    mode: str = "auto",  # keyword | semantic | hybrid | auto
+    limit: int = 12,
+    k: int = RRF_K,
+    min_similarity: float = MIN_SIMILARITY,
+) -> list[RetrievedItem]:
+    """The 3C retrieval engine — eligibility → relevance → priority.
+
+    mode:
+      keyword  — FTS5 only (the Phase 2/3A/3B behavior, always available)
+      semantic — embedding only
+      hybrid   — FTS5 + embedding + RRF
+      auto     — hybrid when a provider is available, else keyword
+    """
+    use_sem = (mode in ("semantic", "hybrid")) or (mode == "auto" and provider is not None)
+    use_kw = mode != "semantic"
+
+    if use_sem and provider is None:
+        use_sem = False
+        mode = "keyword" if mode != "auto" else "keyword"
+
+    hits = store.search(request.task_text, types=("memory", "skill"), limit=50)
+    eligible = eligibility_filter(store, request, hits)
+
+    kw_ranks: dict[str, int] = {}
+    if use_kw:
+        kw_ranks = {h.ent_id: i + 1 for i, h in enumerate(eligible)}
+
+    sem_ranks: dict[str, tuple[int, float]] = {}
+    if use_sem:
+        # The semantic channel ranks the FULL eligible set independently of
+        # keyword hits (contract §3②) — otherwise semantic can never rescue
+        # a query that shares no token with the memory ("帮我查销售数据").
+        sem_ranks = semantic_rank_items(
+            store, provider, request, store.all_eligible_memory_ids(),
+            min_similarity=min_similarity,
+        )
+
+    union_ids: set[str] = set(kw_ranks) | set(sem_ranks)
+    items: list[RetrievedItem] = []
+    for eid in union_ids:
+        ent = store.entity(eid)
+        if ent is None:
+            continue
+        if ent.get("status") == "conflicted":
+            continue
+        kw_r = kw_ranks.get(eid)
+        sem_r = sem_ranks.get(eid)
+        sim = sem_r[1] if sem_r else None
+        score = rrf(kw_r, sem_r[0] if sem_r else None, k=k)
+        if score <= 0.0:
+            continue
+        method = "hybrid" if (kw_r is not None and sem_r is not None) else (
+            "semantic" if sem_r is not None else "keyword"
+        )
+        sm = _scope_match(request, ent)
+        reasons = []
+        if kw_r is not None:
+            reasons.append(f"关键词命中 rank={kw_r}")
+        if sem_r is not None:
+            reasons.append(f"语义相似 {sim}")
+        reasons.append(f"scope={ent.get('scope', 'global')}{' (匹配任务范围)' if sm else ''}")
+        items.append(RetrievedItem(
+            memory_id=eid,
+            retrieval_method=method,
+            keyword_rank=kw_r,
+            semantic_rank=sem_r[0] if sem_r else None,
+            similarity=sim,
+            rrf_score=score,
+            confidence=ent.get("confidence"),
+            scope=ent.get("scope", "global"),
+            scope_match=sm,
+            status=ent.get("status", ""),
+            version=ent.get("version", 1),
+            why_retrieved="; ".join(reasons),
+            content=ent.get("content", ""),
+            subtype=ent.get("subtype", ""),
+        ))
+
+    # ③ Priority: relevance picks the pool (2×limit), priority orders it.
+    items.sort(key=lambda i: i.rrf_score, reverse=True)
+    pool = items[: limit * 2]
+
+    def priority(item: RetrievedItem) -> tuple:
+        ent = store.entity(item.memory_id) or {}
+        sp = _scope_priority(request, ent)
+        conf = (ent.get("confidence") or 0.0)
+        uc = 1.0 if ent.get("user_confirmed") else 0.0
+        return (-(sp * 10 + conf * 0.5 + uc * 0.5), -item.rrf_score)
+
+    pool.sort(key=priority)
+    final = pool[:limit]
+
+    # per-type caps still apply (same contract as Phase 2)
+    capped: list[RetrievedItem] = []
+    used: dict[str, int] = {}
+    for item in final:
+        key = item.subtype or "skill"
+        cap = PER_TYPE_LIMITS.get(key, 2)
+        if used.get(key, 0) >= cap:
+            continue
+        capped.append(item)
+        used[key] = used.get(key, 0) + 1
+    return capped
+
+
+# ---------------------------------------------------------------------------
+# Phase 2/3A/3B — keyword retrieval + context builder (unchanged behavior)
+# ---------------------------------------------------------------------------
 
 
 @dataclass

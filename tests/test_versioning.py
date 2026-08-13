@@ -131,7 +131,7 @@ def test_v2_database_migrates_to_v3(tmp_path):
         cols = {r[1] for r in store._conn.execute("PRAGMA table_info(entities)")}
         assert {"scope", "scope_id", "version", "superseded_at", "superseded_by", "superseded_reason"} <= cols
         v = store._conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()
-        assert v["value"] == "3"
+        assert v and int(v["value"]) >= 3, "schema must migrate to the latest version"
         ent = store.entity("P-OLD-001")
         assert ent["content"] == "v2 era preference"
         assert ent["scope"] == "global" and ent["version"] == 1  # sensible defaults

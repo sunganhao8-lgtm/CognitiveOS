@@ -205,6 +205,7 @@ class Kernel:
         llm_fn=None,              # callable(prompt, timeout=...) -> str | None
         context_budget: int = retrieve_mod.DEFAULT_BUDGET,
         allow_semantic: bool = True,
+        embedding_provider=None,  # Phase 3C: semantic channel (auto→keyword when None)
     ) -> None:
         self.memory = memory
         self.router = router
@@ -215,6 +216,7 @@ class Kernel:
         self.llm_fn = llm_fn
         self.context_budget = context_budget
         self.allow_semantic = allow_semantic
+        self.embedding_provider = embedding_provider
 
     # --- v0.1 protocol loop -------------------------------------------------
 
@@ -387,12 +389,39 @@ class Kernel:
     # ---- internal steps -----------------------------------------------------
 
     def _assemble(self, task: Task, ex_id: str) -> Context:
-        """Retrieve → build bounded context (trace both steps)."""
-        retrieved = self.retriever(self.store, task.intent, domain=task.domain)
-        self._last_retrieved = list(retrieved.hits)
+        """Retrieve (3C engine: eligibility→relevance→priority) → build
+        bounded context (trace both steps)."""
+        from .retrieve import RetrievalRequest, retrieve_ranked
+        from .store import SearchHit
+
+        request = RetrievalRequest(
+            task_text=task.intent, domain=task.domain, execution_id=ex_id,
+        )
+        items = retrieve_ranked(self.store, self.embedding_provider, request, mode="auto")
+        self._last_items = items
+        # re-wrap as SearchHits so the rest of the kernel (verify payloads,
+        # RetrievedSet sections) keeps its Phase 2 shape
+        hits: list[SearchHit] = []
+        for i in items:
+            ent = self.store.entity(i.memory_id) or {}
+            hits.append(SearchHit(
+                ent_id=i.memory_id,
+                type="skill" if not i.subtype else "memory",
+                subtype=i.subtype,
+                domain=ent.get("domain", ""),
+                score=i.rrf_score,
+                content=i.content,
+                payload=ent.get("payload") or {},
+            ))
+        self._last_retrieved = list(hits)
+        retrieved = retrieve_mod.RetrievedSet(hits=hits)
+        methods = {}
+        for i in items:
+            methods[i.retrieval_method] = methods.get(i.retrieval_method, 0) + 1
         trace_mod.append_event(
             self.user, self.store, ex_id, "memory_retrieved",
-            detail=retrieved.summary(), refs=retrieved.refs(),
+            detail=retrieved.summary() + (f" methods={methods}" if methods else ""),
+            refs=retrieved.refs(),
         )
         block = retrieve_mod.build_context(retrieved, task.intent, budget=self.context_budget)
         self._last_sections = dict(block.sections)
@@ -788,12 +817,16 @@ def kernel_from_paths(
     llm_fn=None,
     context_budget: int = retrieve_mod.DEFAULT_BUDGET,
     allow_semantic: bool = True,
+    embedding_provider=None,
 ) -> Kernel:
     """Build a Kernel wired against the project's local paths.
 
     Includes the Cognitive Store (index) and the user layer so the full
-    cognitive loop (``run_input``) works out of the box.
+    cognitive loop (``run_input``) works out of the box. Phase 3C: the
+    embedding provider is resolved once (None → keyword-only retrieval).
     """
+    from . import embedding as emb
+
     store = Store(paths.cache / "cognitive.db")
     user = UserLayer(root=paths.root / "user")
     user.ensure()
@@ -808,6 +841,7 @@ def kernel_from_paths(
         llm_fn=llm_fn,
         context_budget=context_budget if context_budget else retrieve_mod.DEFAULT_BUDGET,
         allow_semantic=allow_semantic,
+        embedding_provider=embedding_provider if embedding_provider is not None else emb.get_provider(),
     )
 
 

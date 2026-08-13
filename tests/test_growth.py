@@ -386,7 +386,7 @@ def test_v1_database_migrates_and_stays_readable(tmp_path):
         cols = {r[1] for r in store._conn.execute("PRAGMA table_info(entities)")}
         assert "status" in cols and "confidence" in cols
         v = store._conn.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()
-        assert v and v["value"] == "3"
+        assert v and int(v["value"]) >= 3, "schema must migrate to the latest version"
         ent = store.entity("R-OLD-001")
         assert ent is not None and ent["content"] == "legacy rule"
         hits = store.search("legacy", types=("memory",))

@@ -113,7 +113,19 @@ def main(argv: list[str] | None = None) -> int:
         if not last.exists():
             print("No previous bootstrap run recorded.", file=sys.stderr)
             return 1
-        print(last.read_text(encoding="utf-8"))
+        try:
+            from . import embedding as emb
+            from .store import Store
+
+            store = Store(paths.cache / "cognitive.db")
+            try:
+                stats = store.vector_stats()
+            finally:
+                store.close()
+            stats["embedding_provider_available"] = emb.get_provider() is not None
+            print(json.dumps(stats, ensure_ascii=False, indent=2))
+        except Exception:
+            print(last.read_text(encoding="utf-8"))
         return 0
 
     if args.cmd == "export-user":
@@ -283,14 +295,20 @@ def main(argv: list[str] | None = None) -> int:
         return _run_command(paths, args)
 
     if args.cmd == "reindex":
+        from . import embedding as emb
         from .store import Store
 
+        provider = emb.get_provider()
         store = Store(paths.cache / "cognitive.db")
         try:
-            report = store.reindex(paths)
+            report = store.reindex(paths, provider=provider)
         finally:
             store.close()
-        print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2))
+        report_dict = report.to_dict()
+        report_dict["embeddings_rebuilt"] = bool(provider)
+        if provider is None:
+            report_dict["embedding_note"] = "no local embedding provider available — keyword-only retrieval"
+        print(json.dumps(report_dict, ensure_ascii=False, indent=2))
         return 0
 
     if args.cmd == "sleep":

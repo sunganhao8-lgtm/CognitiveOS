@@ -26,12 +26,13 @@ from typing import Any, Iterator
 from .paths import Paths
 from .user import UserLayer
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 """Schema version recorded in the ``meta`` table.
 v2 (Phase 3A): growth fields (status/confidence/evidence_count/
 last_observed/verify_pass_count/user_confirmed) on ``entities``.
 v3 (Phase 3B): scope + versioning fields (scope/scope_id/version/
-superseded_at/superseded_by/superseded_reason) — additive ALTER TABLE."""
+superseded_at/superseded_by/superseded_reason) — additive ALTER TABLE.
+v4 (Phase 3C): ``mem_vectors`` table (DERIVED embeddings; never canonical)."""
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -101,6 +102,15 @@ CREATE VIRTUAL TABLE IF NOT EXISTS mem_fts USING fts5(
 CREATE INDEX IF NOT EXISTS idx_exec_started ON executions(started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_events_exec ON trace_events(execution_id);
 CREATE INDEX IF NOT EXISTS idx_ver_rule ON verifications(rule_id);
+CREATE TABLE IF NOT EXISTS mem_vectors (
+  entity_id       TEXT PRIMARY KEY,
+  content_hash    TEXT NOT NULL,
+  embedding_model TEXT NOT NULL,
+  dimension       INTEGER NOT NULL,
+  vector          BLOB NOT NULL,
+  created_at      TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_vec_model ON mem_vectors(embedding_model);
 """
 
 #: Entity types the retriever may surface (memory covers all subtypes).
@@ -620,10 +630,92 @@ class Store:
             out.append(d)
         return out
 
+    # ------------------------------------------------------------ vectors
+
+    def upsert_vector(self, entity_id: str, *, content_hash: str, model: str,
+                      dimension: int, vector: bytes, ts: str | None = None) -> None:
+        ts = ts or now_iso()
+        self._conn.execute(
+            "INSERT OR REPLACE INTO mem_vectors (entity_id, content_hash, embedding_model, dimension, vector, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (entity_id, content_hash, model, dimension, vector, ts),
+        )
+        self._conn.commit()
+
+    def get_vector(self, entity_id: str) -> tuple[str, list[float]] | None:
+        """(model, vector) for one entity, or None."""
+        row = self._conn.execute(
+            "SELECT embedding_model, vector FROM mem_vectors WHERE entity_id=?", (entity_id,)
+        ).fetchone()
+        if not row:
+            return None
+        from .embedding import unpack_vector
+
+        return (row["embedding_model"], unpack_vector(row["vector"]))
+
+    def vectors_for(self, entity_ids: list[str], *, model: str) -> dict[str, list[float]]:
+        """Vectors for the given ids whose stored model MATCHES ``model``
+        (mismatched models are silently skipped — never mixed)."""
+        if not entity_ids:
+            return {}
+        q = (
+            "SELECT entity_id, vector FROM mem_vectors WHERE embedding_model=? AND entity_id IN (%s)"
+            % ",".join("?" for _ in entity_ids)
+        )
+        from .embedding import unpack_vector
+
+        out: dict[str, list[float]] = {}
+        for row in self._conn.execute(q, (model, *entity_ids)):
+            out[row["entity_id"]] = unpack_vector(row["vector"])
+        return out
+
+    def stale_vector_ids(self, model: str) -> list[str]:
+        """Entity ids needing (re)embedding: no vector yet, or model mismatch."""
+        rows = self._conn.execute(
+            "SELECT e.id, e.content, e.updated_at, v.embedding_model, v.content_hash "
+            "FROM entities e LEFT JOIN mem_vectors v ON v.entity_id = e.id "
+            "WHERE e.type='memory'"
+        ).fetchall()
+        from .embedding import content_hash
+
+        stale: list[str] = []
+        for r in rows:
+            if r["embedding_model"] is None or r["embedding_model"] != model:
+                stale.append(r["id"])
+            elif r["content_hash"] != content_hash(r["content"] or ""):
+                stale.append(r["id"])
+        return stale
+
+    def eligible_content(self, entity_ids: list[str]) -> dict[str, str]:
+        """id → content for a batch (used for embedding)."""
+        if not entity_ids:
+            return {}
+        q = "SELECT id, content FROM entities WHERE id IN (%s)" % ",".join("?" for _ in entity_ids)
+        return {r["id"]: r["content"] or "" for r in self._conn.execute(q, entity_ids)}
+
+    def all_eligible_memory_ids(self) -> list[str]:
+        """Every entity that MAY influence the agent (eligibility stage).
+
+        Excludes candidate/temporary (subtype level) and superseded/rejected/
+        suppressed/expired/conflicted (status level) — the same hard rules
+        as search, applied to the FULL store so the semantic channel can
+        rank independently of keyword hits.
+        """
+        rows = self._conn.execute(
+            "SELECT id FROM entities WHERE type IN ('memory','skill') "
+            "AND COALESCE(subtype,'') NOT IN ('candidate','temporary') "
+            "AND COALESCE(status,'') NOT IN ('superseded','rejected','suppressed','expired','conflicted')"
+        ).fetchall()
+        return [r["id"] for r in rows]
+
     # ---------------------------------------------------------------- reindex
 
-    def reindex(self, paths: Paths) -> ReindexReport:
-        """Rebuild the whole index from canonical sources. Idempotent."""
+    def reindex(self, paths: Paths, *, provider=None) -> ReindexReport:
+        """Rebuild the whole index from canonical sources. Idempotent.
+
+        Order (contract §8): canonical → entities → FTS5 → embeddings.
+        ``provider`` = embedding provider or None (skip vector rebuild).
+        """
         user = UserLayer(root=paths.root / "user")
         report = ReindexReport()
 
@@ -633,6 +725,7 @@ class Store:
         self._conn.execute("DELETE FROM executions")
         self._conn.execute("DELETE FROM trace_events")
         self._conn.execute("DELETE FROM verifications")
+        self._conn.execute("DELETE FROM mem_vectors")
         self._conn.commit()
 
         self.upsert_entity(
@@ -649,6 +742,13 @@ class Store:
 
         report.executions = self._replay_traces(user)
 
+        # embeddings last (derived data); skipped gracefully without provider
+        if provider is not None:
+            try:
+                self.rebuild_vectors(provider)
+            except Exception:
+                pass
+
         report.fts_rows = int(
             self._conn.execute("SELECT COUNT(*) AS c FROM mem_fts").fetchone()["c"]
         )
@@ -656,6 +756,62 @@ class Store:
             self._conn.execute("SELECT COUNT(*) AS c FROM edges").fetchone()["c"]
         )
         return report
+
+    def rebuild_vectors(self, provider, batch: int = 128) -> int:
+        """Recompute embeddings for ALL memory entities (derived data).
+
+        Batch-embeds and upserts. Returns the number of vectors written.
+        """
+        from . import embedding as emb
+
+        rows = self._conn.execute(
+            "SELECT id, content FROM entities WHERE type='memory'"
+        ).fetchall()
+        ids = [r["id"] for r in rows]
+        contents = {r["id"]: r["content"] or "" for r in rows}
+        written = 0
+        for start in range(0, len(ids), batch):
+            chunk = ids[start : start + batch]
+            try:
+                vecs = provider.embed([contents.get(mid, "") for mid in chunk])
+            except Exception:
+                break
+            for mid, vec in zip(chunk, vecs):
+                self.upsert_vector(
+                    mid,
+                    content_hash=emb.content_hash(contents.get(mid, "")),
+                    model=provider.name,
+                    dimension=provider.dimension,
+                    vector=emb.pack_vector(vec),
+                )
+                written += 1
+        return written
+
+    def vector_stats(self) -> dict:
+        """Index health for `cogos status` (§28) — all numbers real."""
+        row = self._conn.execute(
+            "SELECT COUNT(*) AS c, COALESCE(MIN(embedding_model),'') AS model, "
+            "COALESCE(MAX(dimension),0) AS dim FROM mem_vectors"
+        ).fetchone()
+        ent = self._conn.execute("SELECT COUNT(*) AS c FROM entities").fetchone()
+        mem = self._conn.execute(
+            "SELECT COUNT(*) AS c FROM entities WHERE type='memory'"
+        ).fetchone()
+        fts = self._conn.execute("SELECT COUNT(*) AS c FROM mem_fts").fetchone()
+        last = self._conn.execute(
+            "SELECT MAX(created_at) AS ts FROM mem_vectors"
+        ).fetchone()
+        return {
+            "schema_version": int(self._conn.execute(
+                "SELECT value FROM meta WHERE key='schema_version'").fetchone()["value"] or 0),
+            "entities": int(ent["c"]),
+            "memories": int(mem["c"]),
+            "fts_indexed": int(fts["c"]),
+            "embeddings": int(row["c"]),
+            "embedding_model": row["model"],
+            "embedding_dimension": int(row["dim"] or 0),
+            "last_vector_built": last["ts"] or "",
+        }
 
     # ---- canonical scanners ------------------------------------------------
 
