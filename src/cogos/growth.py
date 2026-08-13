@@ -210,6 +210,31 @@ class SleepReport:
         }
 
 
+def _blocked_by_explicit_statement(store: Store, cand: dict, llm_fn=None) -> str | None:
+    """Return the id of a confirmed USER-STATEMENT cognition that this
+    candidate contradicts — behavior evidence must not overwrite it.
+
+    Rule-type: deterministic pattern check. Preference-type: one LLM call
+    that only answers "conflict or not" (never who wins).
+    """
+    from .conflict import rule_rule_conflict, _semantic_conflict
+
+    domain = cand.get("domain", "general")
+    for old in store.confirmed_by_domain_scope(domain):
+        if str((old.get("payload") or {}).get("source", "")) != "user_statement":
+            continue
+        if old["subtype"] == "rule" and cand.get("target_type") == "rule":
+            cand_forb = FEATURE_REGISTRY.get(cand.get("feature", ""), {}).get("forbidden", [])
+            if cand_forb and rule_rule_conflict(
+                old, {"payload": {"forbidden": cand_forb, "required": []}}
+            ):
+                return old["id"]
+        elif old["subtype"] in ("preference", "semantic") and llm_fn is not None:
+            if _semantic_conflict(old, {"content": cand.get("content", "")}, llm_fn):
+                return old["id"]
+    return None
+
+
 def _read_jsonl_lines(path: Path) -> list[dict]:
     if not path.exists():
         return []
@@ -437,6 +462,17 @@ def run_sleep(
             )
             continue
         if decision == "promote":
+            # Behavior evidence must NEVER overwrite an explicit user
+            # statement (§12): if this candidate contradicts a confirmed
+            # user_statement cognition, hold it (and say why).
+            blocked_by = _blocked_by_explicit_statement(store, cand, llm_fn)
+            if blocked_by:
+                trace_mod.append_event(
+                    user, store, sleep_id, "promotions_evaluated",
+                    detail=f"{cand_id} decision=hold reason=conflicts with explicit user statement {blocked_by}",
+                    refs=[{"type": "memory", "subtype": "candidate", "id": cand_id}],
+                )
+                continue
             promoted = _promote_candidate(
                 user, store, cand, llm_fn=llm_fn, sleep_id=sleep_id, policy=policy,
             )

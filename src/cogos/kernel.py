@@ -296,6 +296,19 @@ class Kernel:
         task = Task(id=f"tk-{ex_id}", intent=text, domain=intent.domain)
         context = self._assemble(task, ex_id)
 
+        # Phase 3B: active task-scoped exceptions for this domain are
+        # consumed by THIS task — injected into context, and rules whose
+        # forbidden patterns the exception allows are skipped in verify.
+        # When the task domain is undetermined ("general"), ALL active
+        # temporaries apply — a conservative, honest choice.
+        temps = [
+            t for t in self.store.active_temporaries()
+            if t["domain"] == "general" or task.domain == "general" or t["domain"] == task.domain
+        ]
+        overridden: list[str] = []
+        if temps:
+            context, overridden = self._apply_temporaries(context, temps, ex_id)
+
         decision = self.router.decide(task, context)
         adapter = self.adapters.get(decision.agent_id)
         if adapter is None:
@@ -318,7 +331,13 @@ class Kernel:
                 self.user, self.store, ex_id, "agent_executed",
                 detail=f"status={out.status} chars={len(out.output or '')}",
             )
-            verdict = self._verify(ex_id, task, context, out)
+            verdict = self._verify(ex_id, task, context, out, skip_rules=overridden)
+
+        # Task-scoped exceptions are consumed: they expire, long-term
+        # cognition automatically takes effect again (§3/§15).
+        for t in temps:
+            self.store.expire_temporary(t["id"])
+            self._expire_temporary_canonical(t["id"])
 
         mem_id = self._learn(ex_id, task, out, verdict, context.refs)
 
@@ -388,11 +407,14 @@ class Kernel:
             refs=retrieved.refs(),
         )
 
-    def _verify(self, ex_id: str, task: Task, context: Context, out: Result) -> str:
+    def _verify(self, ex_id: str, task: Task, context: Context, out: Result, *, skip_rules: tuple[str, ...] = ()) -> str:
         """Judge the agent's output against every retrieved rule.
 
         Three stages (reused from cogos.verify): forbidden → FAIL;
         required missing → AMBIGUOUS → LLM semantic judge.
+
+        ``skip_rules`` carries rule ids overridden by an active task-scoped
+        temporary exception — they are recorded as skipped, not enforced.
         """
         rules = [h for h in self._retrieved_for(ex_id) if h.type == "memory" and h.subtype == "rule"]
         if not rules:
@@ -407,6 +429,12 @@ class Kernel:
         scope = "code_blocks" if target != (out.output or "") else "full_text"
         for h in rules:
             p = h.payload or {}
+            if h.ent_id in skip_rules:
+                trace_mod.append_verification(
+                    self.user, self.store, ex_id, h.ent_id, "SKIPPED",
+                    "overridden by task-scoped temporary exception",
+                )
+                continue
             rule = verify_mod.Rule(
                 id=h.ent_id,
                 rule_en=p.get("rule_en", ""),
@@ -485,6 +513,50 @@ class Kernel:
         )
         return mem_id
 
+    def _apply_temporaries(self, context: Context, temps: list, ex_id: str) -> tuple[Context, list[str]]:
+        """Inject active task-scoped exceptions into the context and compute
+        which retrieved rules they override (allowed ∩ rule.forbidden)."""
+        lines = ["## 任务级临时例外（本次执行生效）"]
+        overridden: list[str] = []
+        allowed: set[str] = set()
+        for t in temps:
+            lines.append(f"- ({t['id']}) {t['content']}")
+            for a in (t.get("payload") or {}).get("allowed", []):
+                allowed.add(a)
+        if allowed:
+            for ref in context.refs:
+                ent = self.store.entity(ref["id"])
+                if ent is None or ent["subtype"] != "rule":
+                    continue
+                forb = (ent.get("payload") or {}).get("forbidden", [])
+                if allowed & {str(f) for f in forb}:
+                    overridden.append(ent["id"])
+            if overridden:
+                lines.append(f"以下全局规则本次被覆盖：{', '.join(overridden)}")
+        block = "\n".join(lines)
+        trace_mod.append_event(
+            self.user, self.store, ex_id, "temporaries_applied",
+            detail=f"temporaries={','.join(t['id'] for t in temps)} overridden={','.join(overridden)}",
+            refs=[{"type": "memory", "subtype": "temporary", "id": t["id"]} for t in temps],
+        )
+        return Context(
+            task=context.task,
+            memory_entries=context.memory_entries,
+            context_block=context.context_block + "\n\n" + block,
+            refs=context.refs,
+        ), overridden
+
+    def _expire_temporary_canonical(self, tid: str) -> None:
+        """Sync the canonical temporary.jsonl row to expired status."""
+        from .growth import _read_jsonl_lines, _upsert_jsonl
+
+        path = self.user.memory / "temporary.jsonl"
+        for row in _read_jsonl_lines(path):
+            if row.get("id") == tid:
+                row["status"] = "expired"
+                _upsert_jsonl(path, tid, row)
+                break
+
     def _learn_temporary(self, ex_id: str, text: str, intent, t0: float) -> RunResult:
         """Temporary exception path (Phase 3A minimal support).
 
@@ -501,6 +573,7 @@ class Kernel:
             "source": "user_statement",
             "bound_execution": ex_id,
             "status": "temporary",
+            "allowed": classify_mod.extract_allows(text),
             "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         }
         self.user.memory.mkdir(parents=True, exist_ok=True)
@@ -509,7 +582,7 @@ class Kernel:
         self.store.upsert_entity(
             tid, "memory", subtype="temporary", domain=intent.domain,
             content=text, payload=rec, created_at=rec["created_at"],
-            status="temporary",
+            status="temporary", scope="temporary",
         )
         self.store.add_edge(USER_ID, "owns", tid)
         self.store.add_fts(tid, "memory", "temporary", intent.domain, text)
@@ -547,9 +620,17 @@ class Kernel:
         )
 
     def _learn_rule(self, ex_id: str, text: str, intent, t0: float) -> RunResult:
-        """Rule path: structure the statement → persist → trace → done."""
+        """Rule path: structure the statement → persist → trace → done.
+
+        Phase 3B: an explicit user statement that directly contradicts an
+        existing confirmed rule SUPERSEDES it (history kept, never deleted).
+        Conflict ≠ supersede: an explicit statement is an evolution signal
+        (§12), so old rules get superseded with the reason recorded.
+        """
         draft = classify_mod.extract_rule(text, self.llm_fn)
         rid = classify_mod.next_rule_id(self.user.root / "rules", draft.domain)
+        scope = getattr(intent, "scope", "global") or "global"
+        scope_id = getattr(intent, "scope_id", "") or ""
         rule_dict = {
             "id": rid,
             "domain": draft.domain,
@@ -563,6 +644,11 @@ class Kernel:
             "required": list(draft.required),
             "source": "user_statement",
             "extract_method": draft.method,
+            "scope": scope,
+            "scope_id": scope_id,
+            "status": "confirmed",
+            "user_confirmed": True,
+            "version": 1,
             "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         }
         rules_dir = self.user.root / "rules"
@@ -578,12 +664,22 @@ class Kernel:
         self.store.upsert_entity(
             rid, "memory", subtype="rule", domain=draft.domain,
             content=fts_text, payload=rule_dict, created_at=rule_dict["created_at"],
+            status="confirmed", confidence=0.95, user_confirmed=True,
+            scope=scope, scope_id=scope_id, version=1,
         )
         self.store.add_edge(USER_ID, "owns", rid)
         self.store.add_fts(rid, "memory", "rule", draft.domain, fts_text)
+
+        # Explicit statement supersedes directly contradicting confirmed rules
+        # in the SAME domain+scope (deterministic pattern check).
+        superseded = self._supersede_conflicting_rules(rid, rule_dict)
         trace_mod.append_event(
             self.user, self.store, ex_id, "memory_written",
-            detail=f"rule={rid} method={draft.method} forbidden={list(draft.forbidden)}",
+            detail=(
+                f"rule={rid} method={draft.method} scope={scope}"
+                f" forbidden={list(draft.forbidden)}"
+                + (f" superseded={','.join(superseded)}" if superseded else "")
+            ),
             refs=[{"type": "memory", "subtype": "rule", "id": rid}],
         )
 
@@ -599,7 +695,7 @@ class Kernel:
             "started_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "refs": [{"type": "memory", "subtype": "rule", "id": rid}],
-            "memory_written": [rid],
+            "memory_written": [rid] + superseded,
             "retrieved_summary": "",
         }
         trace_mod.append_execution(self.user, self.store, exec_row)
@@ -609,10 +705,57 @@ class Kernel:
             intent_type="rule",
             task=text,
             status="learned",
-            memory_written=[rid],
-            output=f"已记住规则 {rid}（domain={draft.domain}，提取方式={draft.method}）",
+            memory_written=[rid] + superseded,
+            output=(
+                f"已记住规则 {rid}（domain={draft.domain}，scope={scope}，提取方式={draft.method}）"
+                + (f"，并取代旧规则：{', '.join(superseded)}" if superseded else "")
+            ),
             elapsed=round(elapsed, 2),
         )
+
+    def _supersede_conflicting_rules(self, new_id: str, rule_dict: dict) -> list[str]:
+        """Explicit statement wins: supersede same-domain confirmed rules
+        whose patterns directly contradict the new statement.
+
+        Deterministic: new forbidden ∩ old required, new required ∩ old
+        forbidden. Never deletes — history kept with superseded status.
+        """
+        from .conflict import rule_rule_conflict, _semantic_conflict
+
+        superseded: list[str] = []
+        candidates = self.store.confirmed_by_domain_scope(rule_dict.get("domain", "general"))
+        for old in candidates:
+            if old["id"] == new_id:
+                continue
+            if old["subtype"] == "rule" and rule_rule_conflict(old, {"payload": rule_dict}):
+                self._do_supersede(old, new_id, superseded)
+                continue
+            # semantic pass (optional LLM): explicit statement contradicts a
+            # confirmed preference — the LLM only says "conflict or not"
+            if old["subtype"] in ("preference", "semantic") and self.llm_fn is not None:
+                new_ent = {"content": rule_dict.get("rule_zh") or "", "payload": rule_dict}
+                if _semantic_conflict(old, new_ent, self.llm_fn):
+                    self._do_supersede(old, new_id, superseded)
+        return superseded
+
+    def _do_supersede(self, old: dict, new_id: str, superseded: list[str]) -> None:
+        """Supersede one old cognition (store + canonical file, no deletion)."""
+        self.store.supersede(
+            old["id"], new_id,
+            reason=f"explicit user statement {new_id} contradicts this cognition",
+        )
+        if old["subtype"] == "rule":
+            rule_file = self.user.root / "rules" / f"{old['id']}.json"
+            if rule_file.exists():
+                try:
+                    rec = json.loads(rule_file.read_text(encoding="utf-8"))
+                    rec["status"] = "superseded"
+                    rec["superseded_by"] = new_id
+                    rec["superseded_reason"] = "explicit user statement"
+                    rule_file.write_text(json.dumps(rec, ensure_ascii=False, indent=2), encoding="utf-8")
+                except (json.JSONDecodeError, OSError):
+                    pass
+        superseded.append(old["id"])
 
 
 def _verification_target(output: str) -> str:

@@ -26,10 +26,12 @@ from typing import Any, Iterator
 from .paths import Paths
 from .user import UserLayer
 
-SCHEMA_VERSION = 2
-"""Schema version recorded in the ``meta`` table. v2 (Phase 3) adds growth
-fields (status/confidence/evidence_count/last_observed/verify_pass_count/
-user_confirmed) to ``entities`` — applied to v1 databases via ALTER TABLE."""
+SCHEMA_VERSION = 3
+"""Schema version recorded in the ``meta`` table.
+v2 (Phase 3A): growth fields (status/confidence/evidence_count/
+last_observed/verify_pass_count/user_confirmed) on ``entities``.
+v3 (Phase 3B): scope + versioning fields (scope/scope_id/version/
+superseded_at/superseded_by/superseded_reason) — additive ALTER TABLE."""
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -50,7 +52,13 @@ CREATE TABLE IF NOT EXISTS entities (
   evidence_count     INTEGER DEFAULT 0,
   last_observed      TEXT DEFAULT '',
   verify_pass_count  INTEGER DEFAULT 0,
-  user_confirmed     INTEGER DEFAULT 0
+  user_confirmed     INTEGER DEFAULT 0,
+  scope              TEXT DEFAULT 'global',
+  scope_id           TEXT DEFAULT '',
+  version            INTEGER DEFAULT 1,
+  superseded_at      TEXT DEFAULT '',
+  superseded_by      TEXT DEFAULT '',
+  superseded_reason  TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS edges (
   from_id TEXT NOT NULL,
@@ -158,8 +166,9 @@ class Store:
     def _migrate(self) -> None:
         """Apply additive migrations to older databases (idempotent).
 
-        v1 → v2: add growth columns to ``entities``. Existing rows keep
-        defaults ('' status, NULL confidence) — old data stays readable.
+        v1 → v2: growth columns on ``entities``.
+        v2 → v3: scope + versioning columns. Existing rows keep defaults —
+        old data stays readable and its meaning is unchanged.
         """
         cols = {r[1] for r in self._conn.execute("PRAGMA table_info(entities)")}
         for col, decl in (
@@ -169,6 +178,12 @@ class Store:
             ("last_observed", "TEXT DEFAULT ''"),
             ("verify_pass_count", "INTEGER DEFAULT 0"),
             ("user_confirmed", "INTEGER DEFAULT 0"),
+            ("scope", "TEXT DEFAULT 'global'"),
+            ("scope_id", "TEXT DEFAULT ''"),
+            ("version", "INTEGER DEFAULT 1"),
+            ("superseded_at", "TEXT DEFAULT ''"),
+            ("superseded_by", "TEXT DEFAULT ''"),
+            ("superseded_reason", "TEXT DEFAULT ''"),
         ):
             if col not in cols:
                 self._conn.execute(f"ALTER TABLE entities ADD COLUMN {col} {decl}")
@@ -199,6 +214,12 @@ class Store:
         last_observed: str = "",
         verify_pass_count: int = 0,
         user_confirmed: bool = False,
+        scope: str = "global",
+        scope_id: str = "",
+        version: int = 1,
+        superseded_at: str = "",
+        superseded_by: str = "",
+        superseded_reason: str = "",
     ) -> None:
         ts = created_at or now_iso()
         self._conn.execute(
@@ -206,8 +227,10 @@ class Store:
             INSERT INTO entities (id, type, subtype, domain, content,
                                   created_at, updated_at, payload,
                                   status, confidence, evidence_count,
-                                  last_observed, verify_pass_count, user_confirmed)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                  last_observed, verify_pass_count, user_confirmed,
+                                  scope, scope_id, version, superseded_at,
+                                  superseded_by, superseded_reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               subtype=excluded.subtype, domain=excluded.domain,
               content=excluded.content, updated_at=excluded.updated_at,
@@ -216,13 +239,19 @@ class Store:
               evidence_count=excluded.evidence_count,
               last_observed=excluded.last_observed,
               verify_pass_count=excluded.verify_pass_count,
-              user_confirmed=excluded.user_confirmed
+              user_confirmed=excluded.user_confirmed,
+              scope=excluded.scope, scope_id=excluded.scope_id,
+              version=excluded.version, superseded_at=excluded.superseded_at,
+              superseded_by=excluded.superseded_by,
+              superseded_reason=excluded.superseded_reason
             """,
             (
                 ent_id, type_, subtype, domain, content, ts,
                 updated_at or ts, json.dumps(payload or {}, ensure_ascii=False),
                 status, confidence, evidence_count, last_observed,
                 verify_pass_count, 1 if user_confirmed else 0,
+                scope, scope_id, version, superseded_at, superseded_by,
+                superseded_reason,
             ),
         )
         self._conn.commit()
@@ -473,6 +502,123 @@ class Store:
     def skill_count(self) -> int:
         row = self._conn.execute("SELECT COUNT(*) AS c FROM entities WHERE type='skill'").fetchone()
         return int(row["c"] or 0)
+
+    # ----------------------------------------------------------- versioning
+
+    def supersede(self, old_id: str, new_id: str, *, reason: str, ts: str | None = None) -> None:
+        """Mark ``old_id`` superseded by ``new_id`` (never deleted).
+
+        The old entity keeps its history (confidence, evidence, content);
+        only status/superseded_* change. An ``supersedes`` edge links the new
+        version to the old one.
+        """
+        ts = ts or now_iso()
+        self._conn.execute(
+            "UPDATE entities SET status='superseded', superseded_at=?, superseded_by=?, superseded_reason=?, updated_at=? "
+            "WHERE id=?",
+            (ts, new_id, reason, ts, old_id),
+        )
+        self.add_edge(new_id, "supersedes", old_id)
+        self._conn.commit()
+
+    def version_chain(self, ent_id: str) -> list[dict]:
+        """Follow the supersede chain and return the FULL version history.
+
+        The ``superseded_by`` column is a forward pointer (old → new), so:
+        1. walk forward to the newest version,
+        2. walk backward (who points at me?) to the oldest,
+        3. walk forward again collecting the chain, oldest-first.
+        """
+        # 1. newest
+        newest = ent_id
+        seen: set[str] = set()
+        while newest and newest not in seen:
+            seen.add(newest)
+            row = self._conn.execute(
+                "SELECT superseded_by FROM entities WHERE id=? AND superseded_by != ''", (newest,)
+            ).fetchone()
+            if not row:
+                break
+            newest = row["superseded_by"]
+        # 2. oldest
+        oldest = newest
+        seen.clear()
+        while oldest and oldest not in seen:
+            seen.add(oldest)
+            row = self._conn.execute(
+                "SELECT id FROM entities WHERE superseded_by=?", (oldest,)
+            ).fetchone()
+            if not row:
+                break
+            oldest = row["id"]
+        # 3. oldest → newest
+        chain: list[dict] = []
+        cur = oldest
+        seen.clear()
+        while cur and cur not in seen:
+            seen.add(cur)
+            ent = self.entity(cur)
+            if ent is None:
+                break
+            chain.append(ent)
+            row = self._conn.execute(
+                "SELECT superseded_by FROM entities WHERE id=?", (cur,)
+            ).fetchone()
+            if not row or not row["superseded_by"]:
+                break
+            cur = row["superseded_by"]
+        return chain
+
+    def active_temporaries(self) -> list[dict]:
+        """Task-scoped exceptions still waiting for their consuming task."""
+        rows = self._conn.execute(
+            "SELECT * FROM entities WHERE subtype='temporary' AND status='temporary' ORDER BY created_at"
+        ).fetchall()
+        out = []
+        for row in rows:
+            d = dict(row)
+            try:
+                d["payload"] = json.loads(d["payload"] or "{}")
+            except json.JSONDecodeError:
+                d["payload"] = {}
+            out.append(d)
+        return out
+
+    def expire_temporary(self, temp_id: str, ts: str | None = None) -> None:
+        """A task-scoped exception consumed by its task → expired."""
+        ts = ts or now_iso()
+        self._conn.execute(
+            "UPDATE entities SET status='expired', updated_at=? WHERE id=? AND subtype='temporary'",
+            (ts, temp_id),
+        )
+        self._conn.commit()
+
+    def confirmed_by_domain_scope(
+        self, domain: str, *, scope: str | None = None, exclude: tuple[str, ...] = ()
+    ) -> list[dict]:
+        """Current (non-superseded) long-term cognitions for a domain."""
+        q = (
+            "SELECT * FROM entities WHERE type='memory' AND status IN ('confirmed','conflicted') "
+            "AND domain=?"
+        )
+        args: list = [domain]
+        if scope:
+            q += " AND scope=?"
+            args.append(scope)
+        if exclude:
+            q += " AND id NOT IN (%s)" % ",".join("?" for _ in exclude)
+            args.extend(exclude)
+        q += " ORDER BY created_at"
+        rows = self._conn.execute(q, args).fetchall()
+        out = []
+        for row in rows:
+            d = dict(row)
+            try:
+                d["payload"] = json.loads(d["payload"] or "{}")
+            except json.JSONDecodeError:
+                d["payload"] = {}
+            out.append(d)
+        return out
 
     # ---------------------------------------------------------------- reindex
 

@@ -90,6 +90,11 @@ def main(argv: list[str] | None = None) -> int:
     p_sleep.add_argument("--with-llm", action="store_true", help="Optionally polish candidate descriptions with an LLM (promotion decisions stay deterministic)")
     p_sleep.add_argument("--list", dest="list_sleeps", action="store_true", help="List past sleep cycles instead of running")
 
+    p_memory = sub.add_parser("memory", help="Inspect cognitive memory (Phase 3B: version history, supersede chains, conflicts)")
+    mem_sub = p_memory.add_subparsers(dest="memory_cmd", required=True)
+    p_mem_show = mem_sub.add_parser("show", help="Show one cognition: current state, version history, evidence, scope")
+    p_mem_show.add_argument("ent_id", help="Memory id (e.g. R-SQL-001, P-SQL-001)")
+
     add_task_parser(sub)
     add_inbox_parser(sub)
     add_workspace_parser(sub)
@@ -291,6 +296,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "sleep":
         return _sleep_command(paths, args)
 
+    if args.cmd == "memory":
+        return _memory_show(paths, args.ent_id)
+
     if args.cmd == "task":
         return run_task(args)
 
@@ -436,3 +444,57 @@ def _sleep_command(paths, args) -> int:
         store.close()
     print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2))
     return 0
+
+
+def _memory_show(paths, ent_id: str) -> int:
+    """``cogos memory show <id>`` — full version history of one cognition.
+
+    Shows Current / Version / History / Evidence / Supersedes / Superseded-by /
+    Conflicts / Scope — the data behind "why did you think this?" (§21/22).
+    """
+    from .conflict import detect_conflicts
+    from .store import Store
+
+    store = Store(paths.cache / "cognitive.db")
+    try:
+        chain = store.version_chain(ent_id)
+        if not chain:
+            print(f"(no memory with id {ent_id!r})")
+            return 1
+        out: dict = {
+            "id": ent_id,
+            "domain": chain[-1]["domain"],
+            "subtype": chain[-1]["subtype"],
+            "scope": chain[-1]["scope"],
+            "scope_id": chain[-1]["scope_id"],
+            "status": chain[-1]["status"],
+            "current_content": chain[-1]["content"],
+            "confidence": chain[-1]["confidence"],
+            "evidence_count": chain[-1]["evidence_count"],
+            "verify_pass_count": chain[-1]["verify_pass_count"],
+            "user_confirmed": bool(chain[-1]["user_confirmed"]),
+            "version_history": [
+                {
+                    "id": e["id"],
+                    "version": e["version"],
+                    "status": e["status"],
+                    "content": e["content"][:200],
+                    "confidence": e["confidence"],
+                    "created_at": e["created_at"],
+                    "superseded_at": e["superseded_at"],
+                    "superseded_by": e["superseded_by"],
+                    "superseded_reason": e["superseded_reason"],
+                }
+                for e in chain
+            ],
+            "source_executions": (chain[-1].get("payload") or {}).get("source_executions", []),
+            "conflicts": [
+                c.to_dict()
+                for c in detect_conflicts(store, chain[-1]["domain"])
+                if ent_id in (c.a_id, c.b_id) or ent_id in (c.winner,)
+            ],
+        }
+        print(json.dumps(out, ensure_ascii=False, indent=2))
+        return 0
+    finally:
+        store.close()

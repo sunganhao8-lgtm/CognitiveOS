@@ -32,6 +32,28 @@ FORCE_RULE = re.compile(r"^\s*规则[:：]")
 #: form permanent cognition (Phase 3A minimal temporary support).
 TEMPORARY_MARKERS = re.compile(r"(今天|这次|暂时|临时|仅这次|就这一次|本次)")
 
+#: Project-scope markers — "这个项目/本项目/在X项目里" narrows a statement
+#: to a project instead of global scope (Phase 3B scope model).
+PROJECT_SCOPE_RE = re.compile(r"(这个项目|本项目|在我们项目|在项目里|项目里|该项目的)")
+
+#: Project name capture: "在 <name> 项目里" / "<name> 项目以后…"
+PROJECT_NAME_RE = re.compile(r"(?:在|对|给)?([\u4e00-\u9fffA-Za-z0-9]{2,20}?)项目(?:里|中|以后|中以后)?")
+
+
+def detect_scope(text: str) -> tuple[str, str]:
+    """(scope, scope_id) from a user statement — deterministic.
+
+    "这个项目…" → project scope (id = "current" placeholder, refined by
+    caller); temporary markers → temporary scope. Default global.
+    """
+    if TEMPORARY_MARKERS.search(text):
+        return ("temporary", "")
+    if PROJECT_SCOPE_RE.search(text):
+        m = PROJECT_NAME_RE.search(text)
+        name = m.group(1) if m else ""
+        return ("project", name.strip() or "current")
+    return ("global", "")
+
 #: "不允许 X" / "不要 X" / "别用 X" — deterministic forbidden extraction.
 FORBIDDEN_PATTERNS: tuple[re.Pattern, ...] = (
     re.compile(r"(?:不允许|不允许再|禁止|不要再用|不要再|不要用|不要|别用|别)\s*([^，。；,.;\n]+)"),
@@ -42,6 +64,23 @@ FORBIDDEN_PATTERNS: tuple[re.Pattern, ...] = (
 REQUIRED_PATTERNS: tuple[re.Pattern, ...] = (
     re.compile(r"(?:必须|都要|统一用|统一使用|一律)\s*([^，。；,.;\n]+)"),
 )
+
+#: "允许 X" / "可以用 X" — deterministic allowed extraction (temporary
+#: exceptions carry these; they override rules whose forbidden matches).
+ALLOW_PATTERNS: tuple[re.Pattern, ...] = (
+    re.compile(r"(?:允许|可以用|能用|可以)\s*(?:使用|用)?\s*([^，。；,.;\n]+)"),
+)
+
+
+def extract_allows(text: str) -> list[str]:
+    """Deterministic extraction of what a statement permits (temporary use)."""
+    out: list[str] = []
+    for pat in ALLOW_PATTERNS:
+        for m in pat.finditer(text):
+            token = _clean_token(m.group(1))
+            if token and token not in out:
+                out.append(token)
+    return out
 
 DOMAIN_HINTS: dict[str, str] = {
     "sql": "sql",
@@ -61,6 +100,8 @@ class Intent:
     method: str = "keyword"  # keyword | llm | fallback
     confidence: float = 1.0
     temporary: bool = False  # task-scoped exception, never promoted
+    scope: str = "global"    # global | project | task | temporary
+    scope_id: str = ""
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -92,14 +133,20 @@ def classify_intent(text: str, llm_fn=None) -> Intent:
     """
     t = text.strip()
     temporary = bool(TEMPORARY_MARKERS.search(t))
+    scope, scope_id = detect_scope(t)
+    if temporary:
+        scope, scope_id = "temporary", ""
     if FORCE_RULE.search(t):
-        return Intent(type="rule", domain=_domain_hint(t), method="keyword", temporary=temporary)
+        return Intent(type="rule", domain=_domain_hint(t), method="keyword",
+                      temporary=temporary, scope=scope, scope_id=scope_id)
     for pat in RULE_PATTERNS:
         if pat.search(t):
-            return Intent(type="rule", domain=_domain_hint(t), method="keyword", temporary=temporary)
+            return Intent(type="rule", domain=_domain_hint(t), method="keyword",
+                          temporary=temporary, scope=scope, scope_id=scope_id)
 
     if llm_fn is None:
-        return Intent(type="task", domain=_domain_hint(t), method="fallback", confidence=0.6, temporary=temporary)
+        return Intent(type="task", domain=_domain_hint(t), method="fallback", confidence=0.6,
+                      temporary=temporary, scope=scope, scope_id=scope_id)
 
     prompt = (
         'Classify this user message. Reply with ONLY JSON: '
