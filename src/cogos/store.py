@@ -26,7 +26,16 @@ from typing import Any, Iterator
 from .paths import Paths
 from .user import UserLayer
 
+SCHEMA_VERSION = 2
+"""Schema version recorded in the ``meta`` table. v2 (Phase 3) adds growth
+fields (status/confidence/evidence_count/last_observed/verify_pass_count/
+user_confirmed) to ``entities`` — applied to v1 databases via ALTER TABLE."""
+
 SCHEMA = """
+CREATE TABLE IF NOT EXISTS meta (
+  key TEXT PRIMARY KEY,
+  value TEXT
+);
 CREATE TABLE IF NOT EXISTS entities (
   id         TEXT PRIMARY KEY,
   type       TEXT NOT NULL,
@@ -35,7 +44,13 @@ CREATE TABLE IF NOT EXISTS entities (
   content    TEXT,
   created_at TEXT,
   updated_at TEXT,
-  payload    TEXT
+  payload    TEXT,
+  status             TEXT DEFAULT '',
+  confidence         REAL,
+  evidence_count     INTEGER DEFAULT 0,
+  last_observed      TEXT DEFAULT '',
+  verify_pass_count  INTEGER DEFAULT 0,
+  user_confirmed     INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS edges (
   from_id TEXT NOT NULL,
@@ -83,6 +98,14 @@ CREATE INDEX IF NOT EXISTS idx_ver_rule ON verifications(rule_id);
 #: Entity types the retriever may surface (memory covers all subtypes).
 MEMORY_SUBTYPES = ("preference", "rule", "episodic", "semantic", "project_note")
 
+#: Statuses that must NEVER influence retrieval / agent context.
+#: superseded/rejected/suppressed = retired or corrected.
+#: subtype-level exclusion (candidate / temporary) is enforced separately —
+#: a promoted candidate's status becomes "confirmed" but it must STILL never
+#: be retrieved (it lives on as its promoted preference/rule).
+EXCLUDED_STATUSES = ("superseded", "rejected", "suppressed")
+EXCLUDED_SUBTYPES = ("candidate", "temporary")
+
 USER_ID = "u-master"
 
 
@@ -129,7 +152,30 @@ class Store:
         self._conn = sqlite3.connect(str(db_path))
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(SCHEMA)
+        self._migrate()
         self._conn.commit()
+
+    def _migrate(self) -> None:
+        """Apply additive migrations to older databases (idempotent).
+
+        v1 → v2: add growth columns to ``entities``. Existing rows keep
+        defaults ('' status, NULL confidence) — old data stays readable.
+        """
+        cols = {r[1] for r in self._conn.execute("PRAGMA table_info(entities)")}
+        for col, decl in (
+            ("status", "TEXT DEFAULT ''"),
+            ("confidence", "REAL"),
+            ("evidence_count", "INTEGER DEFAULT 0"),
+            ("last_observed", "TEXT DEFAULT ''"),
+            ("verify_pass_count", "INTEGER DEFAULT 0"),
+            ("user_confirmed", "INTEGER DEFAULT 0"),
+        ):
+            if col not in cols:
+                self._conn.execute(f"ALTER TABLE entities ADD COLUMN {col} {decl}")
+        self._conn.execute(
+            "INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', ?)",
+            (str(SCHEMA_VERSION),),
+        )
 
     def close(self) -> None:
         self._conn.close()
@@ -147,21 +193,36 @@ class Store:
         payload: dict | None = None,
         created_at: str | None = None,
         updated_at: str | None = None,
+        status: str = "",
+        confidence: float | None = None,
+        evidence_count: int = 0,
+        last_observed: str = "",
+        verify_pass_count: int = 0,
+        user_confirmed: bool = False,
     ) -> None:
         ts = created_at or now_iso()
         self._conn.execute(
             """
             INSERT INTO entities (id, type, subtype, domain, content,
-                                  created_at, updated_at, payload)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                  created_at, updated_at, payload,
+                                  status, confidence, evidence_count,
+                                  last_observed, verify_pass_count, user_confirmed)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
               subtype=excluded.subtype, domain=excluded.domain,
               content=excluded.content, updated_at=excluded.updated_at,
-              payload=excluded.payload
+              payload=excluded.payload,
+              status=excluded.status, confidence=excluded.confidence,
+              evidence_count=excluded.evidence_count,
+              last_observed=excluded.last_observed,
+              verify_pass_count=excluded.verify_pass_count,
+              user_confirmed=excluded.user_confirmed
             """,
             (
                 ent_id, type_, subtype, domain, content, ts,
                 updated_at or ts, json.dumps(payload or {}, ensure_ascii=False),
+                status, confidence, evidence_count, last_observed,
+                verify_pass_count, 1 if user_confirmed else 0,
             ),
         )
         self._conn.commit()
@@ -233,7 +294,9 @@ class Store:
                     (fts_q, *types, limit),
                 ).fetchall()
                 for row in rows:
-                    hits[row["ent_id"]] = self._hit_from_row(row, rank=float(row["r"] or 0.0))
+                    hit = self._hit_from_row(row, rank=float(row["r"] or 0.0))
+                    if hit is not None:
+                        hits[row["ent_id"]] = hit
             except sqlite3.Error:
                 hits = {}
 
@@ -244,11 +307,20 @@ class Store:
         scored.sort(key=lambda h: h.score, reverse=True)
         return scored[:limit]
 
-    def _hit_from_row(self, row: sqlite3.Row, rank: float) -> SearchHit:
+    def _hit_from_row(self, row: sqlite3.Row, rank: float) -> SearchHit | None:
+        """Build a SearchHit; returns None when the entity is excluded
+        (candidate / temporary / superseded / rejected / suppressed)."""
         ent = self._conn.execute(
-            "SELECT content, payload, created_at FROM entities WHERE id=?", (row["ent_id"],)
+            "SELECT content, payload, created_at, status, subtype, domain, confidence "
+            "FROM entities WHERE id=?", (row["ent_id"],)
         ).fetchone()
-        content, payload, created_at = (ent["content"], ent["payload"], ent["created_at"]) if ent else ("", "{}", "")
+        if ent is None:
+            return None
+        if (ent["subtype"] or "") in EXCLUDED_SUBTYPES:
+            return None
+        if (ent["status"] or "") in EXCLUDED_STATUSES:
+            return None
+        content, payload, created_at = ent["content"], ent["payload"], ent["created_at"]
         try:
             payload_d = json.loads(payload or "{}")
         except json.JSONDecodeError:
@@ -257,11 +329,13 @@ class Store:
         score = -rank if rank < 0 else 1.0
         if created_at:
             score += _recency_boost(created_at)
+        if ent["confidence"] is not None:
+            score += 0.2 * float(ent["confidence"])
         return SearchHit(
             ent_id=row["ent_id"],
             type=row["type"],
-            subtype=row["subtype"] or "",
-            domain=row["domain"] or "",
+            subtype=ent["subtype"] or row["subtype"] or "",
+            domain=ent["domain"] or row["domain"] or "",
             score=round(score, 3),
             content=content,
             payload=payload_d,
@@ -273,11 +347,15 @@ class Store:
         if not terms:
             return {}
         rows = self._conn.execute(
-            "SELECT id, type, subtype, domain, content, payload, created_at FROM entities"
+            "SELECT id, type, subtype, domain, content, payload, created_at, status, confidence FROM entities"
         ).fetchall()
         for row in rows:
             content = (row["content"] or "").lower()
             if not any(t in content for t in terms):
+                continue
+            if (row["subtype"] or "") in EXCLUDED_SUBTYPES:
+                continue
+            if (row["status"] or "") in EXCLUDED_STATUSES:
                 continue
             t = row["type"] or "memory"
             if types and t not in types:
@@ -288,12 +366,15 @@ class Store:
                 payload = {}
             # score by how many terms matched
             matched = sum(1 for tm in terms if tm in content)
+            score = matched + _recency_boost(row["created_at"] or "")
+            if row["confidence"] is not None:
+                score += 0.2 * float(row["confidence"])
             hits[row["id"]] = SearchHit(
                 ent_id=row["id"],
                 type=t,
                 subtype=row["subtype"] or "",
                 domain=row["domain"] or "",
-                score=matched + _recency_boost(row["created_at"] or ""),
+                score=score,
                 content=row["content"] or "",
                 payload=payload,
             )
@@ -350,7 +431,7 @@ class Store:
     def execution_count_on(self, date_prefix: str) -> int:
         row = self._conn.execute(
             "SELECT COUNT(*) AS c FROM executions WHERE execution_id LIKE ?",
-            (f"ex-{date_prefix}-%",),
+            (f"{date_prefix}-%",),
         ).fetchone()
         return int(row["c"] or 0)
 
@@ -450,6 +531,13 @@ class Store:
             domain = rec.get("domain", "general")
             self.upsert_entity(
                 rid, "memory", subtype="rule", domain=domain, content=text, payload=rec,
+                status=rec.get("status", "confirmed"),
+                confidence=rec.get("confidence"),
+                evidence_count=int(rec.get("evidence_count", 0) or 0),
+                last_observed=rec.get("last_observed", ""),
+                verify_pass_count=int(rec.get("verify_pass_count", 0) or 0),
+                user_confirmed=bool(rec.get("user_confirmed")),
+                created_at=rec.get("created_at"),
             )
             self.add_edge(USER_ID, "owns", rid)
             self.add_fts(rid, "memory", "rule", domain, text)
@@ -477,10 +565,18 @@ class Store:
                 self.upsert_entity(
                     mid, "memory", subtype=subtype, domain=domain, content=text,
                     payload=rec, created_at=rec.get("created_at"),
+                    status=rec.get("status", ""),
+                    confidence=rec.get("confidence"),
+                    evidence_count=int(rec.get("evidence_count", 0) or 0),
+                    last_observed=rec.get("last_observed", ""),
+                    verify_pass_count=int(rec.get("verify_pass_count", 0) or 0),
+                    user_confirmed=bool(rec.get("user_confirmed")),
                 )
                 self.add_edge(USER_ID, "owns", mid)
                 if rec.get("derived_from_execution"):
                     self.add_edge(mid, "derived_from", str(rec["derived_from_execution"]))
+                for src_id in rec.get("source_memories", []):
+                    self.add_edge(mid, "derived_from", str(src_id))
                 self.add_fts(mid, "memory", subtype, domain, text)
                 n += 1
         return n
@@ -497,7 +593,9 @@ class Store:
                 mid = f"mem-{path.stem}-{i:03d}"
                 self.upsert_entity(
                     mid, "memory", subtype="preference", domain="general",
-                    content=para, payload={"source": f"user/{name}", "_type": "memory", "_subtype": "preference"},
+                    content=para,
+                    payload={"source": f"user/{name}", "_type": "memory", "_subtype": "preference"},
+                    status="confirmed", confidence=0.95, user_confirmed=True,
                 )
                 self.add_edge(USER_ID, "owns", mid)
                 self.add_fts(mid, "memory", "preference", "general", para)

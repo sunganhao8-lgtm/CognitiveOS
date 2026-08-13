@@ -86,6 +86,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p_reindex = sub.add_parser("reindex", help="Rebuild the Cognitive Store (SQLite index) from canonical user/ data")
 
+    p_sleep = sub.add_parser("sleep", help="Offline cognitive consolidation: pattern detection → candidates → promotion (idempotent)")
+    p_sleep.add_argument("--with-llm", action="store_true", help="Optionally polish candidate descriptions with an LLM (promotion decisions stay deterministic)")
+    p_sleep.add_argument("--list", dest="list_sleeps", action="store_true", help="List past sleep cycles instead of running")
+
     add_task_parser(sub)
     add_inbox_parser(sub)
     add_workspace_parser(sub)
@@ -284,6 +288,9 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2))
         return 0
 
+    if args.cmd == "sleep":
+        return _sleep_command(paths, args)
+
     if args.cmd == "task":
         return run_task(args)
 
@@ -394,3 +401,38 @@ def _run_command(paths, args) -> int:
     result = kernel.run_input(args.text)
     print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
     return 0 if result.status in ("success", "learned") else 3
+
+
+def _sleep_command(paths, args) -> int:
+    """``cogos sleep`` — one offline cognitive-consolidation cycle."""
+    from .growth import run_sleep
+    from .store import Store
+    from .user import UserLayer
+
+    if args.list_sleeps:
+        store = Store(paths.cache / "cognitive.db")
+        try:
+            runs = [
+                r for r in store.recent_executions(limit=20)
+                if r.get("intent_type") == "sleep"
+            ]
+        finally:
+            store.close()
+        if not runs:
+            print("(no sleep cycles recorded yet — run `cogos sleep` first)")
+            return 0
+        for r in runs:
+            promoted = ", ".join(r.get("payload", {}).get("memory_written", [])) or "-"
+            print(f"{r['execution_id']}  {r['started_at']}  promoted=[{promoted}]")
+        return 0
+
+    user = UserLayer(root=paths.root / "user")
+    user.ensure()
+    store = Store(paths.cache / "cognitive.db")
+    try:
+        llm_fn = _hermes_llm if args.with_llm else None
+        report = run_sleep(user, store, llm_fn=llm_fn)
+    finally:
+        store.close()
+    print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2))
+    return 0

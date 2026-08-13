@@ -21,10 +21,16 @@ from dataclasses import asdict, dataclass, field
 RULE_PATTERNS: tuple[re.Pattern, ...] = (
     re.compile(r"^(以后|从现在起|今后|记住|请记住|永远|永远不要|别再|不要再|不要再用|不允许再)"),
     re.compile(r"^我的[^\n]{0,30}(要|不要|别|不能|必须|禁止|不允许|不写|统一)"),
+    # temporary-scoped rule statements — rule mode but NEVER permanent
+    re.compile(r"^(今天|这次|本次|暂时|临时)"),
 )
 
 #: Explicit escape hatch: a "规则:" prefix forces rule mode.
 FORCE_RULE = re.compile(r"^\s*规则[:：]")
+
+#: Task-scoped exception markers — "今天/这次/暂时" statements must NEVER
+#: form permanent cognition (Phase 3A minimal temporary support).
+TEMPORARY_MARKERS = re.compile(r"(今天|这次|暂时|临时|仅这次|就这一次|本次)")
 
 #: "不允许 X" / "不要 X" / "别用 X" — deterministic forbidden extraction.
 FORBIDDEN_PATTERNS: tuple[re.Pattern, ...] = (
@@ -54,6 +60,7 @@ class Intent:
     domain: str = "general"
     method: str = "keyword"  # keyword | llm | fallback
     confidence: float = 1.0
+    temporary: bool = False  # task-scoped exception, never promoted
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -84,14 +91,15 @@ def classify_intent(text: str, llm_fn=None) -> Intent:
     back to "task" — the honest default, recorded as method=fallback.
     """
     t = text.strip()
+    temporary = bool(TEMPORARY_MARKERS.search(t))
     if FORCE_RULE.search(t):
-        return Intent(type="rule", domain=_domain_hint(t), method="keyword")
+        return Intent(type="rule", domain=_domain_hint(t), method="keyword", temporary=temporary)
     for pat in RULE_PATTERNS:
         if pat.search(t):
-            return Intent(type="rule", domain=_domain_hint(t), method="keyword")
+            return Intent(type="rule", domain=_domain_hint(t), method="keyword", temporary=temporary)
 
     if llm_fn is None:
-        return Intent(type="task", domain=_domain_hint(t), method="fallback", confidence=0.6)
+        return Intent(type="task", domain=_domain_hint(t), method="fallback", confidence=0.6, temporary=temporary)
 
     prompt = (
         'Classify this user message. Reply with ONLY JSON: '

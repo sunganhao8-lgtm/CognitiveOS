@@ -288,6 +288,8 @@ class Kernel:
 
         # 2. Remember (rule path)
         if intent.type == "rule":
+            if intent.temporary:
+                return self._learn_temporary(ex_id, text, intent, t0)
             return self._learn_rule(ex_id, text, intent, t0)
 
         # 3-8. Task path
@@ -440,12 +442,21 @@ class Kernel:
         return getattr(self, "_last_retrieved", [])
 
     def _learn(self, ex_id: str, task: Task, out: Result, verdict: str, refs: list) -> str:
-        """Write the episodic memory entry (canonical + index)."""
+        """Write the episodic memory entry (canonical + index).
+
+        Phase 3A: also records deterministic behavioral features extracted
+        from the agent output — the raw material the PatternDetector later
+        aggregates into candidates (features are observations, not
+        conclusions).
+        """
+        from .growth import extract_features
+
         mem_id = f"mem-{ex_id}"
         content = (
             f"[{verdict or 'n/a'}] {task.intent[:200]} "
             f"→ agent={out.routed_to or '?'} status={out.status}"
         )
+        features = extract_features(task.domain, out.output or "")
         rec = {
             "id": mem_id,
             "type": "episodic",
@@ -455,6 +466,7 @@ class Kernel:
             "derived_from_execution": ex_id,
             "verdict": verdict,
             "refs": [r["id"] for r in refs],
+            "features": features,
             "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         }
         self.user.memory.mkdir(parents=True, exist_ok=True)
@@ -472,6 +484,67 @@ class Kernel:
             detail=f"episodic={mem_id}", refs=[{"type": "memory", "id": mem_id}],
         )
         return mem_id
+
+    def _learn_temporary(self, ex_id: str, text: str, intent, t0: float) -> RunResult:
+        """Temporary exception path (Phase 3A minimal support).
+
+        "今天/这次/暂时…" statements are recorded as task-scoped exceptions
+        (subtype=temporary, excluded from retrieval) and NEVER enter the
+        permanent rule store. Full conflict resolution comes in 3B.
+        """
+        tid = f"tmp-{ex_id}"
+        rec = {
+            "id": tid,
+            "type": "temporary",
+            "domain": intent.domain,
+            "content": text,
+            "source": "user_statement",
+            "bound_execution": ex_id,
+            "status": "temporary",
+            "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        }
+        self.user.memory.mkdir(parents=True, exist_ok=True)
+        with (self.user.memory / "temporary.jsonl").open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        self.store.upsert_entity(
+            tid, "memory", subtype="temporary", domain=intent.domain,
+            content=text, payload=rec, created_at=rec["created_at"],
+            status="temporary",
+        )
+        self.store.add_edge(USER_ID, "owns", tid)
+        self.store.add_fts(tid, "memory", "temporary", intent.domain, text)
+        trace_mod.append_event(
+            self.user, self.store, ex_id, "memory_written",
+            detail=f"temporary={tid} (task-scoped, never promoted)",
+            refs=[{"type": "memory", "subtype": "temporary", "id": tid}],
+        )
+
+        elapsed = time.time() - t0
+        exec_row = {
+            "execution_id": ex_id,
+            "task": text,
+            "intent_type": "rule",
+            "agent_id": "",
+            "status": "learned",
+            "verdict": "",
+            "context_chars": 0,
+            "started_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "refs": [{"type": "memory", "subtype": "temporary", "id": tid}],
+            "memory_written": [tid],
+            "retrieved_summary": "",
+        }
+        trace_mod.append_execution(self.user, self.store, exec_row)
+        trace_mod.append_event(self.user, self.store, ex_id, "execution_completed", detail="learned")
+        return RunResult(
+            execution_id=ex_id,
+            intent_type="rule",
+            task=text,
+            status="learned",
+            memory_written=[tid],
+            output=f"已记录任务级临时例外 {tid}（不形成长期认知）",
+            elapsed=round(elapsed, 2),
+        )
 
     def _learn_rule(self, ex_id: str, text: str, intent, t0: float) -> RunResult:
         """Rule path: structure the statement → persist → trace → done."""

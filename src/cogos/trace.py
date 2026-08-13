@@ -34,10 +34,19 @@ def trace_file(user: UserLayer, ts: str | None = None) -> str:
 
 def new_execution_id(store: Store, ts: str | None = None) -> str:
     """Unique execution id: ``ex-YYYYMMDD-NNNNNN`` (daily sequence)."""
+    return new_run_id(store, prefix="ex", ts=ts)
+
+
+def new_run_id(store: Store, *, prefix: str = "ex", ts: str | None = None) -> str:
+    """Unique run id with a daily sequence: ``<prefix>-YYYYMMDD-NNNNNN``.
+
+    Executions use ``ex-``; offline consolidation cycles use ``slp-`` so the
+    dashboard can tell "when did CognitiveOS learn" from normal runs.
+    """
     ts = ts or now_iso()
-    prefix = datetime.fromisoformat(ts.replace("Z", "+00:00")).strftime("%Y%m%d")
-    count = store.execution_count_on(prefix)
-    return f"ex-{prefix}-{count + 1:06d}"
+    date = datetime.fromisoformat(ts.replace("Z", "+00:00")).strftime("%Y%m%d")
+    count = store.execution_count_on(f"{prefix}-{date}")
+    return f"{prefix}-{date}-{count + 1:06d}"
 
 
 def append_event(
