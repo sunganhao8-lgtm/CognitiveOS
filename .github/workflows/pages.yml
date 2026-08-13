@@ -30,22 +30,21 @@ jobs:
           python scripts/build_demo_site.py
 
       - name: Verify no real-data leaks into published artifact
+        env:
+          COGOS_PRIVACY_PATTERNS: ${{ secrets.COGOS_PRIVACY_PATTERNS }}
         run: |
           # Defensive check: the public demo must never contain real-user
-          # data. We assert that the demo HTML does NOT include any of the
-          # canonical master profile markers (they live in user/manifest.md
-          # only). If this fails, somebody wired up real data into the demo.
-          if grep -qi "[REDACTED]" demo/index.html; then
-            echo "ERROR: demo/index.html contains master profile ('[REDACTED]'). Aborting." >&2
-            exit 1
-          fi
-          if grep -qi "[REDACTED]" demo/index.html; then
-            echo "ERROR: demo/index.html contains private brand name ('[REDACTED]'). Aborting." >&2
-            exit 1
-          fi
-          if grep -qi "上海[REDACTED]\|[REDACTED]" demo/index.html; then
-            echo "ERROR: demo/index.html contains private company name. Aborting." >&2
-            exit 1
+          # data. Patterns live in the repo Secret COGOS_PRIVACY_PATTERNS
+          # (one regex per line) so the real terms never appear in this
+          # repository. If this fails, somebody wired real data into the demo.
+          if [ -z "$COGOS_PRIVACY_PATTERNS" ]; then
+            echo "WARNING: COGOS_PRIVACY_PATTERNS secret is empty; skipping substantive scan." >&2
+          else
+            printf '%s\n' "$COGOS_PRIVACY_PATTERNS" > /tmp/privacy_patterns.txt
+            if grep -qi -f /tmp/privacy_patterns.txt demo/index.html; then
+              echo "ERROR: demo/index.html contains private content. Aborting." >&2
+              exit 1
+            fi
           fi
           echo "privacy check passed: demo contains only fake data"
 

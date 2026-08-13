@@ -88,9 +88,9 @@ REGIONS: tuple[Region, ...] = (
         role_en="Decides which agent to call and orchestrates the flow",
         role_zh="决定调用哪个 Agent，编排整体流程",
         memory=(
-            MemoryItem("Hands-off by default; only confirm irreversible actions", "默认别每步问我；只有不可逆操作才确认", "user/style.md"),
-            MemoryItem("Lead with the conclusion; details after", "结论先行，过程后置", "user/preferences.md"),
-            MemoryItem('"[REDACTED] / [REDACTED]" means: act now, don\'t explain', "听到「[REDACTED] / [REDACTED]」：立刻执行，不解释", "docs/design-decisions.md"),
+            MemoryItem("Kernel provides the loop; policy lives in the Router, not the Kernel", "内核只提供循环；策略属于 Router，不进内核", "core/kernel/DESIGN.md"),
+            MemoryItem("Route decisions are auditable: agent + reason + confidence", "路由决策可审计：Agent + 理由 + 置信度", "core/kernel/DESIGN.md"),
+            MemoryItem("v0.1 routing is explicit and rule-based; fail-open to the first adapter", "v0.1 路由是显式规则型；无匹配时回退到第一个 Adapter", "docs/design-decisions.md"),
         ),
     ),
     Region(
@@ -128,8 +128,8 @@ REGIONS: tuple[Region, ...] = (
         memory=(
             MemoryItem("Memory must be layered; never mix everything together", "记忆必须分层，不能把什么都混在一起记", "docs/design-decisions.md"),
             MemoryItem("Traceability: source → normalized → wiki, always reversible", "可追溯：原始 → 标准化 → wiki，层层可查", "docs/architecture.md"),
-            MemoryItem('Resume privacy: never name the chip fabs; say "factory-side" only', '简历隐私红线：不写具体公司名，只说「工厂智能化相关」', "user/preferences.md"),
-            MemoryItem("The store is 筹备阶段, not failed; brand is 品牌叫[REDACTED]", "铺子说「筹备阶段」不说「没开起来」；品牌叫「[REDACTED]」", "user/projects/zhaiyu-bp.md"),
+            MemoryItem("Harvest whitelist only — credentials, sessions, and caches are never copied", "只收割白名单——凭据、会话、缓存从不复制", "docs/design-decisions.md"),
+            MemoryItem("Every wiki page traces back to its source file", "每个 wiki 页面都能追溯回源文件", "docs/architecture.md"),
         ),
     ),
     Region(
@@ -294,14 +294,10 @@ def render_dashboard(paths: Paths) -> Path:
             projects=projects,
             qa_groups=qa_groups,
             qa_groups_json=json.dumps(qa_groups, ensure_ascii=False),
-            master_name="[REDACTED]",
-            rules=[
-                "品牌叫[REDACTED]",
-                "AI 是核心杠杆",
-                "店铺处于筹备阶段",
-                "简历 隐私红线",
-                "hands-off 模式",
-            ],
+            master_name="主人",
+            # 数据真实性原则：rules 不再是硬编码——真实规则来自 user/rules/，
+            # 由 dashboard 从 Cognitive Store 读取（Phase 2C）。此处保持空列表。
+            rules=[],
         )
 
     out = paths.dashboard_index

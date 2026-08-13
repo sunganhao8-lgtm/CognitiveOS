@@ -30,3 +30,9 @@ user/conversations/details/
 
 # Local symlinks to external skill libraries (e.g. emilkowalski/skills)
 .skills-emil/
+
+# Master private layer — never commit user cognitive data
+user/
+
+# Abandoned local redesign experiment (failed solo-design run)
+cognitiveos-redesign/

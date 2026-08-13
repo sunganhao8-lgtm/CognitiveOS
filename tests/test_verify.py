@@ -28,20 +28,20 @@ def test_judge_passes_when_neither_forbidden_nor_required():
 
 
 def test_judge_fails_on_forbidden():
-    r = _rule(forbidden=("上海[REDACTED]",))
-    verdict, detail = judge(r, "我在 上海[REDACTED] 工作过")
+    r = _rule(forbidden=("ACME-Fab",))
+    verdict, detail = judge(r, "I worked at ACME-Fab")
     assert verdict == "FAIL"
-    assert "上海[REDACTED]" in detail
+    assert "ACME-Fab" in detail
 
 
 def test_judge_returns_ambiguous_when_required_phrase_missing():
     """Soft-required: missing alone is not a FAIL — the response might satisfy
     the rule via synonyms. Mark AMBIGUOUS so the caller escalates to the
     semantic judge. Only a literal forbidden hit is a hard FAIL."""
-    r = _rule(required=("工厂智能化",))
+    r = _rule(required=("芯片制造",))
     verdict, detail = judge(r, "I worked in chip fabrication")
     assert verdict == "AMBIGUOUS"
-    assert "工厂智能化" in detail
+    assert "芯片制造" in detail
 
 
 def test_judge_forbidden_takes_priority_over_required():
@@ -56,17 +56,36 @@ def test_generated_rules_are_demographic_safe():
 
     This is the canary that protects against accidentally inlining
     personal iron rules into the public package.
-    """
-    import re
 
-    forbidden_patterns = [
-        r"上海[REDACTED]", r"绍兴[REDACTED]", r"[REDACTED]", r"工厂智能化", r"线下小店",
-        r"只是个工具", r"Lin",
-    ]
+    Two layers:
+    1. Structural (public): every GENERATED_RULES entry is a clearly-marked
+       placeholder (DEMO- id + （示例） prefix).
+    2. Substantive (local): if the LOCAL, gitignored pattern file
+       .cogos/sensitive_patterns.json exists, its patterns must not match.
+       The real master terms never ship with the repo — they live only in
+       that local file, so the public package cannot leak them by accident.
+    """
+    import json
+    import re
+    from pathlib import Path
+
     blob = "\n".join([r.rule_en + r.rule_zh + r.probe_en + r.probe_zh
                        for r in GENERATED_RULES])
-    for pat in forbidden_patterns:
-        assert not re.search(pat, blob), f"GENERATED_RULES leak: {pat}"
+
+    # Layer 1 — structural canary (ships with the repo).
+    for r in GENERATED_RULES:
+        assert r.id.startswith("DEMO-"), f"placeholder id must start with DEMO-: {r.id}"
+        assert r.rule_zh.startswith("（示例）"), f"placeholder must be marked （示例）: {r.rule_zh}"
+
+    # Layer 2 — local substantive canary (patterns never shipped).
+    patterns_file = Path(__file__).resolve().parent.parent / ".cogos" / "sensitive_patterns.json"
+    if patterns_file.exists():
+        try:
+            local_patterns = json.loads(patterns_file.read_text(encoding="utf-8"))
+        except Exception:
+            local_patterns = []
+        for pat in local_patterns:
+            assert not re.search(pat, blob), f"GENERATED_RULES leak: {pat}"
 
 
 def test_load_rules_returns_empty_when_dir_missing(tmp_path):

@@ -24,9 +24,9 @@ from cogos.user import UserLayer
 
 VERIFY_PROMPT = (
     "Based ONLY on the brief you just received, answer two questions:\n"
-    "1. The store called [REDACTED] — is it currently open, in preparation, "
-    "or failed? (One sentence.)\n"
-    "2. In the [REDACTED] brand story, is AI positioned as a 'core lever' "
+    "1. The store project described in the brief — is it currently open, "
+    "in preparation, or failed? (One sentence.)\n"
+    "2. In that store's brand story, is AI positioned as a 'core lever' "
     "or as 'just a tool'? (One sentence.)\n"
     "Do not consult any other source. Just the brief."
 )

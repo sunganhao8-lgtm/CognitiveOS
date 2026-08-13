@@ -4,7 +4,7 @@ The demo site is built from FAKE data so nothing personal leaks:
 
 - Projects: fictional example entries
 - Q&A: clearly-labelled sample exchanges
-- Region memory: generic principles (no [REDACTED] / no privacy red lines)
+- Region memory: generic principles only (no real user preferences / no privacy red lines)
 
 The brain artwork is CC0 (assets/brain-source.svg) so it can be
 published too.
