@@ -78,6 +78,14 @@ def main(argv: list[str] | None = None) -> int:
     p_ingest = sub.add_parser("ingest", help="Extract conversation memories from other agents (Codex / Claude Code) into user/conversations/")
     p_ingest.add_argument("--limit", type=int, default=None, help="Max pairs per source")
 
+    p_run = sub.add_parser("run", help="Run the full cognitive loop: classify → remember/retrieve → context → execute → verify → learn → trace")
+    p_run.add_argument("text", nargs="?", default=None, help="User input (a task or a rule statement)")
+    p_run.add_argument("--list", dest="list_runs", action="store_true", help="List recent executions instead of running")
+    p_run.add_argument("--no-llm", action="store_true", help="Skip LLM calls (keyword classification + pattern extraction only)")
+    p_run.add_argument("--budget", type=int, default=None, help="Context budget in characters (default 4000)")
+
+    p_reindex = sub.add_parser("reindex", help="Rebuild the Cognitive Store (SQLite index) from canonical user/ data")
+
     add_task_parser(sub)
     add_inbox_parser(sub)
     add_workspace_parser(sub)
@@ -262,6 +270,20 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"{source}: extracted {count} QA pairs -> user/conversations/")
         return 0
 
+    if args.cmd == "run":
+        return _run_command(paths, args)
+
+    if args.cmd == "reindex":
+        from .store import Store
+
+        store = Store(paths.cache / "cognitive.db")
+        try:
+            report = store.reindex(paths)
+        finally:
+            store.close()
+        print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2))
+        return 0
+
     if args.cmd == "task":
         return run_task(args)
 
@@ -276,3 +298,99 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.error(f"unknown command: {args.cmd}")
     return 2
+
+
+# ---------------------------------------------------------------------------
+# run / reindex helpers
+# ---------------------------------------------------------------------------
+
+
+def _hermes_llm(prompt: str, *, timeout: int = 120, profile: str = "cogos-test") -> str | None:
+    """Single-shot Hermes call used for semantic classification / rule
+    extraction / semantic judging. Sessions are quarantined in the
+    ``cogos-test`` profile so probes never pollute the master's history."""
+    import shutil
+    import subprocess
+
+    if shutil.which("hermes") is None:
+        return None
+    try:
+        proc = subprocess.run(
+            ["hermes", "--profile", profile, "chat", "-q", prompt,
+             "-t", "terminal,file",
+             "--max-turns", "1", "-Q",
+             "--reasoning", "none"],
+            capture_output=True, text=True, timeout=timeout, encoding="utf-8",
+        )
+    except Exception:
+        return None
+    if proc.returncode != 0:
+        return None
+    return _clean_hermes_stdout(proc.stdout)
+
+
+def _clean_hermes_stdout(stdout: str) -> str | None:
+    """Hermes v0.20 emits a leading ``session_id: ...`` line in -Q mode;
+    strip it (and any blank leading lines) so callers get the answer text.
+
+    Also strips ANSI escape sequences and any residual reasoning panel —
+    we must never record model-internal chain-of-thought (trace policy)."""
+    import re
+
+    text = stdout or ""
+    text = re.sub(r"\x1b\[[0-9;]*m", "", text)  # ANSI colors/styles
+    text = re.sub(r"[┌└┐┘│─]+\s*Reasoning[^\n]*", "", text)  # reasoning panel open
+    lines = [
+        ln for ln in text.splitlines()
+        if ln.strip() and not ln.strip().startswith("session_id:")
+    ]
+    return "\n".join(lines).strip() or None
+
+
+def _run_command(paths, args) -> int:
+    """``cogos run`` — the full cognitive loop."""
+    from .adapters import load_adapter
+    from .discovery import discover as discover_agents
+    from .kernel import kernel_from_paths
+
+    if args.list_runs:
+        from .store import Store
+
+        store = Store(paths.cache / "cognitive.db")
+        try:
+            runs = store.recent_executions(limit=10)
+        finally:
+            store.close()
+        if not runs:
+            print("(no executions recorded yet — run `cogos run \"<text>\"` first)")
+            return 0
+        for r in runs:
+            print(
+                f"{r['execution_id']}  {r['status']:<8} verdict={r['verdict'] or '-'}"
+                f"  agent={r['agent_id'] or '-'}  {r['task'][:60]}"
+            )
+        return 0
+
+    if not args.text:
+        print("usage: cogos run \"<task or rule statement>\"", file=sys.stderr)
+        return 2
+
+    handles = discover_agents(paths)
+    adapters = [load_adapter(h) for h in handles]
+    adapters = [a for a in adapters if a is not None]
+    if not adapters:
+        print("no agent adapters available (Hermes not found?)", file=sys.stderr)
+        return 1
+
+    llm_fn = None if args.no_llm else _hermes_llm
+    kernel = kernel_from_paths(
+        paths,
+        adapters,
+        llm_fn=llm_fn,
+        context_budget=args.budget if args.budget else None,
+        allow_semantic=not args.no_llm,
+    )
+
+    result = kernel.run_input(args.text)
+    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
+    return 0 if result.status in ("success", "learned") else 3

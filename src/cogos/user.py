@@ -58,6 +58,23 @@ class UserLayer:
     def cognitive(self) -> Path:
         return self.root / "cognitive"
 
+    @property
+    def memory(self) -> Path:
+        """Machine-written memory items (JSONL): preferences/episodic/semantic."""
+        return self.root / "memory"
+
+    @property
+    def traces(self) -> Path:
+        """Append-only execution traces (JSONL per day) — canonical trace store."""
+        return self.root / "traces"
+
     def ensure(self) -> None:
-        for p in (self.root, self.projects, self.experience, self.cognitive):
+        for p in (
+            self.root,
+            self.projects,
+            self.experience,
+            self.cognitive,
+            self.memory,
+            self.traces,
+        ):
             p.mkdir(parents=True, exist_ok=True)

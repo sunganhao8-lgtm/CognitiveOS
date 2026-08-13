@@ -482,6 +482,42 @@
     .memory-list li a.mem-link:hover { color: var(--blue); text-decoration: underline; }
 
     /* ============================================================
+       EXEC PANEL — real runtime data from the Cognitive Store
+       ============================================================ */
+    .exec-panel { padding: 2px 28px 0; max-width: 1500px; margin: 0 auto; }
+    .exec-title { font-size: 16px; font-weight: 700; color: var(--ink); margin: 0 0 2px; letter-spacing: -0.01em; }
+    .exec-sub { font-size: 12px; color: var(--ink-soft); margin: 0 0 12px; }
+    .exec-item {
+      background: var(--card-2); border: 1px solid var(--line);
+      border-radius: 12px; padding: 12px 14px; margin-bottom: 10px;
+      transition: transform var(--t-quick) var(--ease-out), box-shadow var(--t-base) var(--ease-spring);
+    }
+    .exec-item:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(43,27,18,0.05); }
+    .exec-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .exec-id { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; font-weight: 600; color: #7A5C3A; background: #F4E9D7; border-radius: 6px; padding: 2px 7px; }
+    .exec-status { padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; }
+    .exec-status.st-success { background: #E7F4EA; color: #1A7F37; }
+    .exec-status.st-failed  { background: #FDEBEC; color: #B42318; }
+    .exec-status.st-learned { background: #EDE9FE; color: #6941C6; }
+    .exec-verdict { padding: 2px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 700; }
+    .exec-verdict.vd-PASS { background: #E7F4EA; color: #1A7F37; }
+    .exec-verdict.vd-FAIL { background: #FDEBEC; color: #B42318; }
+    .exec-verdict.vd-AMBIGUOUS { background: #FEF0C7; color: #93370D; }
+    .exec-agent { font-size: 12px; color: var(--ink); }
+    .exec-time { font-size: 11.5px; color: var(--ink-soft); margin-left: auto; }
+    .exec-task { margin-top: 7px; font-size: 13.5px; color: var(--ink); line-height: 1.45; }
+    .exec-meta { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+    .exec-ver { font-size: 12px; margin-top: 3px; }
+    .exec-ver::before { content: "✓"; font-weight: 700; color: #1A7F37; margin-right: 4px; }
+    .exec-events { margin-top: 8px; font-size: 12px; }
+    .exec-events summary { cursor: pointer; color: #7A5C3A; font-weight: 600; user-select: none; }
+    .exec-events-list { list-style: none; margin: 6px 0 0; padding: 6px 0 0; border-top: 1px dashed var(--line); display: grid; gap: 3px; }
+    .exec-events-list .ev-step { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: #7A5C3A; margin-right: 8px; }
+    .exec-events-list .ev-detail { color: var(--ink-soft); font-size: 11.5px; }
+    .exec-empty { font-size: 13px; color: var(--ink-soft); background: var(--card-2); border: 1px dashed var(--line); border-radius: 12px; padding: 16px; }
+    .exec-empty code { font-family: ui-monospace, Menlo, Consolas, monospace; background: #F4E9D7; border-radius: 5px; padding: 1px 6px; font-size: 12px; }
+
+    /* ============================================================
        LOWER STRIP — projects / qa / commands
        ============================================================ */
     .lower-strip {
@@ -922,6 +958,48 @@
         </div>
       </section>
     </main>
+
+    <section class="exec-panel">
+      <h2 class="exec-title">最近执行 <span class="count">{{ executions | length }}</span></h2>
+      <p class="exec-sub">以下全部来自 Cognitive Store 的真实运行记录（user/traces/ 的投影），不是硬编码。</p>
+      {% if executions %}
+        {% for e in executions %}
+        <div class="exec-item">
+          <div class="exec-row">
+            <span class="exec-id">{{ e.execution_id }}</span>
+            <span class="exec-status st-{{ e.status }}">{{ e.status }}</span>
+            {% if e.verdict %}<span class="exec-verdict vd-{{ e.verdict }}">{{ e.verdict }}</span>{% endif %}
+            {% if e.agent_id %}<span class="exec-agent">{{ e.agent_id }}</span>{% endif %}
+            <span class="exec-time">{{ e.started_at }}</span>
+          </div>
+          <div class="exec-task">{{ e.task }}</div>
+          {% if e.payload and e.payload.retrieved_summary %}
+          <div class="exec-meta">检索：{{ e.payload.retrieved_summary }}</div>
+          {% endif %}
+          {% if e.payload and e.payload.memory_written %}
+          <div class="exec-meta">写入：{{ e.payload.memory_written | join(', ') }}</div>
+          {% endif %}
+          {% if e.verifications %}
+            {% for v in e.verifications %}
+            <div class="exec-ver">验证 {{ v.rule_id }}：{{ v.verdict }} — {{ v.detail }}</div>
+            {% endfor %}
+          {% endif %}
+          {% if e.events %}
+          <details class="exec-events">
+            <summary>Trace 事件（{{ e.events | length }} 步）</summary>
+            <ul class="exec-events-list">
+              {% for ev in e.events %}
+              <li><span class="ev-step">{{ ev.step }}</span><span class="ev-detail">{{ ev.detail }}</span></li>
+              {% endfor %}
+            </ul>
+          </details>
+          {% endif %}
+        </div>
+        {% endfor %}
+      {% else %}
+      <p class="exec-empty">暂无执行记录。运行 <code>cogos run "…"</code> 后，这里会显示真实运行数据：任务、Agent、检索到的记忆、验证结果与学习记录。</p>
+      {% endif %}
+    </section>
 
     <div class="lower-strip">
       <div class="panel">

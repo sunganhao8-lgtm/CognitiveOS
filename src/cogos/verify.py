@@ -198,7 +198,10 @@ def semantic_judge(rule: Rule, response: str, timeout: int = 120) -> tuple[str, 
         return ("AMBIGUOUS", f"(semantic judge rc={proc.returncode})")
     import json
     import re
-    m = re.search(r"\{[^{}]*\"verdict\"[^{}]*\}", proc.stdout)
+    from .cli import _clean_hermes_stdout
+
+    out = _clean_hermes_stdout(proc.stdout) or ""
+    m = re.search(r"\{[^{}]*\"verdict\"[^{}]*\}", out)
     if not m:
         return ("AMBIGUOUS", "(semantic judge unparseable)")
     try:
@@ -214,18 +217,20 @@ def semantic_judge(rule: Rule, response: str, timeout: int = 120) -> tuple[str, 
 def _hermes_args(prompt: str) -> list[str]:
     """Build a hermes chat command that quarantines the session in cogos-test.
 
-    The --profile-name flag keeps probe sessions in their own profile
-    so they never appear in the user's normal Hermes session list.
+    The --profile flag (v0.20+ syntax, top-level) keeps probe sessions in
+    their own profile so they never appear in the user's normal Hermes
+    session list.
     """
     import os
     profile = os.environ.get("COGOS_HERMES_PROFILE", ISOLATION_PROFILE)
     return [
-        "hermes", "chat",
+        "hermes", "--profile", profile,
+        "chat",
         "-q", prompt,
         "-t", "terminal,file",
         "--max-turns", "1",
         "-Q",
-        "--profile-name", profile,
+        "--reasoning", "none",
     ]
 
 
@@ -245,7 +250,9 @@ def run_one(rule: Rule, *, lang: str = "zh", timeout: int = 120) -> ProbeResult:
                 _hermes_args(prompt),
                 capture_output=True, text=True, timeout=timeout, encoding="utf-8",
             )
-            response = proc.stdout.strip() or f"(empty, rc={proc.returncode})"
+            from .cli import _clean_hermes_stdout
+
+            response = _clean_hermes_stdout(proc.stdout) or f"(empty, rc={proc.returncode})"
         except subprocess.TimeoutExpired:
             response = "(timeout)"
         except Exception as exc:

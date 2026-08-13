@@ -288,12 +288,20 @@ def render_dashboard(paths: Paths) -> Path:
     )
     template = env.get_template("dashboard.html.j2")
 
+    # Real runtime data from the Cognitive Store (data-truth principle:
+    # the dashboard shows what the system actually knows / did — never
+    # hardcoded state). Missing store degrades to empty panels.
+    snapshot = _load_store_snapshot(paths)
+
     html = template.render(
             regions=REGIONS,
-            regions_json=_regions_json(REGIONS),
+            regions_json=_regions_json_with_real_memory(REGIONS, snapshot["region_memories"]),
             projects=projects,
             qa_groups=qa_groups,
             qa_groups_json=json.dumps(qa_groups, ensure_ascii=False),
+            executions=snapshot["executions"],
+            memory_counts=snapshot["memory_counts"],
+            skill_count=snapshot["skills"],
             master_name="主人",
             # 数据真实性原则：rules 不再是硬编码——真实规则来自 user/rules/，
             # 由 dashboard 从 Cognitive Store 读取（Phase 2C）。此处保持空列表。
@@ -303,6 +311,74 @@ def render_dashboard(paths: Paths) -> Path:
     out = paths.dashboard_index
     out.write_text(html, encoding="utf-8")
     return out
+
+
+def _load_store_snapshot(paths: Paths) -> dict:
+    """Read real runtime data from the Cognitive Store.
+
+    Never raises: a missing/corrupt index degrades to empty panels — the
+    dashboard is a projection, not a fact source.
+    """
+    try:
+        from .store import Store
+
+        store = Store(paths.cache / "cognitive.db")
+    except Exception:
+        return {"executions": [], "region_memories": {}, "memory_counts": {}, "skills": 0}
+    try:
+        return {
+            "executions": store.recent_executions(limit=6),
+            "region_memories": store.memories_for_regions(),
+            "memory_counts": store.memory_counts(),
+            "skills": store.skill_count(),
+        }
+    except Exception:
+        return {"executions": [], "region_memories": {}, "memory_counts": {}, "skills": 0}
+    finally:
+        try:
+            store.close()
+        except Exception:
+            pass
+
+
+def _regions_json_with_real_memory(regions: tuple[Region, ...], region_memories: dict[str, list[dict]]) -> str:
+    """Brain-region JSON where the memory items are REAL store data.
+
+    Region definitions (anatomy, labels, roles) stay as static legend —
+    allowed by the data-truth principle. What the system "knows" per region
+    comes from the Cognitive Store, mapped subtype → region:
+    preference → prefrontal, rule → hippocampus, semantic → cortex,
+    episodic → reflection.
+    """
+    payload = [
+        {
+            "key": r.key,
+            "color": r.color,
+            "ax": r.ax,
+            "ay": r.ay,
+            "lx": r.lx,
+            "ly": r.ly,
+            "label_en": r.label_en,
+            "label_zh": r.label_zh,
+            "brain_en": r.brain_en,
+            "brain_zh": r.brain_zh,
+            "desc_en": r.desc_en,
+            "desc_zh": r.desc_zh,
+            "role_en": r.role_en,
+            "role_zh": r.role_zh,
+            "memory": [
+                {
+                    "title_en": m["content"][:90],
+                    "title_zh": m["content"][:90],
+                    "path": "",
+                    "content": m["content"],
+                }
+                for m in region_memories.get(r.key, [])
+            ],
+        }
+        for r in regions
+    ]
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def _read_mem_content(rel_path: str) -> str:
