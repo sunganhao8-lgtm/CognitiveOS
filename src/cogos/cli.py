@@ -90,10 +90,28 @@ def main(argv: list[str] | None = None) -> int:
     p_sleep.add_argument("--with-llm", action="store_true", help="Optionally polish candidate descriptions with an LLM (promotion decisions stay deterministic)")
     p_sleep.add_argument("--list", dest="list_sleeps", action="store_true", help="List past sleep cycles instead of running")
 
-    p_memory = sub.add_parser("memory", help="Inspect cognitive memory (Phase 3B: version history, supersede chains, conflicts)")
+    p_memory = sub.add_parser("memory", help="User control over cognitive state (Phase 3E): inspect, confirm, reject, forget, modify")
     mem_sub = p_memory.add_subparsers(dest="memory_cmd", required=True)
     p_mem_show = mem_sub.add_parser("show", help="Show one cognition: current state, version history, evidence, scope")
     p_mem_show.add_argument("ent_id", help="Memory id (e.g. R-SQL-001, P-SQL-001)")
+    p_mem_list = mem_sub.add_parser("list", help="List current cognitions")
+    p_mem_list.add_argument("--status", default=None, help="Filter by status (confirmed/candidate/suppressed/...)")
+    p_mem_list.add_argument("--limit", type=int, default=50)
+    p_mem_why = mem_sub.add_parser("why", help="Evidence-based explanation: why does the system believe this?")
+    p_mem_why.add_argument("ent_id")
+    p_mem_confirm = mem_sub.add_parser("confirm", help="Confirm a candidate (becomes a confirmed cognition; evidence kept)")
+    p_mem_confirm.add_argument("ent_id")
+    p_mem_confirm.add_argument("--reason", default="user confirmation")
+    p_mem_reject = mem_sub.add_parser("reject", help="Reject a cognition ('your inference is wrong'); history kept, pattern suppressed")
+    p_mem_reject.add_argument("ent_id")
+    p_mem_reject.add_argument("--reason", default="user rejection")
+    p_mem_forget = mem_sub.add_parser("forget", help="Stop using a confirmed cognition from now on (suppressed, never deleted)")
+    p_mem_forget.add_argument("ent_id")
+    p_mem_forget.add_argument("--reason", default="no longer relevant")
+    p_mem_modify = mem_sub.add_parser("modify", help="Correct a cognition WITHOUT overwrite: new version supersedes old")
+    p_mem_modify.add_argument("ent_id")
+    p_mem_modify.add_argument("--content", required=True, help="New content of the cognition")
+    p_mem_modify.add_argument("--reason", default="user explicit modification")
 
     add_task_parser(sub)
     add_inbox_parser(sub)
@@ -315,7 +333,7 @@ def main(argv: list[str] | None = None) -> int:
         return _sleep_command(paths, args)
 
     if args.cmd == "memory":
-        return _memory_show(paths, args.ent_id)
+        return _memory_command(paths, args)
 
     if args.cmd == "task":
         return run_task(args)
@@ -464,55 +482,48 @@ def _sleep_command(paths, args) -> int:
     return 0
 
 
-def _memory_show(paths, ent_id: str) -> int:
-    """``cogos memory show <id>`` — full version history of one cognition.
+def _memory_command(paths, args) -> int:
+    """``cogos memory …`` — ALL user control goes through MemoryService
+    (validate → apply → persist → trace → verify); CLI never touches the
+    store or canonical files directly."""
+    from .memory_service import MemoryService
 
-    Shows Current / Version / History / Evidence / Supersedes / Superseded-by /
-    Conflicts / Scope — the data behind "why did you think this?" (§21/22).
-    """
-    from .conflict import detect_conflicts
-    from .store import Store
-
-    store = Store(paths.cache / "cognitive.db")
+    svc = MemoryService(paths)
     try:
-        chain = store.version_chain(ent_id)
-        if not chain:
-            print(f"(no memory with id {ent_id!r})")
-            return 1
-        out: dict = {
-            "id": ent_id,
-            "domain": chain[-1]["domain"],
-            "subtype": chain[-1]["subtype"],
-            "scope": chain[-1]["scope"],
-            "scope_id": chain[-1]["scope_id"],
-            "status": chain[-1]["status"],
-            "current_content": chain[-1]["content"],
-            "confidence": chain[-1]["confidence"],
-            "evidence_count": chain[-1]["evidence_count"],
-            "verify_pass_count": chain[-1]["verify_pass_count"],
-            "user_confirmed": bool(chain[-1]["user_confirmed"]),
-            "version_history": [
-                {
-                    "id": e["id"],
-                    "version": e["version"],
-                    "status": e["status"],
-                    "content": e["content"][:200],
-                    "confidence": e["confidence"],
-                    "created_at": e["created_at"],
-                    "superseded_at": e["superseded_at"],
-                    "superseded_by": e["superseded_by"],
-                    "superseded_reason": e["superseded_reason"],
-                }
-                for e in chain
-            ],
-            "source_executions": (chain[-1].get("payload") or {}).get("source_executions", []),
-            "conflicts": [
-                c.to_dict()
-                for c in detect_conflicts(store, chain[-1]["domain"])
-                if ent_id in (c.a_id, c.b_id) or ent_id in (c.winner,)
-            ],
-        }
-        print(json.dumps(out, ensure_ascii=False, indent=2))
-        return 0
+        if args.memory_cmd == "list":
+            rows = svc.list(status=args.status, limit=args.limit)
+            for r in rows:
+                print(
+                    f"{r['id']:<22} {r['status']:<12} {r['subtype']:<12} "
+                    f"conf={r['confidence'] or '-':<6} ev={r['evidence_count'] or 0} "
+                    f"v{r['version']} {r['content'][:50]}"
+                )
+            print(f"({len(rows)} cognitions)")
+            return 0
+        if args.memory_cmd == "show":
+            print(json.dumps(svc.show(args.ent_id), ensure_ascii=False, indent=2))
+            return 0
+        if args.memory_cmd == "why":
+            print(json.dumps(svc.why(args.ent_id), ensure_ascii=False, indent=2))
+            return 0
+        if args.memory_cmd == "confirm":
+            print(json.dumps(svc.confirm(args.ent_id, reason=args.reason), ensure_ascii=False, indent=2))
+            return 0
+        if args.memory_cmd == "reject":
+            print(json.dumps(svc.reject(args.ent_id, reason=args.reason), ensure_ascii=False, indent=2))
+            return 0
+        if args.memory_cmd == "forget":
+            print(json.dumps(svc.forget(args.ent_id, reason=args.reason), ensure_ascii=False, indent=2))
+            return 0
+        if args.memory_cmd == "modify":
+            print(json.dumps(svc.modify(args.ent_id, args.content, reason=args.reason), ensure_ascii=False, indent=2))
+            return 0
+    except KeyError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
     finally:
-        store.close()
+        svc.close()
+    return 2

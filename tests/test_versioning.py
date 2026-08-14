@@ -91,9 +91,16 @@ def test_memory_show_cli_output_shape(tmp_path):
     _seed(store, _pref("P-SQL-001", content="v1", version=1))
     _seed(store, _pref("P-SQL-002", content="v2", version=2))
     store.supersede("P-SQL-001", "P-SQL-002", reason="test")
-    from cogos.cli import _memory_show
+    from cogos.memory_service import MemoryService
 
-    _memory_show(paths, "P-SQL-002")
+    svc = MemoryService(paths)
+    try:
+        out = svc.show("P-SQL-002")
+        assert out["id"] == "P-SQL-002"
+        assert len(out["version_history"]) == 2
+        assert out["version_history"][0]["status"] == "superseded"
+    finally:
+        svc.close()
     # (shape validated by version_chain tests; smoke the CLI path)
 
 

@@ -210,6 +210,78 @@ class SleepReport:
         }
 
 
+def _is_rejected_pattern(user: UserLayer, domain: str, feature: str, *, store: Store | None = None, now=None) -> bool:
+    """Was this (domain, feature) pattern rejected by the user?
+
+    Fingerprint match suppresses re-creation — UNLESS a newer explicit user
+    statement exists for the same domain (new evidence revives the concept,
+    §21). Deterministic, no LLM.
+    """
+    now = now or datetime.now(timezone.utc)
+    rej_path = user.memory / "rejections.jsonl"
+    if not rej_path.exists():
+        return False
+    fp = feature  # the feature IS the fingerprint (domain lives in it)
+    matched_at = ""
+    for row in _read_jsonl_lines(rej_path):
+        if row.get("fingerprint") == fp:
+            matched_at = row.get("rejected_at", "")
+            break
+    if not matched_at:
+        return False
+    # revive check: any explicit user statement after the rejection?
+    try:
+        rejected_dt = datetime.fromisoformat(matched_at.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        rejected_dt = now
+    for ent in _confirmed_user_statements(user, domain, store=store):
+        created = ent.get("created_at", "")
+        try:
+            created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+        except (ValueError, TypeError):
+            continue
+        if created_dt > rejected_dt:
+            return False  # new explicit evidence → allow the concept to return
+    return True
+
+
+def _confirmed_user_statements(user: UserLayer, domain: str, store: Store | None = None) -> list[dict]:
+    """Confirmed cognitions the user explicitly stated (rules + preferences).
+
+    Reads canonical files AND (when given) the store — canonical may lag
+    behind entities created between reindexes.
+    """
+    out: list[dict] = []
+    rules_dir = user.root / "rules"
+    if rules_dir.exists():
+        for p in sorted(rules_dir.glob("R-*.json")):
+            try:
+                rec = json.loads(p.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                continue
+            if rec.get("domain") == domain and rec.get("status", "confirmed") in ("confirmed",):
+                out.append(rec)
+    for row in _read_jsonl_lines(user.memory / "preferences.jsonl"):
+        if row.get("domain") == domain and row.get("status") == "confirmed" \
+                and str(row.get("source", "")) == "user_statement":
+            out.append(row)
+    if store is not None:
+        rows = store._conn.execute(
+            "SELECT id, payload, created_at FROM entities "
+            "WHERE type='memory' AND domain=? AND status='confirmed'",
+            (domain,),
+        ).fetchall()
+        for r in rows:
+            try:
+                payload = json.loads(r["payload"] or "{}")
+            except json.JSONDecodeError:
+                payload = {}
+            if str(payload.get("source", "")) != "user_statement":
+                continue
+            out.append({"id": r["id"], "created_at": r["created_at"], "payload": payload})
+    return out
+
+
 def _blocked_by_explicit_statement(store: Store, cand: dict, llm_fn=None) -> str | None:
     """Return the id of a confirmed USER-STATEMENT cognition that this
     candidate contradicts — behavior evidence must not overwrite it.
@@ -344,6 +416,14 @@ def run_sleep(
     for (domain, feature), evs in feature_groups.items():
         registry = FEATURE_REGISTRY.get(feature)
         if registry is None:
+            continue
+        # §20: a pattern the user REJECTED must not immediately resurface.
+        # §21: unless new explicit user evidence arrived after the rejection.
+        if _is_rejected_pattern(user, domain, feature, store=store, now=now):
+            trace_mod.append_event(
+                user, store, sleep_id, "patterns_detected",
+                detail=f"{domain}:{feature} suppressed (rejected by user; fingerprint match)",
+            )
             continue
         # dedupe by execution — repeated behavior in ONE execution is one evidence
         execs: dict[str, dict] = {}
@@ -539,16 +619,24 @@ def _promote_candidate(
     *,
     llm_fn=None,
     sleep_id: str,
-    policy: PromotionPolicy,
+    policy: PromotionPolicy | None = None,
+    user_confirmed: bool = False,
 ) -> str | None:
     """Promote a candidate to a confirmed long-term memory (idempotent).
 
     preference/semantic → user/memory/preferences.jsonl
     rule               → user/rules/R-<DOMAIN>-NNN.json (forbidden pattern
                          from the deterministic FEATURE_REGISTRY)
+
+    ``user_confirmed`` marks a human-confirmed promotion (MemoryService
+    confirm) — confidence gets the confirmation bonus.
     """
+    policy = policy or POLICY
     target = cand.get("target_type", "preference")
     domain = cand.get("domain", "general")
+    base_conf = cand.get("confidence")
+    if user_confirmed:
+        base_conf = max(base_conf or 0.0, 0.9)
 
     if target == "rule":
         from .classify import next_rule_id
@@ -571,11 +659,11 @@ def _promote_candidate(
             "promoted_from": cand["id"],
             "source_executions": cand.get("source_executions", []),
             "status": "confirmed",
-            "confidence": cand.get("confidence"),
+            "confidence": base_conf,
             "evidence_count": cand.get("evidence_count", 0),
             "verify_pass_count": cand.get("verify_pass_count", 0),
             "last_observed": cand.get("last_observed", ""),
-            "user_confirmed": False,
+            "user_confirmed": user_confirmed,
             "version": 1,
             "created_at": _now(),
         }
@@ -591,7 +679,7 @@ def _promote_candidate(
             evidence_count=rule["evidence_count"],
             last_observed=rule["last_observed"],
             verify_pass_count=rule["verify_pass_count"],
-            user_confirmed=False,
+            user_confirmed=user_confirmed,
         )
         store.add_edge(rid, "promoted_from", cand["id"])
         store.add_edge(USER_ID, "owns", rid)
@@ -624,11 +712,11 @@ def _promote_candidate(
         "promoted_from": cand["id"],
         "source_executions": cand.get("source_executions", []),
         "status": "confirmed",
-        "confidence": cand.get("confidence"),
+        "confidence": base_conf,
         "evidence_count": cand.get("evidence_count", 0),
         "verify_pass_count": cand.get("verify_pass_count", 0),
         "last_observed": cand.get("last_observed", ""),
-        "user_confirmed": False,
+        "user_confirmed": user_confirmed,
         "version": 1,
         "created_at": _now(),
     }
@@ -640,7 +728,7 @@ def _promote_candidate(
         evidence_count=pref["evidence_count"],
         last_observed=pref["last_observed"],
         verify_pass_count=pref["verify_pass_count"],
-        user_confirmed=False,
+        user_confirmed=user_confirmed,
     )
     store.add_edge(pid, "promoted_from", cand["id"])
     for m in cand.get("source_memories", []):
