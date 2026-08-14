@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from cogos.dashboard import REGIONS, TEMPLATES_DIR
+from cogos.dashboard import REGIONS, TEMPLATES_DIR, MemoryItem
 
 # Demo regions: same anatomy & layout, but the "master's principles"
 # are generic placeholders — nothing personal.
@@ -63,8 +63,10 @@ for r in REGIONS:
     }
     # Demo memory: no `path` field — demo should NOT link to real files,
     # because the demo is for strangers who do not have the repo.
+    # REGIONS.memory is empty by design (Phase 3F §11: no hardcoded
+    # cognition) — the demo fabricates its own synthetic principles.
     mem = tuple(
-        type(r.memory[0])(en, zh, "demo-file.md")
+        MemoryItem(en, zh, "demo-file.md")
         for en, zh in demos.get(r.key, (("(demo)", "(示例)"),))
     )
     DEMO_REGIONS.append(type(r)(
@@ -103,7 +105,69 @@ def hello():
 """
 
 
-def _regions_json(regions) -> str:
+def _demo_vm():
+    """Synthetic ViewModel for the public demo — every panel is explicitly
+    labeled 示例; nothing real, nothing private. Phase 3F §29."""
+    from cogos.dashboard_query import (
+        BrainRegionVM, CandidateVM, CognitiveDashboardViewModel, ConflictVM,
+        CorrectionVM, ExecutionVM, HealthVM, LearningCardVM, OverviewVM,
+        TimelineEventVM,
+    )
+
+    vm = CognitiveDashboardViewModel()
+    vm.overview = OverviewVM(learned=3, applied=2, avoided_errors=1, corrected=1,
+                             reused=2, conflicts_pending=0, candidates_pending=1,
+                             window_days=7)
+    vm.recent_learning = [
+        LearningCardVM(
+            id="示例 · P-SQL-001", content="（示例）复杂 SQL 使用 CTE 组织",
+            subtype="preference", confidence=0.93, evidence_count=7,
+            verify_pass_count=5, scope="global", scope_id="",
+            formed_at="2026-08-10 09:12", user_confirmed=True, actions=["modify", "forget"]),
+        LearningCardVM(
+            id="示例 · R-SQL-001", content="（示例）SQL 查询禁止 SELECT *",
+            subtype="rule", confidence=0.97, evidence_count=14,
+            verify_pass_count=11, scope="global", scope_id="",
+            formed_at="2026-08-06 18:02", user_confirmed=True, actions=["modify", "forget"]),
+    ]
+    vm.candidates = [
+        CandidateVM(id="示例 · cand-001", content="（示例）用户似乎偏好固定的报表列顺序",
+                    confidence=0.64, evidence_count=4, target_type="preference",
+                    observed_at="2026-08-12 20:45"),
+    ]
+    vm.recent_corrections = [
+        CorrectionVM(ts="2026-08-11 15:30", action="modify", memory_id="示例 · P-001",
+                     old_status="confirmed", new_status="superseded",
+                     old_version=1, new_version=2, reason="user explicit modification"),
+    ]
+    vm.timeline = [
+        TimelineEventVM(date="2026-08-06", label="（示例）第一次观察到 CTE 使用", kind="observation"),
+        TimelineEventVM(date="2026-08-10", label="（示例）认知形成：P-SQL-001", kind="promotion"),
+        TimelineEventVM(date="2026-08-11", label="（示例）应用：销售查询任务", kind="application"),
+    ]
+    vm.recent_executions = [
+        ExecutionVM(execution_id="示例 · ex-000021", task="（示例）帮我写销售 SQL",
+                    agent_id="hermes", status="success", verdict="PASS",
+                    started_at="2026-08-13 10:02", retrieved=4, applied=2,
+                    memory_impact="HIGH",
+                    retrieved_memories=[{"id": "示例 · R-SQL-001", "subtype": "rule",
+                                         "why": "关键词命中 rank=1; scope=global (匹配任务范围)"}]),
+    ]
+    vm.cognitive_health = HealthVM(memory_count=22, retrieval_healthy=True,
+                                   conflicts_unresolved=0, index_healthy=True,
+                                   last_reindex="2026-08-13 10:28",
+                                   embedding_model="bge-small-zh-v1.5",
+                                   embedding_dimension=512, schema_version=4)
+    vm.brain_regions = [
+        BrainRegionVM(key=k, label_zh=l, brain_zh=b, color="", domain="",
+                      count=c, avg_confidence=0.9, recent=["（示例）"])
+        for k, l, b, c in [("prefrontal", "路由", "前额叶", 6), ("hippocampus", "规则", "海马体", 8),
+                           ("cortex", "知识", "皮层", 5), ("reflection", "反思", "睡眠周期", 3)]
+    ]
+    return vm
+
+
+def _regions_json(regions):
     payload = [
         {
             "key": r.key, "color": r.color, "ax": r.ax, "ay": r.ay, "lx": r.lx, "ly": r.ly,
@@ -199,12 +263,13 @@ def main() -> int:
         projects=DEMO_PROJECTS,
         qa_groups=DEMO_QA_GROUPS,
         qa_groups_json=json.dumps(DEMO_QA_GROUPS, ensure_ascii=False),
+        vm=_demo_vm(),
+        vm_json=json.dumps(_demo_vm().to_dict(), ensure_ascii=False),
+        executions=_demo_vm().to_dict()["recent_executions"],
+        memory_counts={"confirmed": 3},
+        skill_count=7,
         master_name="示例主人 (Demo)",
-        rules=[
-            "示例规则：先行动，不可逆才确认",
-            "示例规则：本地优先",
-            "示例规则：结论先行",
-        ],
+        rules=[],
     )
 
     demo_dir = ROOT / "demo"
@@ -226,7 +291,7 @@ def main() -> int:
     out_path = demo_dir / "index.html"
     out_path.write_text(html, encoding="utf-8")
     size = out_path.stat().st_size
-    cap = 100 * 1024  # 100KB cap (raised from 80KB on 2026-08-11)
+    cap = 120 * 1024  # 120KB cap (raised from 100KB on 2026-08-14: Phase 3F cockpit panels)
     if size > cap:
         print(f"WARN: demo index.html is {size:,} bytes (cap {cap:,})")
 

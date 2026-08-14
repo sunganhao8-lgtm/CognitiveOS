@@ -40,13 +40,15 @@ class MemoryService:
         self.paths = paths
         self.user = UserLayer(root=paths.root / "user")
         self.user.ensure()
+        self._owns_store = store is None
         self.store = store or Store(paths.cache / "cognitive.db")
 
     def close(self) -> None:
-        try:
-            self.store.close()
-        except Exception:
-            pass
+        if self._owns_store:
+            try:
+                self.store.close()
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------ core
 

@@ -87,11 +87,7 @@ REGIONS: tuple[Region, ...] = (
         desc_zh="决定任务交给哪个 Agent——规划与决策中枢。",
         role_en="Decides which agent to call and orchestrates the flow",
         role_zh="决定调用哪个 Agent，编排整体流程",
-        memory=(
-            MemoryItem("Kernel provides the loop; policy lives in the Router, not the Kernel", "内核只提供循环；策略属于 Router，不进内核", "core/kernel/DESIGN.md"),
-            MemoryItem("Route decisions are auditable: agent + reason + confidence", "路由决策可审计：Agent + 理由 + 置信度", "core/kernel/DESIGN.md"),
-            MemoryItem("v0.1 routing is explicit and rule-based; fail-open to the first adapter", "v0.1 路由是显式规则型；无匹配时回退到第一个 Adapter", "docs/design-decisions.md"),
-        ),
+        memory=(),
     ),
     Region(
         key="thalamus",
@@ -106,11 +102,7 @@ REGIONS: tuple[Region, ...] = (
         desc_zh="感官中继——首次初始化必须全自动，不需要用户手动告诉读哪些目录。",
         role_en="First to receive the master's input; routes it inward",
         role_zh="第一个接收到主人输入的脑区，向内路由",
-        memory=(
-            MemoryItem("Bootstrap discovers the environment itself; never ask what to scan", "初始化要自己发现环境，绝不问「要扫描哪些目录」", "docs/architecture.md"),
-            MemoryItem("First run does the minimum; refine progressively", "第一次只做必要工作，后续逐步完善", "ROADMAP.md"),
-            MemoryItem("Produce a JSON report every run", "每次运行都要产出 JSON 报告", ".cogos/last_report.json"),
-        ),
+        memory=(),
     ),
     Region(
         key="hippocampus",
@@ -125,12 +117,7 @@ REGIONS: tuple[Region, ...] = (
         desc_zh="长期记忆形成——原始数据，保留原始目录结构。",
         role_en="Stashes the raw record of what happened verbatim",
         role_zh="把发生过的事情原样留档",
-        memory=(
-            MemoryItem("Memory must be layered; never mix everything together", "记忆必须分层，不能把什么都混在一起记", "docs/design-decisions.md"),
-            MemoryItem("Traceability: source → normalized → wiki, always reversible", "可追溯：原始 → 标准化 → wiki，层层可查", "docs/architecture.md"),
-            MemoryItem("Harvest whitelist only — credentials, sessions, and caches are never copied", "只收割白名单——凭据、会话、缓存从不复制", "docs/design-decisions.md"),
-            MemoryItem("Every wiki page traces back to its source file", "每个 wiki 页面都能追溯回源文件", "docs/architecture.md"),
-        ),
+        memory=(),
     ),
     Region(
         key="cortex",
@@ -145,11 +132,7 @@ REGIONS: tuple[Region, ...] = (
         desc_zh="把经验整合成可查询的通用知识。",
         role_en="Distills raw records into reusable knowledge",
         role_zh="把原始记录提炼成可复用知识",
-        memory=(
-            MemoryItem("The directory structure IS the knowledge structure", "目录结构本身就是知识结构", "docs/architecture.md"),
-            MemoryItem("Human-readable AND machine-readable", "知识库要人可读，也要机器可读", "docs/vision.md"),
-            MemoryItem("No giant everything.json — keep it vertical and tidy", "不要一个巨大的 everything.json——垂直、整洁、可追溯", "docs/design-decisions.md"),
-        ),
+        memory=(),
     ),
     Region(
         key="reflection",
@@ -164,11 +147,7 @@ REGIONS: tuple[Region, ...] = (
         desc_zh="离线巩固——任务结束后系统学到什么（v0.3）。",
         role_en="Sleeps, re-runs probes, audits whether the Agent still obeys the rules",
         role_zh="睡眠、回放探针，校验 Agent 是否仍守规则",
-        memory=(
-            MemoryItem("Train on real past Q&A, compare against the master's actual words", "用过去真实的问答训练，对照主人原话做语义匹配打分", "docs/persona-training.md"),
-            MemoryItem("Never self-reward; the master's judgement is the signal", "绝不自评自嗨；主人的判断才是训练信号", "docs/design-decisions.md"),
-            MemoryItem("Lessons become long-term memory; task state stays in the session", "教训进长期记忆；任务进度留在会话里", "docs/vision.md"),
-        ),
+        memory=(),
     ),
     Region(
         key="corpus",
@@ -183,11 +162,7 @@ REGIONS: tuple[Region, ...] = (
         desc_zh="左右脑的桥——Agent 之间共享知识但不合并。",
         role_en="Bridges cognition with the external Agent (Hermes/Codex/Claude)",
         role_zh="把认知系统与外部 Agent 桥接起来",
-        memory=(
-            MemoryItem("Hermes is the first adapter, NOT the core", "Hermes 是第一个 Adapter，不是 CognitiveOS 的核心", "agents/README.md"),
-            MemoryItem("Agent-agnostic: no if-hermes / elif-claude switch", "与 Agent 无关：不做 if Hermes / elif Claude 的硬编码", "core/protocol/README.md"),
-            MemoryItem("Shared cognition, per-agent identity preserved", "统一认知，但保留每个 Agent 的来源与身份", "docs/architecture.md"),
-        ),
+        memory=(),
     ),
     Region(
         key="brainstem",
@@ -202,11 +177,7 @@ REGIONS: tuple[Region, ...] = (
         desc_zh="生命维持——安装、路径、命令行。无聊但必不可少。",
         role_en="Keeps the runtime alive: install, paths, CLI",
         role_zh="维持运行时：安装、路径、命令行",
-        memory=(
-            MemoryItem("Local-first: your data stays on your machine", "本地优先：数据默认留在本地", "docs/vision.md"),
-            MemoryItem("When tooling is missing: install/fix/wire it, don't retreat", "工具链缺失时默认走「装/修/接」路径，不给退缩型选项", "docs/design-decisions.md"),
-            MemoryItem("Portable: user/ travels to any machine, any agent", "可移植：user/ 能带到任何电脑、任何 Agent", "user/README.md"),
-        ),
+        memory=(),
     ),
 )
 
@@ -220,11 +191,6 @@ def render_dashboard(paths: Paths) -> Path:
     """Render the root ``index.html``; return its on-disk path."""
     paths.root.mkdir(parents=True, exist_ok=True)
 
-    # Active projects: read user/projects/INDEX.md and resolve to a real
-    # clickable target. If user/<rel_path> exists in-repo, link to it;
-    # otherwise the project lives outside the repo (e.g. zhaiyu-bp is on
-    # the master's Desktop) — in that case fall back to the project .md
-    # that we DO have inside user/projects/ for read-only reference.
     user_dir = paths.root / "user"
     projects: list[dict] = []
     projects_index = user_dir / "projects" / "INDEX.md"
@@ -242,10 +208,6 @@ def render_dashboard(paths: Paths) -> Path:
             link = f"./user/{rel_path}" if local_md.exists() else f"./user/projects/{rel_path}"
             projects.append({"title": title, "path": link, "note": note})
 
-    # Recent Q/A: group by agent source (hermes / codex / claude_code),
-    # latest 3 per agent. Each entry carries the FULL question + answer
-    # text so the dashboard can render the conversation inline (no fetch
-    # needed — works over file://).
     qa_groups: list[dict] = []
     conv_dir = user_dir / "conversations"
     if conv_dir.exists():
@@ -265,7 +227,6 @@ def render_dashboard(paths: Paths) -> Path:
             records.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
             if not records:
                 continue
-            # embed full text (trimmed) so inline rendering works offline
             for r in records[:3]:
                 r.setdefault("source", source)
                 r["question_full"] = r.get("question", "")[:1200]
@@ -279,7 +240,6 @@ def render_dashboard(paths: Paths) -> Path:
                     "records": records[:3],
                 }
             )
-        # hermes first, then others
         qa_groups.sort(key=lambda g: 0 if g["source"] == "hermes" else 1)
 
     env = Environment(
@@ -288,23 +248,29 @@ def render_dashboard(paths: Paths) -> Path:
     )
     template = env.get_template("dashboard.html.j2")
 
-    # Real runtime data from the Cognitive Store (data-truth principle:
-    # the dashboard shows what the system actually knows / did — never
-    # hardcoded state). Missing store degrades to empty panels.
-    snapshot = _load_store_snapshot(paths)
+    # Phase 3F: ONE query pass builds the complete ViewModel; the template
+    # only renders. No hardcoded cognition anywhere.
+    from .dashboard_query import DashboardQuery
+
+    query = DashboardQuery(paths)
+    try:
+        vm = query.build()
+    finally:
+        query.close()
+    vm_dict = vm.to_dict()
 
     html = template.render(
             regions=REGIONS,
-            regions_json=_regions_json_with_real_memory(REGIONS, snapshot["region_memories"]),
+            regions_json=_regions_json_with_real_memory(REGIONS, {}),
             projects=projects,
             qa_groups=qa_groups,
             qa_groups_json=json.dumps(qa_groups, ensure_ascii=False),
-            executions=snapshot["executions"],
-            memory_counts=snapshot["memory_counts"],
-            skill_count=snapshot["skills"],
+            vm=vm,
+            vm_json=json.dumps(vm_dict, ensure_ascii=False),
+            executions=vm_dict["recent_executions"],
+            memory_counts={"confirmed": vm_dict["overview"]["learned"]},
+            skill_count=len(vm_dict["brain_regions"]),
             master_name="主人",
-            # 数据真实性原则：rules 不再是硬编码——真实规则来自 user/rules/，
-            # 由 dashboard 从 Cognitive Store 读取（Phase 2C）。此处保持空列表。
             rules=[],
         )
 

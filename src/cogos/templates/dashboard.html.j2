@@ -482,6 +482,42 @@
     .memory-list li a.mem-link:hover { color: var(--blue); text-decoration: underline; }
 
     /* ============================================================
+       COGNITIVE COCKPIT (Phase 3F) — what changed / learned / helped
+       ============================================================ */
+    .cockpit { padding: 4px 28px 20px; max-width: 1500px; margin: 0 auto; }
+    .cockpit h2 { font-size: 15px; margin: 0 0 6px; color: var(--ink); }
+    .cockpit .sub { font-size: 12px; color: var(--ink-soft); margin: 0 0 14px; }
+    .ov-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+    .ov-card { background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    .ov-num { font-size: 26px; font-weight: 700; color: var(--ink); }
+    .ov-label { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+    .ov-warn { background: #FEF0C7; color: #93370D; border-color: #F5D78E; }
+    .cog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+    .cog-card { background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    .cog-card h3 { font-size: 13px; margin: 0 0 6px; }
+    .cog-body { font-size: 13px; color: var(--ink); margin-bottom: 8px; line-height: 1.6; }
+    .cog-meta { font-size: 11.5px; color: var(--ink-soft); line-height: 1.7; }
+    .cog-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+    .btn-mini { font-size: 11.5px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink); cursor: pointer; }
+    .btn-mini:hover { border-color: var(--ink); }
+    .cog-why { font-size: 12px; color: var(--ink-soft); margin-top: 8px; padding: 8px 10px; background: #FFFDF9; border: 1px dashed var(--line); border-radius: 8px; }
+    .cand-card { border-style: dashed; }
+    .cand-note { font-size: 11.5px; color: #B45309; margin-top: 6px; }
+    .timeline { display: flex; flex-direction: column; }
+    .tl-item { display: flex; gap: 12px; font-size: 12.5px; padding: 6px 0 6px 14px; border-left: 2px solid var(--line); margin-left: 6px; position: relative; align-items: baseline; }
+    .tl-item::before { content: ""; position: absolute; left: -6px; top: 11px; width: 8px; height: 8px; border-radius: 50%; background: var(--ink-soft); }
+    .tl-date { color: var(--ink-soft); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .correction-item { display: flex; gap: 10px; align-items: baseline; font-size: 12.5px; padding: 6px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+    .health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .health-item { font-size: 12px; color: var(--ink-soft); }
+    .health-item b { display: block; font-size: 13px; color: var(--ink); margin-top: 2px; }
+    .chip { display: inline-block; font-size: 11px; padding: 1px 8px; border-radius: 999px; }
+    .chip-pass { background: #E7F4EA; color: #1A7F37; }
+    .chip-fail { background: #FDEBEC; color: #B42318; }
+    .chip-amb { background: #FEF0C7; color: #93370D; }
+    .chip-learned { background: #EDE9FE; color: #6941C6; }
+
+    /* ============================================================
        EXEC PANEL — real runtime data from the Cognitive Store
        ============================================================ */
     .exec-panel { padding: 2px 28px 0; max-width: 1500px; margin: 0 auto; }
@@ -896,6 +932,119 @@
     </div>
   </div>
 
+  <!-- ============ COGNITIVE COCKPIT (Phase 3F) ============ -->
+  <section class="cockpit">
+    <h2>你的 CognitiveOS 最近发生了什么？</h2>
+    <p class="sub">全部数字来自真实执行记录（Trace / Cognitive Store），非硬编码。</p>
+    <div class="ov-grid">
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.learned }}</div><div class="ov-label">最近 {{ vm.overview.window_days }} 天学会的认知</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.applied }}</div><div class="ov-label">自动应用偏好</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.avoided_errors }}</div><div class="ov-label">避免已知错误</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.reused }}</div><div class="ov-label">复用历史知识</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.corrected }}</div><div class="ov-label">被你纠正</div></div>
+      {% if vm.overview.conflicts_pending > 0 %}
+      <div class="ov-card ov-warn"><div class="ov-num">⚠ {{ vm.overview.conflicts_pending }}</div><div class="ov-label">认知需要你的裁决</div></div>
+      {% endif %}
+      {% if vm.overview.candidates_pending > 0 %}
+      <div class="ov-card ov-warn"><div class="ov-num">{{ vm.overview.candidates_pending }}</div><div class="ov-label">候选等待确认</div></div>
+      {% endif %}
+    </div>
+
+    {% if vm.recent_learning %}
+    <h2 style="margin-top:26px">最近形成的认知</h2>
+    <div class="cog-grid">
+      {% for c in vm.recent_learning %}
+      <div class="cog-card">
+        <h3>{{ c.subtype }} · {{ c.id }}</h3>
+        <div class="cog-body">{{ c.content }}</div>
+        <div class="cog-meta">
+          Confidence {{ (c.confidence * 100)|round|int if c.confidence is not none else 0 }}% ·
+          Evidence {{ c.evidence_count }} 次 · Verified {{ c.verify_pass_count }} 次<br>
+          Scope {{ c.scope }}{% if c.scope_id %}（{{ c.scope_id }}）{% endif %} · 形成于 {{ c.formed_at }}{% if c.user_confirmed %} · ✅ 你确认过{% endif %}
+        </div>
+        <div class="cog-actions">
+          <button class="btn-mini" onclick="copyCmd('cogos memory why {{ c.id }}')">为什么这么认为</button>
+          {% for a in c.actions %}<button class="btn-mini" onclick="copyCmd('cogos memory {{ a }} {{ c.id }}')">复制：{{ a }}</button>{% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if vm.candidates %}
+    <h2 style="margin-top:26px">正在形成的认知</h2>
+    <div class="cog-grid">
+      {% for c in vm.candidates %}
+      <div class="cog-card cand-card">
+        <h3>候选 · {{ c.id }}</h3>
+        <div class="cog-body">{{ c.content }}</div>
+        <div class="cog-meta">Confidence {{ (c.confidence * 100)|round|int if c.confidence is not none else 0 }}% · Evidence {{ c.evidence_count }} 次 · 观察到 {{ c.observed_at }}</div>
+        <div class="cand-note">⚠ 系统推测，尚未影响 Agent 行为</div>
+        <div class="cog-actions">
+          <button class="btn-mini" onclick="copyCmd('cogos memory confirm {{ c.id }}')">复制：确认</button>
+          <button class="btn-mini" onclick="copyCmd('cogos memory reject {{ c.id }}')">复制：拒绝</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if vm.conflicts %}
+    <h2 style="margin-top:26px">⚠ 需要你注意的冲突</h2>
+    {% for c in vm.conflicts %}
+    <div class="ov-card ov-warn" style="margin-bottom:8px">
+      <div class="cog-body">{{ c.a_id }}（{{ c.a_scope }}）：{{ c.a_content }}</div>
+      {% if c.b_id %}<div class="cog-body">VS {{ c.b_id }}（{{ c.b_scope }}）：{{ c.b_content }}</div>{% endif %}
+      <div class="cand-note">CognitiveOS 没有替你做决定——查看详情：<code>cogos memory show {{ c.a_id }}</code></div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if vm.recent_corrections %}
+    <h2 style="margin-top:26px">你最近纠正了 AI 什么？</h2>
+    {% for c in vm.recent_corrections %}
+    <div class="correction-item">
+      <span class="tl-date">{{ c.ts }}</span>
+      <b>{{ c.action }}</b>
+      <span>{{ c.memory_id }}</span>
+      <span class="chip chip-{{ 'pass' if c.new_status in ('confirmed', 'superseded') else 'fail' }}">{{ c.old_status }} → {{ c.new_status }}</span>
+      {% if c.old_version and c.new_version %}<span>v{{ c.old_version }} → v{{ c.new_version }}</span>{% endif %}
+      <span style="color:var(--ink-soft)">{{ c.reason }}</span>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    {% if vm.timeline %}
+    <h2 style="margin-top:26px">我的 AI 是怎么学会这些的？（Cognitive Timeline）</h2>
+    <div class="timeline">
+      {% for t in vm.timeline %}
+      <div class="tl-item"><span class="tl-date">{{ t.date }}</span><span>{{ t.label }}</span><span class="chip chip-learned">{{ t.kind }}</span></div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <h2 style="margin-top:26px">我的大脑（真实状态）</h2>
+    <div class="ov-grid">
+      {% for r in vm.brain_regions %}
+      <div class="ov-card">
+        <div class="ov-label">{{ r.brain_zh }}（{{ r.label_zh }}）</div>
+        <div class="ov-num" style="font-size:20px">{{ r.count }} 条认知</div>
+        <div class="ov-label">平均置信度 {{ (r.avg_confidence * 100)|round|int }}%</div>
+        {% for rc in r.recent %}<div class="ov-label" style="font-size:11px">{{ rc }}</div>{% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <h2 style="margin-top:26px">Cognitive Health</h2>
+    <div class="health-grid">
+      <div class="health-item">Memory<b>{{ vm.cognitive_health.memory_count }} 条认知</b></div>
+      <div class="health-item">Retrieval<b>{{ 'Healthy' if vm.cognitive_health.retrieval_healthy else 'index missing' }}</b></div>
+      <div class="health-item">Conflict<b>{{ vm.cognitive_health.conflicts_unresolved }} unresolved</b></div>
+      <div class="health-item">Embedding<b>{{ vm.cognitive_health.embedding_model }}（{{ vm.cognitive_health.embedding_dimension }}d）</b></div>
+      <div class="health-item">Schema<b>v{{ vm.cognitive_health.schema_version }}</b></div>
+    </div>
+  </section>
+
   <!-- ============ PAINS STRIP: 3 pain cards (用户反馈#9: hover translateY + shadow) ============ -->
   <section class="pains">
     <div class="pains-grid">
@@ -971,25 +1120,16 @@
             {% if e.verdict %}<span class="exec-verdict vd-{{ e.verdict }}">{{ e.verdict }}</span>{% endif %}
             {% if e.agent_id %}<span class="exec-agent">{{ e.agent_id }}</span>{% endif %}
             <span class="exec-time">{{ e.started_at }}</span>
+            <span class="chip chip-{{ 'pass' if e.memory_impact == 'HIGH' else 'amb' if e.memory_impact == 'MEDIUM' else 'fail' }}">Memory Impact: {{ e.memory_impact }}</span>
           </div>
           <div class="exec-task">{{ e.task }}</div>
-          {% if e.payload and e.payload.retrieved_summary %}
-          <div class="exec-meta">检索：{{ e.payload.retrieved_summary }}</div>
-          {% endif %}
-          {% if e.payload and e.payload.memory_written %}
-          <div class="exec-meta">写入：{{ e.payload.memory_written | join(', ') }}</div>
-          {% endif %}
-          {% if e.verifications %}
-            {% for v in e.verifications %}
-            <div class="exec-ver">验证 {{ v.rule_id }}：{{ v.verdict }} — {{ v.detail }}</div>
-            {% endfor %}
-          {% endif %}
-          {% if e.events %}
+          <div class="exec-meta">认知影响：Retrieved {{ e.retrieved }} · Applied {{ e.applied }} · Verified {{ e.verdict or '—' }}</div>
+          {% if e.retrieved_memories %}
           <details class="exec-events">
-            <summary>Trace 事件（{{ e.events | length }} 步）</summary>
+            <summary>本次为什么使用这些记忆（{{ e.retrieved_memories | length }}）</summary>
             <ul class="exec-events-list">
-              {% for ev in e.events %}
-              <li><span class="ev-step">{{ ev.step }}</span><span class="ev-detail">{{ ev.detail }}</span></li>
+              {% for m in e.retrieved_memories %}
+              <li><span class="ev-step">{{ m.id }} [{{ m.subtype }}]</span><span class="ev-detail">{{ m.why }}</span></li>
               {% endfor %}
             </ul>
           </details>
@@ -1465,6 +1605,22 @@
       if (next === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
       else document.documentElement.removeAttribute('data-theme');
       try { localStorage.setItem('cogos:theme', next); } catch (e) {}
+    }
+
+    // Phase 3F: honest static-page actions — buttons copy the CLI command
+    // instead of pretending to write files (file:// boundary, §18)
+    function copyCmd(cmd) {
+      const text = 'PYTHONPATH=src python -m cogos.cli ' + cmd;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+          const el = document.activeElement;
+          if (el) { const t = el.textContent; el.textContent = '已复制 ✓'; setTimeout(function(){ el.textContent = t; }, 1200); }
+        });
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+      }
     }
 
     function escapeHtml(s) {

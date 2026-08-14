@@ -418,10 +418,22 @@ class Kernel:
         methods = {}
         for i in items:
             methods[i.retrieval_method] = methods.get(i.retrieval_method, 0) + 1
+        # Phase 3F: refs carry why_retrieved so the dashboard can explain
+        # every injected cognition (Retrieval Transparency)
+        refs = [
+            {
+                "type": "skill" if not i.subtype else "memory",
+                "subtype": i.subtype,
+                "id": i.memory_id,
+                "score": i.rrf_score,
+                "why": i.why_retrieved,
+            }
+            for i in items
+        ]
         trace_mod.append_event(
             self.user, self.store, ex_id, "memory_retrieved",
             detail=retrieved.summary() + (f" methods={methods}" if methods else ""),
-            refs=retrieved.refs(),
+            refs=refs,
         )
         block = retrieve_mod.build_context(retrieved, task.intent, budget=self.context_budget)
         self._last_sections = dict(block.sections)
@@ -433,7 +445,7 @@ class Kernel:
             task=task,
             memory_entries=[],
             context_block=block.text,
-            refs=retrieved.refs(),
+            refs=refs,
         )
 
     def _verify(self, ex_id: str, task: Task, context: Context, out: Result, *, skip_rules: tuple[str, ...] = ()) -> str:
