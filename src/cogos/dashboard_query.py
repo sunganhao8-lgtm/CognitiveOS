@@ -112,6 +112,23 @@ class ExecutionVM:
     verification: str         # PASS | FAIL | — (of the applied cognitions)
     retrieved_memories: list[dict] = field(default_factory=list)  # {id, subtype, why, verified}
 
+    def to_dict(self) -> dict:
+        return {
+            "execution_id": self.execution_id,
+            "task": self.task,
+            "agent_id": self.agent_id,
+            "status": self.status,
+            "verdict": self.verdict,
+            "started_at": self.started_at,
+            "retrieved": self.retrieved,
+            "injected": self.injected,
+            "applied": self.applied,
+            "verified": self.verified,
+            "memory_impact": self.memory_impact,
+            "verification": self.verification,
+            "retrieved_memories": self.retrieved_memories,
+        }
+
 
 @dataclass
 class CorrectionVM:
@@ -170,10 +187,12 @@ class CognitiveDashboardViewModel:
     recent_corrections: list[CorrectionVM] = field(default_factory=list)
     timeline: list[TimelineEventVM] = field(default_factory=list)
     recent_executions: list[ExecutionVM] = field(default_factory=list)
+    agent_activity: list[dict] = field(default_factory=list)
+    executions_all: list[dict] = field(default_factory=list)  # bounded, for search
     cognitive_health: HealthVM = field(default_factory=HealthVM)
     brain_regions: list[BrainRegionVM] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self):
         return {
             "overview": self.overview.__dict__,
             "recent_learning": [c.__dict__ for c in self.recent_learning],
@@ -183,6 +202,8 @@ class CognitiveDashboardViewModel:
             "recent_corrections": [c.__dict__ for c in self.recent_corrections],
             "timeline": [t.__dict__ for t in self.timeline],
             "recent_executions": [e.__dict__ for e in self.recent_executions],
+            "agent_activity": self.agent_activity,
+            "executions_all": self.executions_all,
             "cognitive_health": self.cognitive_health.__dict__,
             "brain_regions": [r.__dict__ for r in self.brain_regions],
         }
@@ -394,7 +415,8 @@ class DashboardQuery:
             ))
 
         # --- executions with 4-level memory impact (Phase 3G) ---------
-        for ex in executions[:10]:
+        all_execs: list[ExecutionVM] = []
+        for ex in executions[:80]:
             p = ex.get("payload") or {}
             refs = p.get("refs", [])
             retrieved_n = int(p.get("retrieved_total") or len(refs))
@@ -419,7 +441,7 @@ class DashboardQuery:
             else:
                 impact = "NONE"
             verification = "FAIL" if any_fail else ("PASS" if verified_n > 0 else "—")
-            vm.recent_executions.append(ExecutionVM(
+            all_execs.append(ExecutionVM(
                 execution_id=ex["execution_id"], task=ex.get("task", ""),
                 agent_id=ex.get("agent_id") or "", status=ex.get("status", ""),
                 verdict=ex.get("verdict") or "", started_at=_fmt_ts(ex.get("started_at") or ""),
@@ -435,6 +457,26 @@ class DashboardQuery:
                     for r in refs[:6]
                 ],
             ))
+        vm.recent_executions = all_execs[:10]
+
+        # --- agent activity (per-agent latest Q&A + counts) -----------
+        from collections import OrderedDict
+
+        by_agent: "OrderedDict[str, list[ExecutionVM]]" = OrderedDict()
+        for ex in all_execs:
+            aid = ex.agent_id or "cogos"
+            by_agent.setdefault(aid, []).append(ex)
+        vm.agent_activity = [
+            {
+                "agent_id": aid,
+                "count": len(items),
+                "latest": items[0].started_at,
+                "executions": [e.to_dict() for e in items[:6]],
+            }
+            for aid, items in by_agent.items()
+        ]
+        # full history for the search box (bounded, newest first)
+        vm.executions_all = [e.to_dict() for e in all_execs]
 
         # --- timeline --------------------------------------------------
         vm.timeline = self._build_timeline(entities, executions, since)

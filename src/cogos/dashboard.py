@@ -261,7 +261,15 @@ def render_dashboard(paths: Paths) -> Path:
 
     html = template.render(
             regions=REGIONS,
-            regions_json=_regions_json_with_real_memory(REGIONS, {}),
+            regions_json=_regions_json_with_real_memory(
+                REGIONS,
+                {
+                    r["key"]: [{"title_zh": t, "title_en": t, "path": "", "content": t}
+                               for t in r.get("recent", [])[:6]]
+                    for r in vm_dict["brain_regions"]
+                    if r.get("recent")
+                },
+            ),
             projects=projects,
             qa_groups=qa_groups,
             qa_groups_json=json.dumps(qa_groups, ensure_ascii=False),

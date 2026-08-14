@@ -517,6 +517,39 @@
     .chip-amb { background: #FEF0C7; color: #93370D; }
     .chip-learned { background: #EDE9FE; color: #6941C6; }
 
+    /* ============ BRAIN FIRST SCREEN (Dashboard 3.0) ============ */
+    .brain-screen { padding: 6px 28px 0; max-width: 1500px; margin: 0 auto; }
+    .brain-screen-head h2 { font-size: 15px; margin: 0 0 4px; }
+    .brain-screen-head .sub { font-size: 12px; color: var(--ink-soft); margin: 0 0 12px; }
+    .zone { opacity: .22; pointer-events: none; transition: opacity .15s ease; }
+    .callout:hover .zone, .callout.active .zone { opacity: .4; }
+    .region-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 10px; }
+    .region-legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 8px; border: 1px solid transparent; }
+    .region-legend-item:hover, .region-legend-item.active { border-color: var(--line); background: var(--card-2); }
+    .rl-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+    .rl-name { font-weight: 600; color: var(--ink); }
+    .rl-count { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+    .rl-conf { color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+    /* ============ AGENT Q&A PANEL (Dashboard 3.0) ============ */
+    .qa-search { display: flex; gap: 10px; align-items: center; margin: 10px 0 14px; }
+    .qa-search input { flex: 1; max-width: 420px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); font-size: 13px; background: #fff; }
+    .qa-agents { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 12px; }
+    .qa-agent { background: var(--card-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    .qa-agent-head { display: flex; align-items: baseline; justify-content: space-between; }
+    .qa-agent-name { font-size: 14px; font-weight: 700; }
+    .qa-agent-meta { font-size: 11.5px; color: var(--ink-soft); }
+    .qa-item { padding: 7px 0; border-bottom: 1px dashed var(--line); }
+    .qa-item:last-child { border-bottom: none; }
+    .qa-task { font-size: 12.5px; color: var(--ink); }
+    .qa-sub { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+    .qa-empty { font-size: 12.5px; color: var(--ink-soft); padding: 16px 0; }
+    .md-body { line-height: 1.75; }
+    .md-body strong { font-weight: 700; }
+    .md-body code { background: rgba(0,0,0,.06); padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+    .md-body ul { margin: 4px 0; padding-left: 18px; }
+    .md-body li { margin: 2px 0; }
+
     /* ============================================================
        EXEC PANEL — real runtime data from the Cognitive Store
        ============================================================ */
@@ -926,11 +959,71 @@
       </div>
     <div class="hero-right">
       <div class="tip">
-        <b>使用提示</b>
-        点击大脑图上的彩色锚点，右侧会加载该脑区的工作记忆；点击「最近的问答」可内嵌查看完整对话。
+        <b>怎么用</b>
+        点击下方大脑图中的彩色脑区，查看该区的真实认知；往下是最近问答与认知驾驶舱。
       </div>
     </div>
   </div>
+
+  <!-- ============ BRAIN FIRST SCREEN (Dashboard 3.0): 分区脑图 + 真实认知 ============ -->
+  <section class="brain-screen">
+    <div class="brain-screen-head">
+      <h2>你的认知地图</h2>
+      <p class="sub">以下全部是你与 Agent 的真实交互中提取的认知（user/ 层的投影），不是测试数据。</p>
+    </div>
+    <main class="dash">
+      <section class="brain-card">
+        <div class="title" data-i18n="brainTitle">认知地图</div>
+        <div class="brain-wrap">
+          <img class="brain" src="assets/brain-source.svg" alt="" />
+          <svg class="overlay" viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            {% for r in regions %}
+            <g class="callout" data-region="{{ r.key }}">
+              {% if r.lx < 200 %}
+              <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax - 40 }} {{ r.ay }}, {{ r.lx + 60 }} {{ r.ly }}, {{ r.lx }} {{ r.ly }}" />
+              {% elif r.lx > 800 %}
+              <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax + 40 }} {{ r.ay }}, {{ r.lx - 60 }} {{ r.ly }}, {{ r.lx }} {{ r.ly }}" />
+              {% else %}
+              <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax }} {{ r.ay + 50 }}, {{ r.lx }} {{ r.ly - 50 }}, {{ r.lx }} {{ r.ly }}" />
+              {% endif %}
+              <!-- 分区色块：整块可点可悬停（不是小点） -->
+              <circle class="zone" cx="{{ r.ax }}" cy="{{ r.ay }}" r="58" fill="{{ r.color }}" />
+              <circle class="anchor" cx="{{ r.ax }}" cy="{{ r.ay }}" r="11" fill="{{ r.color }}" />
+              {% if r.lx < 200 %}
+              <text class="lbl" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_zh }}</text>
+              {% elif r.lx > 800 %}
+              <text class="lbl" text-anchor="start" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_zh }}</text>
+              {% else %}
+              <text class="lbl" text-anchor="middle" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_zh }}</text>
+              {% endif %}
+              <!-- generous hit area: whole zone is clickable -->
+              <rect class="hit-area" x="{{ r.ax - 62 }}" y="{{ r.ay - 62 }}" width="124" height="124" fill="transparent" pointer-events="all" />
+            </g>
+            {% endfor %}
+          </svg>
+        </div>
+        <!-- 图例承接：每个脑区的真实数字（与上方的区一一对应） -->
+        <div class="region-legend">
+          {% for r in vm.brain_regions %}
+          <div class="region-legend-item" data-region="{{ r.key }}">
+            <span class="rl-dot" style="background:{{ r.color }}"></span>
+            <span class="rl-name">{{ r.brain_zh }} · {{ r.label_zh }}</span>
+            <span class="rl-count">{{ r.count }} 条认知</span>
+            <span class="rl-conf">平均 {{ (r.avg_confidence * 100)|round|int }}%</span>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="right-col">
+        <div class="panel memory-panel" id="memory-panel">
+          <h2 data-i18n="memoryTitle">这个脑区记住的</h2>
+          <p class="empty" id="memory-empty">点击上方脑图中的一个脑区，这里会显示它记住的真实认知。</p>
+          <div class="body" id="memory-body"></div>
+        </div>
+      </section>
+    </main>
+  </section>
 
   <!-- ============ COGNITIVE COCKPIT (Phase 3F) ============ -->
   <section class="cockpit">
@@ -979,8 +1072,8 @@
     <div class="cog-grid">
       {% for c in vm.recent_learning %}
       <div class="cog-card">
-        <h3>{{ c.subtype }} · {{ c.id }}</h3>
-        <div class="cog-body">{{ c.content }}</div>
+        <h3>{{ {'preference':'偏好','rule':'规则','semantic':'语义','episodic':'经验','project_note':'项目'}.get(c.subtype, c.subtype) }} · {{ c.id }}</h3>
+        <div class="cog-body md-body">{{ c.content }}</div>
         <div class="cog-meta">
           Confidence {{ (c.confidence * 100)|round|int if c.confidence is not none else 0 }}% ·
           Evidence {{ c.evidence_count }} 次 · Verified {{ c.verify_pass_count }} 次<br>
@@ -1092,77 +1185,34 @@
 
   <!-- ============ DASHBOARD TAB ============ -->
   <div id="view-dash">
-    <main class="dash">
-      <section class="brain-card">
-        <div class="title" data-i18n="brainTitle">认知地图</div>
-        <div class="brain-wrap">
-          <img class="brain" src="assets/brain-source.svg" alt="" />
-          <svg class="overlay" viewBox="0 0 960 960" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            {% for r in regions %}
-            <g class="callout" data-region="{{ r.key }}">
-              {% if r.lx < 200 %}
-              <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax - 40 }} {{ r.ay }}, {{ r.lx + 60 }} {{ r.ly }}, {{ r.lx }} {{ r.ly }}" />
-              {% elif r.lx > 800 %}
-              <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax + 40 }} {{ r.ay }}, {{ r.lx - 60 }} {{ r.ly }}, {{ r.lx }} {{ r.ly }}" />
-              {% else %}
-              <path class="leader" d="M {{ r.ax }} {{ r.ay }} C {{ r.ax }} {{ r.ay + 50 }}, {{ r.lx }} {{ r.ly - 50 }}, {{ r.lx }} {{ r.ly }}" />
-              {% endif %}
-              <circle class="anchor" cx="{{ r.ax }}" cy="{{ r.ay }}" r="10" fill="{{ r.color }}" />
-              {% if r.lx < 200 %}
-              <text class="lbl" text-anchor="end" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_zh }}</text>
-              {% elif r.lx > 800 %}
-              <text class="lbl" text-anchor="start" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_zh }}</text>
-              {% else %}
-              <text class="lbl" text-anchor="middle" x="{{ r.lx }}" y="{{ r.ly - 8 }}">{{ r.label_zh }}</text>
-              {% endif %}
-              <!-- invisible hit area centered on (ax, ay) for easy clicking -->
-              <rect class="hit-area" x="{{ r.ax - 40 }}" y="{{ r.ay - 40 }}" width="80" height="80" fill="transparent" pointer-events="all" />
-            </g>
-            {% endfor %}
-          </svg>
-        </div>
-      </section>
-
-      <section class="right-col">
-        <div class="panel memory-panel" id="memory-panel">
-          <h2 data-i18n="memoryTitle">Working memory</h2>
-          <p class="empty" id="memory-empty" data-i18n="memoryEmpty">Click a region on the cognitive map to load its working memory.</p>
-          <div class="body" id="memory-body"></div>
-        </div>
-      </section>
-    </main>
+    <!-- brain map now lives in the first screen above (Dashboard 3.0) -->
 
     <section class="exec-panel">
-      <h2 class="exec-title">最近执行 <span class="count">{{ executions | length }}</span></h2>
-      <p class="exec-sub">以下全部来自 Cognitive Store 的真实运行记录（user/traces/ 的投影），不是硬编码。</p>
-      {% if executions %}
-        {% for e in executions %}
-        <div class="exec-item">
-          <div class="exec-row">
-            <span class="exec-id">{{ e.execution_id }}</span>
-            <span class="exec-status st-{{ e.status }}">{{ e.status }}</span>
-            {% if e.verdict %}<span class="exec-verdict vd-{{ e.verdict }}">{{ e.verdict }}</span>{% endif %}
-            {% if e.agent_id %}<span class="exec-agent">{{ e.agent_id }}</span>{% endif %}
-            <span class="exec-time">{{ e.started_at }}</span>
-            <span class="chip chip-{{ 'pass' if e.memory_impact == 'VERIFIED' else 'amb' if e.memory_impact in ('APPLIED','RETRIEVED') else 'fail' }}">{{ e.memory_impact }}</span>
-            {% if e.verification != '—' %}<span class="chip chip-{{ 'pass' if e.verification == 'PASS' else 'fail' }}">verification {{ e.verification }}</span>{% endif %}
+      <h2 class="exec-title">最近问答 <span class="count">{{ executions | length }}</span></h2>
+      <p class="exec-sub">每个 Agent 的最新任务真实记录；搜索框可查历史（来自 user/traces 的投影）。</p>
+      <div class="qa-search">
+        <input type="search" id="qa-filter" placeholder="搜索历史任务，如：SQL、报表、汇报…" oninput="filterQA(this.value)" />
+        <span class="qa-empty" id="qa-count" style="padding:0"></span>
+      </div>
+      {% if vm.agent_activity %}
+      <div class="qa-agents">
+        {% for a in vm.agent_activity %}
+        <div class="qa-agent">
+          <div class="qa-agent-head">
+            <span class="qa-agent-name">{{ a.agent_id }}</span>
+            <span class="qa-agent-meta">{{ a.count }} 次任务 · 最新 {{ a.latest }}</span>
           </div>
-          <div class="exec-task">{{ e.task }}</div>
-          <div class="exec-meta">认知影响：Retrieved {{ e.retrieved }} · Injected {{ e.injected }} · Applied {{ e.applied }} · Verified {{ e.verified }}</div>
-          {% if e.retrieved_memories %}
-          <details class="exec-events">
-            <summary>本次为什么使用这些记忆（{{ e.retrieved_memories | length }}）</summary>
-            <ul class="exec-events-list">
-              {% for m in e.retrieved_memories %}
-              <li><span class="ev-step">{{ m.id }} [{{ m.subtype }}]</span><span class="ev-detail">{{ m.why }}</span></li>
-              {% endfor %}
-            </ul>
-          </details>
-          {% endif %}
+          {% for e in a.executions %}
+          <div class="qa-item" data-search="{{ e.task }} {{ e.execution_id }} {{ a.agent_id }}">
+            <div class="qa-task">{{ e.task }}</div>
+            <div class="qa-sub">{{ e.execution_id }} · {{ e.verdict or '—' }} · impact {{ e.memory_impact }} {% if e.verification != '—' %}· verification {{ e.verification }}{% endif %}</div>
+          </div>
+          {% endfor %}
         </div>
         {% endfor %}
+      </div>
       {% else %}
-      <p class="exec-empty">暂无执行记录。运行 <code>cogos run "…"</code> 后，这里会显示真实运行数据：任务、Agent、检索到的记忆、验证结果与学习记录。</p>
+      <p class="qa-empty">还没有真实任务记录——用 `cogos run "你的任务"` 开始第一条。</p>
       {% endif %}
     </section>
 
@@ -1251,72 +1301,10 @@
 
   <!-- ============ ABOUT TAB ============ -->
   <div class="about-wrap" id="view-about">
-    <div class="flow-diagram">
-      <h2 data-i18n="flowTitle">🧠 大脑各部门如何协作</h2>
-      <p class="lede" data-i18n="flowLede">主人发起一次提问时，7 个脑区按下面的顺序协同工作：</p>
-      <svg class="flow-svg" viewBox="0 0 1100 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Cognitive flow diagram">
-        <defs>
-          <marker id="arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-            <path d="M0,0 L10,5 L0,10 z" fill="var(--ink-soft)" />
-          </marker>
-        </defs>
-        <g class="step">
-          <rect x="20"  y="100" width="130" height="60" rx="10" fill="#D97706" />
-          <text class="step-label" font-size="15" x="85"  y="128" text-anchor="middle">Thalamus</text>
-          <text class="step-sub" font-size="11"   x="85"  y="146" text-anchor="middle" data-i18n="flowStep1Sub">receives input</text>
-        </g>
-        <g class="step">
-          <rect x="195" y="100" width="140" height="60" rx="10" fill="#16A34A" />
-          <text class="step-label" x="265" y="128" text-anchor="middle">Hippocampus</text>
-          <text class="step-sub"   x="265" y="146" text-anchor="middle" data-i18n="flowStep2Sub">stashes raw</text>
-        </g>
-        <g class="step">
-          <rect x="380" y="100" width="130" height="60" rx="10" fill="#7C3AED" />
-          <text class="step-label" x="445" y="128" text-anchor="middle">Cortex</text>
-          <text class="step-sub"   x="445" y="146" text-anchor="middle" data-i18n="flowStep3Sub">distills rules</text>
-        </g>
-        <g class="step">
-          <rect x="555" y="100" width="140" height="60" rx="10" fill="#E89A3C" />
-          <text class="step-label" x="625" y="128" text-anchor="middle">Prefrontal</text>
-          <text class="step-sub"   x="625" y="146" text-anchor="middle" data-i18n="flowStep4Sub">routes to agent</text>
-        </g>
-        <g class="step">
-          <rect x="740" y="100" width="130" height="60" rx="10" fill="#0891B2" />
-          <text class="step-label" x="805" y="128" text-anchor="middle">Corpus</text>
-          <text class="step-sub"   x="805" y="146" text-anchor="middle" data-i18n="flowStep5Sub">bridges to Agent</text>
-        </g>
-        <g class="step">
-          <rect x="915" y="100" width="165" height="60" rx="10" fill="#DB2777" />
-          <text class="step-label" x="997" y="128" text-anchor="middle">Reflection</text>
-          <text class="step-sub"   x="997" y="146" text-anchor="middle" data-i18n="flowStep6Sub">reproduces probe</text>
-        </g>
-        <path class="arrow" d="M150 130 L195 130" />
-        <path class="arrow" d="M335 130 L380 130" />
-        <path class="arrow" d="M510 130 L555 130" />
-        <path class="arrow" d="M695 130 L740 130" />
-        <path class="arrow" d="M870 130 L915 130" />
-        <g class="step">
-          <rect x="380" y="240" width="500" height="40" rx="20" fill="#64748B" />
-          <text class="step-label" x="630" y="265" text-anchor="middle" data-i18n="flowStepBrainstem">Brainstem — keeps the runtime alive, hosts every other region</text>
-        </g>
-        <path class="arrow" d="M997 160 Q997 220 800 220 Q265 220 265 160" />
-        <text class="arrow-label" font-size="11" x="630" y="215" text-anchor="middle" data-i18n="flowLoop">failure → hippocampus for evidence</text>
-        <g class="step">
-          <rect x="730" y="295" width="180" height="50" rx="8" fill="#1B3A6E" />
-          <text class="step-label" x="820" y="318" text-anchor="middle" data-i18n="flowStepAgent">External Agent</text>
-          <text class="step-sub"   x="820" y="334" text-anchor="middle">Hermes / Codex / Claude</text>
-        </g>
-        <path class="arrow" d="M805 160 L805 295" />
-        <path class="arrow" d="M820 295 L820 160" stroke-dasharray="4 3" />
-        <text class="arrow-label" x="855" y="235" data-i18n="flowStepAsk">ask</text>
-        <text class="arrow-label" x="785" y="235" data-i18n="flowStepAns">answer</text>
-      </svg>
-      <div class="legend">
-        <div><b data-i18n="flowLegend1Bold">1. 摄入</b> <span data-i18n="flowLegend1Body">主人的输入经丘脑路由到海马体，原样留档。</span></div>
-        <div><b data-i18n="flowLegend2Bold">2. 提炼</b> <span data-i18n="flowLegend2Body">皮层把原话变成可复用知识/规则。</span></div>
-        <div><b data-i18n="flowLegend3Bold">3. 路由</b> <span data-i18n="flowLegend3Body">前额叶根据任务决定调用哪个 Agent。</span></div>
-        <div><b data-i18n="flowLegend4Bold">4. 复刻</b> <span data-i18n="flowLegend4Body">胼胝体把知识+规则传给 Agent，验证它复刻主人的决策模式。</span></div>
-      </div>
+    <div class="about-intro">
+      <h2>关于 CognitiveOS</h2>
+      <p class="lede">认知驾驶舱里的数据全部来自你与 Agent 的真实交互（user/ 层的投影）。
+      本页说明系统为什么存在、它如何理解你。</p>
     </div>
 
     <h2 class="about-h2" data-i18n="aboutTitle">如果 AI 是硅基生命，它也需要一个「大脑结构」吗？</h2>
@@ -1518,6 +1506,21 @@
       // bind click for all brain region callouts (g elements inside overlay)
       document.querySelectorAll('.callout').forEach(g => {
         g.addEventListener('click', () => renderMemory(g.dataset.region));
+        g.addEventListener('mouseenter', () => {
+          document.querySelectorAll('.region-legend-item').forEach(i =>
+            i.classList.toggle('active', i.dataset.region === g.dataset.region));
+        });
+        g.addEventListener('mouseleave', () => {
+          document.querySelectorAll('.region-legend-item').forEach(i =>
+            i.classList.remove('active'));
+        });
+      });
+      // legend click drives the map too (bidirectional)
+      document.querySelectorAll('.region-legend-item').forEach(i => {
+        i.addEventListener('click', () => {
+          const g = document.querySelector('.callout[data-region="' + i.dataset.region + '"]');
+          if (g) { g.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
+        });
       });
     });
 
@@ -1631,6 +1634,49 @@
       else document.documentElement.removeAttribute('data-theme');
       try { localStorage.setItem('cogos:theme', next); } catch (e) {}
     }
+
+    // Q&A history search (Dashboard 3.0)
+    function filterQA(q) {
+      q = (q || '').toLowerCase();
+      let visible = 0;
+      document.querySelectorAll('.qa-item').forEach(item => {
+        const hit = !q || (item.dataset.search || '').toLowerCase().indexOf(q) !== -1;
+        item.style.display = hit ? '' : 'none';
+        if (hit) visible++;
+      });
+      document.querySelectorAll('.qa-agent').forEach(card => {
+        const any = [...card.querySelectorAll('.qa-item')].some(i => i.style.display !== 'none');
+        card.style.display = any ? '' : 'none';
+      });
+      const counter = document.getElementById('qa-count');
+      if (counter) counter.textContent = q ? '匹配 ' + visible + ' 条' : '';
+    }
+
+    // lightweight markdown rendering for cognition cards (no external lib)
+    function renderMarkdown() {
+      document.querySelectorAll('.md-body').forEach(el => {
+        let t = el.innerHTML;
+        t = t.replace(/^### (.*)$/gm, '<h4>$1</h4>');
+        t = t.replace(/^## (.*)$/gm, '<h4>$1</h4>');
+        t = t.replace(/^# (.*)$/gm, '<h4>$1</h4>');
+        t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+        const lines = t.split('\n');
+        let html = '', inList = false;
+        lines.forEach(line => {
+          if (/^[-*] /.test(line.trim())) {
+            if (!inList) { html += '<ul>'; inList = true; }
+            html += '<li>' + line.trim().slice(2) + '</li>';
+          } else {
+            if (inList) { html += '</ul>'; inList = false; }
+            html += (html ? '\n' : '') + line;
+          }
+        });
+        if (inList) html += '</ul>';
+        el.innerHTML = html;
+      });
+    }
+    document.addEventListener('DOMContentLoaded', renderMarkdown);
 
     // Phase 3F/9: static pages copy the CLI command; the local serve mode
     // (cogos dashboard serve, 127.0.0.1 only) calls the real API through
