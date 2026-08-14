@@ -87,6 +87,7 @@ class RunResult:
     status: str = ""  # "learned" | "success" | "failed"
     verdict: str = ""  # "" (nothing to verify) | PASS | FAIL | AMBIGUOUS
     context_chars: int = 0
+    cognitive_context: str = ""  # Phase 3E: full assembled SYSTEM CONTEXT (for DSH-style agents)
     retrieved_summary: str = ""
     memory_written: list = field(default_factory=list)
     output: str = ""
@@ -378,18 +379,19 @@ class Kernel:
         trace_mod.append_event(self.user, self.store, ex_id, "execution_completed", detail=final_status)
 
         return RunResult(
-            execution_id=ex_id,
-            intent_type=intent.type,
-            task=text,
-            agent_id=decision.agent_id if out.routed_to else "",
-            status=final_status,
-            verdict=verdict,
-            context_chars=len(context.context_block),
-            retrieved_summary=exec_row["retrieved_summary"],
-            memory_written=[mem_id] if mem_id else [],
-            output=(out.output or "")[:2000],
-            elapsed=round(elapsed, 2),
-        )
+                    execution_id=ex_id,
+                    intent_type=intent.type,
+                    task=text,
+                    agent_id=decision.agent_id if out.routed_to else "",
+                    status=final_status,
+                    verdict=verdict,
+                    context_chars=len(context.context_block),
+                    cognitive_context=context.context_block,  # Phase 3E: full context for DSH-style agents
+                    retrieved_summary=exec_row["retrieved_summary"],
+                    memory_written=[mem_id] if mem_id else [],
+                    output=(out.output or "")[:2000],
+                    elapsed=round(elapsed, 2),
+                )
 
     # ---- internal steps -----------------------------------------------------
 

@@ -83,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--list", dest="list_runs", action="store_true", help="List recent executions instead of running")
     p_run.add_argument("--no-llm", action="store_true", help="Skip LLM calls (keyword classification + pattern extraction only)")
     p_run.add_argument("--budget", type=int, default=None, help="Context budget in characters (default 4000)")
+    p_run.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
 
     p_reindex = sub.add_parser("reindex", help="Rebuild the Cognitive Store (SQLite index) from canonical user/ data")
 
@@ -521,7 +522,7 @@ def _run_command(paths, args) -> int:
 
 
 def _sleep_command(paths, args) -> int:
-    """``cogos sleep`` — one offline cognitive-consolidation cycle."""
+    """``cogs sleep`` — one offline cognitive-consolidation cycle."""
     from .growth import run_sleep
     from .store import Store
     from .user import UserLayer
