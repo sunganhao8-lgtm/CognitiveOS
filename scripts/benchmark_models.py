@@ -31,23 +31,30 @@ def main() -> int:
     providers = [("keyword-only", None, "keyword")]
     if small is not None:
         providers.append((small.name, small, "hybrid"))
-    # attempt bge-m3 (downloads on first use; skip honestly if unavailable)
-    try:
-        from fastembed import TextEmbedding
+    # attempt a stronger zh/multilingual model (downloads on first use;
+    # skipped honestly when unavailable). bge-m3 is NOT supported by
+    # fastembed 0.8.0 — jina-embeddings-v2-base-zh (zh, 768d) is the next
+    # best candidate.
+    for mname, mlabel in (
+        ("jinaai/jina-embeddings-v2-base-zh", "jina-embeddings-v2-base-zh"),
+        ("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2", "multilingual-MiniLM"),
+    ):
+        try:
+            from fastembed import TextEmbedding
 
-        model = TextEmbedding("BAAI/bge-m3", threads=2)
-        probe = list(model.embed(["你好"]))
+            model = TextEmbedding(mname, threads=2)
+            probe = list(model.embed(["你好"]))
 
-        class _M3:
-            name = "bge-m3"
-            dimension = len(probe[0])
+            class _Alt:
+                name = mlabel
+                dimension = len(probe[0])
 
-            def embed(self, texts):
-                return [v.tolist() for v in model.embed(texts)]
+                def embed(self, texts):
+                    return [v.tolist() for v in model.embed(texts)]
 
-        providers.append((_M3.name, _M3(), "hybrid"))
-    except Exception as exc:
-        print(f"(bge-m3 unavailable: {exc})", file=sys.stderr)
+            providers.append((_Alt.name, _Alt(), "hybrid"))
+        except Exception as exc:
+            print(f"({mname} unavailable: {exc})", file=sys.stderr)
 
     print(f"dataset: {len(load_queries())} queries\n")
     rows = []

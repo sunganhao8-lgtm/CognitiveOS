@@ -60,6 +60,8 @@ Episodic → PatternDetector（确定性签名）→ Candidate（永世不检索
   （benchmark 锁死，FCR=0.005 keyword / 同 hybrid，目标趋近 0）。
 - Benchmark：50 queries × 12 类别；bge-small-zh-v1.5 数据驱动胜出
   （R@5=0.88 vs keyword 0.84，NDCG 0.686 vs 0.675）——保持现状，不因升级而升级。
+  bge-m3 未被 fastembed 0.8.0 支持（实测拒绝加载），对比脚本已换为
+  jina-embeddings-v2-base-zh / multilingual-MiniLM（结果见 scripts/benchmark_models.py）。
 
 ## Agent Runtime
 
