@@ -28,14 +28,15 @@ def build_benchmark_dataset(store) -> list[str]:
 
     def mem(ent_id, subtype, domain, content, *, scope="global", scope_id="",
             status="confirmed", confidence=0.85, user_confirmed=False,
-            payload=None, version=1):
+            payload=None, version=1, fts=True):
         store.upsert_entity(
             ent_id, "memory", subtype=subtype, domain=domain, content=content,
             payload=payload or {"source": "benchmark"},
             status=status, scope=scope, scope_id=scope_id,
             confidence=confidence, user_confirmed=user_confirmed, version=version,
         )
-        store.add_fts(ent_id, "memory", subtype, domain, content)
+        if fts:
+            store.add_fts(ent_id, "memory", subtype, domain, content)
         return ent_id
 
     ids: list[str] = []
@@ -70,6 +71,41 @@ def build_benchmark_dataset(store) -> list[str]:
                    "写 SQL 时习惯给表起简短别名（如 s、o、p）",
                    payload={"source": "sleep_promotion"}, confidence=0.72,
                    user_confirmed=False))
+    # interference memory (same domain, wrong topic — must NOT be injected
+    # for sales queries)
+    ids.append(mem("P-SQL-BACKUP", "preference", "sql",
+                   "数据库备份策略：每天凌晨全量备份到本地磁盘",
+                   confidence=0.99, user_confirmed=True))
+    # unrelated topic inside a related domain (trap for keyword overlap)
+    ids.append(mem("P-SQL-SECURITY", "rule", "sql",
+                   "生产数据库禁止直接执行 DELETE 语句，必须先备份",
+                   payload={"source": "user_statement", "forbidden": ["DELETE FROM"], "required": []},
+                   user_confirmed=True, confidence=0.9))
+    # superseded version (must never be injected)
+    ids.append(mem("P-SQL-CTE-OLD", "preference", "sql",
+                   "旧版：所有 SQL 一律使用 CTE",
+                   payload={"source": "user_statement"}, status="superseded",
+                   confidence=0.8))
+    # conflicted pair (must never inject as ordinary cognition)
+    ids.append(mem("R-CONF-X", "rule", "sql",
+                   "SQL 必须使用 CTE 结构",
+                   payload={"source": "manual", "required": ["CTE"]},
+                   status="conflicted", confidence=0.9))
+    ids.append(mem("R-CONF-Y", "rule", "sql",
+                   "SQL 禁止使用 CTE 结构",
+                   payload={"source": "manual", "forbidden": ["CTE"]},
+                   status="conflicted", confidence=0.9))
+    # candidate (must never inject)
+    ids.append(mem("cand-sql-join", "candidate", "sql", "用户似乎偏好 JOIN 写法",
+                   status="candidate", confidence=0.6, fts=False))
+    # long-query-friendly general preference
+    ids.append(mem("P-GEN-001", "preference", "general",
+                   "给用户的汇报必须先给结论再给细节，不要一上来就铺细节",
+                   confidence=0.85))
+    # temporary (retrieval layer must exclude it)
+    ids.append(mem("tmp-bench-002", "temporary", "sql",
+                   "本次允许使用 SELECT *", status="temporary", scope="temporary",
+                   payload={"allowed": ["SELECT *"]}, fts=False))
     return ids
 
 

@@ -115,11 +115,57 @@ def main(argv: list[str] | None = None) -> int:
 
     add_task_parser(sub)
     add_inbox_parser(sub)
+
+    # Phase 6: backup / restore
+    p_export = sub.add_parser("export", help="Export canonical user/ + readable trace dumps (backup)")
+    p_export.add_argument("target", help="Target directory (created if missing)")
+    p_import = sub.add_parser("import", help="Restore a user/ layer from an export into THIS workspace")
+    p_import.add_argument("source", help="Export directory (must contain user/)")
+
+    # Phase 7/8: agent / skill / task / execution inspection
+    p_agent = sub.add_parser("agent", help="Inspect registered agents (Phase 7)")
+    agent_sub = p_agent.add_subparsers(dest="agent_cmd", required=True)
+    agent_sub.add_parser("list", help="List registered agents")
+    p_agent_show = agent_sub.add_parser("show", help="Show one agent")
+    p_agent_show.add_argument("agent_id")
+    p_agent_skills = agent_sub.add_parser("skills", help="List an agent's registered skills")
+    p_agent_skills.add_argument("agent_id")
+
+    p_skill = sub.add_parser("skill", help="Inspect registered skills")
+    skill_sub = p_skill.add_subparsers(dest="skill_cmd", required=True)
+    p_skill_list = skill_sub.add_parser("list", help="List skills (optionally per agent)")
+    p_skill_list.add_argument("--agent", default=None)
+    p_skill_show = skill_sub.add_parser("show", help="Show one skill")
+    p_skill_show.add_argument("skill_name")
+
+    p_exec = sub.add_parser("execution", help="Inspect past executions (list/show)")
+    exec_sub = p_exec.add_subparsers(dest="exec_cmd", required=True)
+    p_exec_list = exec_sub.add_parser("list", help="List recent executions")
+    p_exec_list.add_argument("--limit", type=int, default=10)
+    p_exec_show = exec_sub.add_parser("show", help="Show one execution with its full trace")
+    p_exec_show.add_argument("execution_id")
+    p_dash = sub.add_parser("dashboard", help="Build or serve the dashboard")
+    dash_sub = p_dash.add_subparsers(dest="dash_cmd", required=True)
+    dash_sub.add_parser("build", help="Render index.html (static file:// mode)")
+    p_dash_serve = dash_sub.add_parser("serve", help="Run the local dashboard server (127.0.0.1 only)")
+    p_dash_serve.add_argument("--port", type=int, default=8787)
+
     add_workspace_parser(sub)
     add_lock_parser(sub)
 
     args = parser.parse_args(argv)
     paths = Paths(root=(args.root or Path.cwd()).resolve())
+
+    if args.cmd == "dashboard":
+        if args.dash_cmd == "build":
+            report = bootstrap_run(paths, open_browser=False)
+            print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2))
+            return 0
+        if args.dash_cmd == "serve":
+            from .dashboard_serve import serve
+
+            serve(paths, port=args.port)
+            return 0
 
     if args.cmd == "bootstrap":
         report = bootstrap_run(paths, open_browser=not args.no_browser)
@@ -335,8 +381,35 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "memory":
         return _memory_command(paths, args)
 
+    if args.cmd == "export":
+        from .backup import export_user
+
+        meta = export_user(paths, args.target)
+        print(json.dumps(meta, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.cmd == "import":
+        from .backup import import_user
+
+        try:
+            result = import_user(paths, args.source)
+        except FileNotFoundError as exc:
+            print(str(exc), file=sys.stderr)
+            return 1
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
     if args.cmd == "task":
         return run_task(args)
+
+    if args.cmd == "execution":
+        return _inspect_command(paths, args)
+
+    if args.cmd == "agent":
+        return _agent_command(paths, args)
+
+    if args.cmd == "skill":
+        return _skill_command(paths, args)
 
     if args.cmd == "inbox":
         return run_inbox(args)
@@ -480,6 +553,115 @@ def _sleep_command(paths, args) -> int:
         store.close()
     print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2))
     return 0
+
+
+def _agent_command(paths, args) -> int:
+    """``cogos agent …`` — registry inspection (Phase 7)."""
+    from .agent_registry import AgentRegistry
+
+    # runtime adapters come from the standard wiring (best effort); the
+    # harvested sources always contribute
+    registry = AgentRegistry(paths)
+    try:
+        if args.agent_cmd == "list":
+            agents = [a.to_dict() for a in registry.list()]
+            print(json.dumps(agents, ensure_ascii=False, indent=2))
+            return 0
+        if args.agent_cmd == "show":
+            a = registry.show(args.agent_id)
+            if a is None:
+                print(f"(no agent with id {args.agent_id!r})", file=sys.stderr)
+                return 1
+            print(json.dumps(a.to_dict(), ensure_ascii=False, indent=2))
+            return 0
+        if args.agent_cmd == "skills":
+            skills = registry.skills_for(args.agent_id)
+            print(json.dumps(skills, ensure_ascii=False, indent=2))
+            return 0
+    finally:
+        pass
+    return 2
+
+
+def _skill_command(paths, args) -> int:
+    """``cogos skill …`` — registered skills (Phase 8)."""
+    from .agent_registry import AgentRegistry
+
+    registry = AgentRegistry(paths)
+    try:
+        if args.skill_cmd == "list":
+            agents = registry.list()
+            out = []
+            for a in agents:
+                for s in registry.skills_for(a.agent_id):
+                    if args.agent and a.agent_id != args.agent:
+                        continue
+                    out.append({"agent": a.agent_id, "name": s["name"], "path": s["path"]})
+            print(json.dumps(out, ensure_ascii=False, indent=2))
+            return 0
+        if args.skill_cmd == "show":
+            for a in registry.list():
+                for s in registry.skills_for(a.agent_id):
+                    if s["name"] == args.skill_name:
+                        print(s["path"])
+                        try:
+                            print(Path(s["path"]).read_text(encoding="utf-8")[:4000])
+                        except OSError as exc:
+                            print(f"(cannot read: {exc})", file=sys.stderr)
+                        return 0
+            print(f"(no skill named {args.skill_name!r})", file=sys.stderr)
+            return 1
+    finally:
+        pass
+    return 2
+
+
+def _inspect_command(paths, args) -> int:
+    """``cogos execution list|show`` — execution inspection with traces."""
+    from .store import Store
+
+    store = Store(paths.cache / "cognitive.db")
+    try:
+        if args.exec_cmd == "list":
+            rows = store.recent_executions(limit=args.limit)
+            out = []
+            for r in rows:
+                d = dict(r)
+                payload = d.get("payload") or {}
+                if isinstance(payload, str):
+                    try:
+                        payload = json.loads(payload)
+                    except json.JSONDecodeError:
+                        payload = {}
+                out.append({
+                    "execution_id": d["execution_id"],
+                    "task": (d.get("task") or "")[:60],
+                    "agent_id": d.get("agent_id") or "",
+                    "status": d.get("status") or "",
+                    "verdict": d.get("verdict") or "",
+                    "started_at": d.get("started_at") or "",
+                    "retrieved": payload.get("retrieved_total", 0),
+                    "injected": payload.get("injected", 0),
+                })
+            print(json.dumps(out, ensure_ascii=False, indent=2))
+            return 0
+        if args.exec_cmd == "show":
+            row = store._conn.execute(
+                "SELECT * FROM executions WHERE execution_id=?", (args.execution_id,)
+            ).fetchone()
+            if not row:
+                print(f"(no execution {args.execution_id!r})", file=sys.stderr)
+                return 1
+            events = store.execution_events(args.execution_id)
+            verifs = store.execution_verifications(args.execution_id)
+            out = dict(row)
+            out["events"] = events
+            out["verifications"] = verifs
+            print(json.dumps(out, ensure_ascii=False, indent=2))
+            return 0
+    finally:
+        store.close()
+    return 2
 
 
 def _memory_command(paths, args) -> int:

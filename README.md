@@ -1,144 +1,102 @@
 # CognitiveOS
 
-面向 AI Agent 的**认知运行时层**（Cognitive Runtime Layer）。
+**一个本地、可观察、可纠正、可追溯、可持续学习的 Agent Cognitive Runtime。**
 
-[中文](README.md) | [English](README.en.md)
+换管家、换电脑、换产品——你的偏好、项目、经验都不丢。
 
-> **一句话本质**：普通 Agent 是"替你做决策"，CognitiveOS 是**让 Agent 能复刻你的决策，并通过主动复现校验来证明它真的复刻了**——不只是蒸馏几个 skill 那么简单。
+## 这是什么？
 
-> **真正的差异化**：CognitiveOS 替 Agent **搭建对主人的认知，并把认知从 Agent 里抽出来**。"跨 Agent / 跨设备 / 文本可读"只是"把认知剥离出来"后的自然结果，导入导出就能做。
->
-> **不可替代的核心机制：主动复现校验。** Agent 的"记忆"只是**被动记录**——"主人说过 X"——遇到类似问题还是会踩同样的雷。CognitiveOS 把主人铁律作为**测试用例**，每次新会话 / 切换 Agent / 升级提示词时主动跑一遍，**校验 Agent 是否还踩同样的雷**。
->
-> **为什么这套类人脑框架是必要的**：要让"主动复现校验"真的可靠，不是把几条规则扔成 markdown 文件喂给 Agent 那么简单——必须有一个**独立的认知结构**承担四件事：
->
-> | 脑区 | 在 CognitiveOS 里的角色 | 如果没有 |
-> |---|---|---|
-> | 前额叶（Router） | 决定当前验证跑给哪个 Agent / 哪个 prompt | 切 Agent / 升 prompt 时没有自动触发点 |
-> | 海马体（Sources） | 把每次纠正、每次失败踩雷的原话**原样**留档 | 提炼后无法追溯，规则被污染就再也查不到 |
-> | 皮层（Cortex） | 把原话提炼成可执行、可比对的"测试探针" | 只能写抽象规则，Agent 没办法针对性测试 |
-> | 反思回路（Reflection） | 主动复现校验 + 差异分析，规则被违反就回到海马体取证 | "PASS"只能说明"这一次没错"，不能验证"以后也不会错" |
->
-> 没有这套独立结构，主动复现校验就只能靠 Agent 自己的 prompt 自检——而 prompt 自检本身又是被复现校验的对象，会无限递归。这就是为什么 CognitiveOS 必须把认知从 Agent 里抽出来：**只有站在 Agent 外面，才能客观地测 Agent 是不是还在踩雷**。
->
-> ——导入导出做得到第一件的一半（搬运）；剩下四件事，Agent 工程自己干不了（自己测自己）。
+CognitiveOS 不是 AI Memory Manager，不是 Agent Dashboard，也不是 RAG 系统。
+它是 Agent 的认知操作系统：让 Agent 观察你、记住你、在任务中应用你的认知、
+验证是否用对、接受你的纠正，并让你**看见**这一切。
 
-## 这些痛点，你经历过吗？
+```
+Task → Classify → Remember → Retrieve → Context → Agent
+     → Verify → Learn → Trace → Impact → Dashboard → User Correction
+```
 
-### 痛点 1：想换个 AI Agent，却不敢换 😰
+## 为什么存在？
 
-你已经在某个 Agent 里积累了大量记忆：你的习惯、你的偏好、你踩过的坑、几百个项目的来龙去脉。
+AI Agent 会换（Hermes / Claude Code / Codex），但你的认知应该跟随你。
+用户永远拥有最终控制权：确认、拒绝、修改、遗忘。
 
-换一个新的 Agent = **全部重来**。要重新教会它"你是谁、你在乎什么、什么不能碰"。
-
-一想到迁移成本，你放弃了尝试新产品。**你被"记忆锁定"在旧 Agent 上了。**
-
-### 痛点 2：换台电脑，等于失忆 🧠
-
-新电脑装好 Agent，它不认识你。
-
-它不记得你的项目、你的决策、你花几个月踩坑踩出来的经验。
-
-你的"认知"留在了旧机器上。**换电脑 = 失忆，从头再来。**
-
-### 痛点 3：Agent 的记忆是"它的"，不是"你的" 🔒
-
-你在这台机器、这个 Agent 里积累的一切，都跟着 Agent 走。
-
-哪天不用它了，**这些积累就没了**——就像换了管家，管家记得的事，不是主人的事。
-
----
-
-**CognitiveOS 的答案：把"你的认知"从 Agent 里拿出来，放到你自己手里。**
-
-## 愿景
-
-现在的 AI Agent 很强大，但彼此孤立：
-
-- Claude Code 擅长写代码
-- OpenClaw 擅长自动化
-- Codex 擅长工程
-- Hermes 擅长编排
-
-但它们缺乏：**共享记忆、统一身份、经验积累、认知协调**。
-
-CognitiveOS 的目标，是为 AI Agent 提供一层"认知层"——并且这层认知属于**用户**，不属于任何 Agent。
-
-## 核心理念
-
-> AI Agent 就像管家，用户是主人。以前换了管家或换了地方，就要重新交代一切。CognitiveOS 保存的是**主人最有价值的数据**——习惯、思维模式、经验、偏好——让主人换管家、换电脑、换产品时，认知无缝迁移。
-
-CognitiveOS 不是另一个 AI Agent，而是让 Agent 能够 **记住（remember）、推理（reason）、协作（collaborate）、改进（improve）** 的基础设施。
-
-## v0.1 能做什么
+## 安装
 
 ```bash
-pip install -e .
-cogos bootstrap        # 全流程：发现 Agent → 收割 → wiki → 仪表盘
-cogos brief --agent X  # 给新管家一份"主人档案"
-cogos persona fit      # 用过去真实问答训练管家对主人的拟合
-cogos export-user      # 导出 user/ 层（跨设备迁移）
-cogos import-user      # 导入 user/ 层
+git clone https://github.com/sunganhao8-lgtm/CognitiveOS.git
+cd CognitiveOS
+pip install -r requirements.txt      # 或 uv sync
+pip install fastembed                 # 本地语义检索（可选，无则自动降级 FTS5）
 ```
 
-打开生成的 `index.html`，你会看到一张可点击的**认知地图**（大脑分区图），以及你的活跃项目、最近问答和可用命令。
+## 初始化
 
-## 架构
-
-```
-cogos/
-  discovery.py      发现本机已安装的 AI Agent
-  adapters/         统一 Agent 接口（Hermes 第一个实现）
-  kernel.py         Kernel 编排循环（DESIGN.md 的实现）
-  persona_fit.py    主人人格拟合训练（语义匹配打分）
-  conversations.py  从 Hermes 会话库提取真实问答对
-  portability.py    user/ 层导出/导入（跨设备迁移）
-  dashboard.py      生成 index.html 认知地图
+```bash
+PYTHONPATH=src python -m cogos.cli bootstrap --no-browser   # 生成 dashboard
+PYTHONPATH=src python -m cogos.cli reindex                  # 重建索引
 ```
 
-数据流永远是：
+## 接 Agent
 
-```
-Raw Source → Normalized Document → Wiki Page
-```
+`cogos run "<任务>"` 通过统一 AgentAdapter 调用本机 Agent（Hermes 已内置）；
+每个执行自动产生 trace。查看已注册 Agent：
 
-## user/ 层（核心资产）
-
-```
-user/
-  manifest.md       主人档案（新管家入职第一份文件）
-  preferences.md    沟通/输出/工具偏好
-  style.md          决策风格
-  projects/         每个项目的 tacit knowledge
-  experience/       值得记住的具体经历
-  conversations/    历史问答对（从 Agent 会话库提取）
-  cognitive/        跨设备、跨 Agent 的认知状态
+```bash
+PYTHONPATH=src python -m cogos.cli agent list
 ```
 
-**这些文件属于你，不属于任何 Agent。** 换机器、换 Agent，`user/` 跟着你走。
+## 运行
 
-## 设计原则
+```bash
+PYTHONPATH=src python -m cogos.cli run "帮我写一个查询销售数据的 SQL。"
+PYTHONPATH=src python -m cogos.cli sleep        # 离线认知整理（幂等）
+PYTHONPATH=src python -m cogos.cli status       # 系统健康
+```
 
-- **Local-first**：数据默认留在本地
-- **Agent-agnostic**：CognitiveOS 不属于任何一个 Agent
-- **Source-preserving**：每条知识都能追溯到原始文件
-- **Human-readable**：知识库人可以直接阅读
-- **Machine-readable**：同时方便 AI 读取
-- **Modular**：发现、适配、仪表盘都可以独立替换
-- **Progressive**：第一次初始化只做必要工作
-- **Open ecosystem**：允许第三方 Agent / Adapter 接入
+## 查看 Memory
 
-## 路线图
+```bash
+PYTHONPATH=src python -m cogos.cli memory list
+PYTHONPATH=src python -m cogos.cli memory show R-SQL-001
+PYTHONPATH=src python -m cogos.cli memory why  R-SQL-001   # 证据式解释
+```
 
-- **v0.1 Foundation**：项目架构、Agent 发现、user/ 层、认知地图 ✅
-- **v0.2 Agent Integration**：接入更多 Agent（Codex / Claude Code / OpenClaw）
-- **v0.3 Reflection**：自我改进循环（sleep cycle）
-- **v1.0 Cognitive Runtime**：稳定的开源生态
+## 纠正 Memory
 
-## 状态
+```bash
+PYTHONPATH=src python -m cogos.cli memory confirm cand-001   # 确认候选
+PYTHONPATH=src python -m cogos.cli memory reject  cand-001   # 拒绝推断
+PYTHONPATH=src python -m cogos.cli memory forget  P-SQL-002  # 停止使用
+PYTHONPATH=src python -m cogos.cli memory modify  P-SQL-002 --content "新认知"
+```
 
-实验性 / 研究项目（Experimental / Research Project）
+## 查看 Dashboard
 
-## 参与贡献
+```bash
+# 静态模式（双击 index.html 即可，按钮复制 CLI 命令）
+PYTHONPATH=src python -m cogos.cli dashboard build
+# 本地服务模式（127.0.0.1，按钮直接执行——confirm/reject/forget）
+PYTHONPATH=src python -m cogos.cli dashboard serve
+```
 
-欢迎！请看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解如何加入。
+## 备份
+
+```bash
+PYTHONPATH=src python -m cogos.cli export  ~/cogos-backup-2026-08-14
+PYTHONPATH=src python -m cogos.cli import  ~/cogos-backup-2026-08-14
+```
+
+导出为可读的 md/json/jsonl（不是二进制），`cogos import` 在任意机器还原。
+
+## 文档
+
+- 架构：`docs/architecture.md`、`docs/cognitive-architecture.md`
+- 认知图谱 / 成长 / 检索 / 影响：`docs/cognitive-graph.md`、`docs/cognitive-growth.md`、
+  `docs/cognitive-retrieval.md`、`docs/impact-integrity.md`
+- 隐私与治理：`docs/privacy-remediation.md`、`docs/project-hygiene.md`
+- 开发：`CONTRIBUTING.md`、`docs/development.md`
+
+## 隐私边界
+
+公开仓库只含代码、文档、合成 fixture 与 demo；`user/`（真实认知、对话、偏好、
+trace）永不出现在 Git 与远程。本地优先，远程 embedding 需显式配置。

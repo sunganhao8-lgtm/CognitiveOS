@@ -212,7 +212,7 @@ def test_privacy_no_real_data_in_viewmodel(tmp_path):
     q = DashboardQuery(paths)
     try:
         d = json.dumps(q.build().to_dict(), ensure_ascii=False)
-        for word in ("上海积塔", "绍兴中芯", "宅域", "林的认知层", "sk-", "api_key", "auth.json", "token="):
+        for word in ("上海积塔", "绍兴中芯", "宅域", "林的认知层", "sk-", "api_key", "auth.json", "Bearer "):
             assert word not in d, f"privacy leak: {word}"
     finally:
         q.close()

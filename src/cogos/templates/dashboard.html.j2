@@ -1632,9 +1632,23 @@
       try { localStorage.setItem('cogos:theme', next); } catch (e) {}
     }
 
-    // Phase 3F: honest static-page actions — buttons copy the CLI command
-    // instead of pretending to write files (file:// boundary, §18)
+    // Phase 3F/9: static pages copy the CLI command; the local serve mode
+    // (cogos dashboard serve, 127.0.0.1 only) calls the real API through
+    // MemoryService — never a fake write.
     function copyCmd(cmd) {
+      if (location.protocol === 'http:' || location.protocol === 'https:') {
+        const m = cmd.match(/cogos memory (\w+) (\S+)/);
+        if (!m) { return; }
+        fetch('/api/memory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: m[1], id: m[2] })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          const el = document.activeElement;
+          if (el) { const t = el.textContent; el.textContent = (d.error ? '失败: ' + d.error : '已执行 ✓'); setTimeout(function () { el.textContent = t; }, 1500); }
+        }).catch(function () { });
+        return;
+      }
       const text = 'PYTHONPATH=src python -m cogos.cli ' + cmd;
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(function () {
