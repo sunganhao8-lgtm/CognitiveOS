@@ -208,39 +208,11 @@ def render_dashboard(paths: Paths) -> Path:
             link = f"./user/{rel_path}" if local_md.exists() else f"./user/projects/{rel_path}"
             projects.append({"title": title, "path": link, "note": note})
 
+    # user/conversations/ holds past agent session exports (typically
+    # synced from external tooling). They are NOT the user's own Q&A
+    # history — dashboard must NOT display them as such. Read paths
+    # intentionally skipped; see docs/privacy-remediation.md.
     qa_groups: list[dict] = []
-    conv_dir = user_dir / "conversations"
-    if conv_dir.exists():
-        for f in sorted(conv_dir.glob("*.jsonl")):
-            source = f.stem.split("-")[0]  # "hermes", "codex", ...
-            if source in ("details",):
-                continue
-            records: list[dict] = []
-            for line in f.read_text(encoding="utf-8").splitlines():
-                if not line.strip():
-                    continue
-                try:
-                    rec = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                records.append(rec)
-            records.sort(key=lambda r: r.get("timestamp", ""), reverse=True)
-            if not records:
-                continue
-            for r in records[:3]:
-                r.setdefault("source", source)
-                r["question_full"] = r.get("question", "")[:1200]
-                r["answer_full"] = r.get("answer", "")[:2000]
-            qa_groups.append(
-                {
-                    "source": source,
-                    "display": {"hermes": "Hermes", "codex": "Codex", "claude_code": "Claude Code"}.get(
-                        source, source
-                    ),
-                    "records": records[:3],
-                }
-            )
-        qa_groups.sort(key=lambda g: 0 if g["source"] == "hermes" else 1)
 
     env = Environment(
         loader=FileSystemLoader(str(TEMPLATES_DIR)),
