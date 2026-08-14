@@ -365,6 +365,11 @@ class Kernel:
             "finished_at": finished_at,
             "refs": context.refs,
             "memory_written": [mem_id] if mem_id else [],
+            # Phase 3G: impact integrity — retrieved_total (eligible hits) vs
+            # injected (len(refs)) lets the dashboard distinguish RETRIEVED
+            # from APPLIED instead of guessing
+            "retrieved_total": int(getattr(self, "_last_retrieval_stats", {}).get("eligible_total", 0)),
+            "injected": len(context.refs),
             "retrieved_summary": " ".join(
                 f"{k}={v}" for k, v in sorted(self._last_sections.items()) if v
             ) if getattr(self, "_last_sections", None) else "",
@@ -397,7 +402,10 @@ class Kernel:
         request = RetrievalRequest(
             task_text=task.intent, domain=task.domain, execution_id=ex_id,
         )
-        items = retrieve_ranked(self.store, self.embedding_provider, request, mode="auto")
+        items, stats = retrieve_ranked(
+            self.store, self.embedding_provider, request, mode="auto", return_stats=True,
+        )
+        self._last_retrieval_stats = stats
         self._last_items = items
         # re-wrap as SearchHits so the rest of the kernel (verify payloads,
         # RetrievedSet sections) keeps its Phase 2 shape

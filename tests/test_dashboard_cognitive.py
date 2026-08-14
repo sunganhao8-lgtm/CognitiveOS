@@ -76,10 +76,11 @@ def _build_fixture(tmp_path: Path) -> Paths:
             "finished_at": _ts(4 + i), "refs": refs,
         })
 
-    # verifications (avoided errors = real PASS records on rule checks)
+    # verifications (avoided errors = rule applied + verify PASS; verified
+    # = applied & PASS pairs — each execution's ref gets its own record)
     trace_mod.append_verification(user, store, "ex-20260802-000001", "R-SQL-001", "PASS", "code_blocks clean", _ts(5))
-    trace_mod.append_verification(user, store, "ex-20260802-000002", "R-SQL-001", "PASS", "code_blocks clean", _ts(5))
-    trace_mod.append_verification(user, store, "ex-20260802-000003", "R-SQL-001", "PASS", "code_blocks clean", _ts(5))
+    trace_mod.append_verification(user, store, "ex-20260802-000002", "P-SQL-002", "PASS", "code_blocks clean", _ts(5))
+    trace_mod.append_verification(user, store, "ex-20260802-000003", "P-REPORT-001", "PASS", "code_blocks clean", _ts(5))
 
     # 2 corrections via MemoryService (real user_corrected traces)
     svc = MemoryService(paths, store)
@@ -101,16 +102,23 @@ def test_viewmodel_overview_real_numbers(tmp_path):
     try:
         vm = q.build()
         ov = vm.overview
-        # learned: confirmed created within the window (R-SQL-001, P-SQL-002,
-        # P-REPORT-001 — P-SQL-002's successor also counts)
+        # learned: real cognition formation (preference/rule/semantic), NOT
+        # episodic writes (Phase 3G integrity)
         assert ov.learned >= 3
-        # applied: executions with preference/rule refs AND verdict PASS
+        # applied: injected pref/rule refs (no PASS condition — 3G)
         assert ov.applied >= 2
-        assert ov.avoided_errors >= 3, "verify PASS count must aggregate"
+        assert ov.verified >= 3, "applied & PASS pairs must aggregate"
+        # only the RULE chain counts as avoided error — the two preference
+        # PASS pairs are verified but NOT avoided errors (§19)
+        assert ov.avoided_errors == 1, "rule + injected + PASS full chain (preferences excluded)"
         assert ov.corrected >= 2, "two user corrections must appear"
-        assert ov.reused >= 4, "executions with refs"
+        assert ov.retrieved >= 4, "retrieved_total aggregation"
         assert ov.conflicts_pending >= 1
         assert ov.candidates_pending >= 2
+        # integrity invariants (§24)
+        assert ov.applied <= ov.retrieved
+        assert ov.verified <= ov.applied
+        assert ov.avoided_errors <= ov.verified
     finally:
         q.close()
 
@@ -162,11 +170,13 @@ def test_execution_memory_impact(tmp_path):
         by_id = {e.execution_id: e for e in vm.recent_executions}
         high = by_id["ex-20260802-000001"]
         assert high.retrieved == 1 and high.applied == 1 and high.verdict == "PASS"
-        assert high.memory_impact == "HIGH"
+        assert high.verified == 1
+        assert high.memory_impact == "VERIFIED", "applied + verification PASS → VERIFIED (Phase 3G)"
         low = by_id["ex-20260802-000004"]
-        assert low.retrieved == 0 and low.memory_impact == "LOW"
+        assert low.retrieved == 0 and low.memory_impact == "NONE"
         med = by_id["ex-20260802-000005"]
-        assert med.memory_impact == "MEDIUM" or med.verdict == "FAIL"
+        # episodic-only refs: applied=0 but retrieved≥1 → RETRIEVED (not APPLIED)
+        assert med.applied == 0 and med.retrieved >= 1 and med.memory_impact == "RETRIEVED"
     finally:
         q.close()
 
@@ -249,4 +259,4 @@ def test_render_dashboard_uses_viewmodel(tmp_path):
     assert "你的 CognitiveOS 最近发生了什么" in html
     assert "R-SQL-001" in html
     assert "正在形成的认知" in html and "cand-sql-x" in html
-    assert "Memory Impact" in html
+    assert "VERIFIED" in html or "Memory Impact" in html

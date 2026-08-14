@@ -115,9 +115,14 @@ def _demo_vm():
     )
 
     vm = CognitiveDashboardViewModel()
-    vm.overview = OverviewVM(learned=3, applied=2, avoided_errors=1, corrected=1,
-                             reused=2, conflicts_pending=0, candidates_pending=1,
-                             window_days=7)
+    vm.overview = OverviewVM(learned=3, retrieved=8, applied=5, verified=4,
+                             avoided_errors=2, corrected=1,
+                             conflicts_pending=0, candidates_pending=1,
+                             window_days=7,
+                             avoided_errors_evidence=[
+                                 {"execution_id": "示例 · ex-000019", "rule_id": "示例 · R-SQL-001", "verdict": "PASS"},
+                                 {"execution_id": "示例 · ex-000021", "rule_id": "示例 · R-SQL-001", "verdict": "PASS"},
+                             ])
     vm.recent_learning = [
         LearningCardVM(
             id="示例 · P-SQL-001", content="（示例）复杂 SQL 使用 CTE 组织",
@@ -148,10 +153,12 @@ def _demo_vm():
     vm.recent_executions = [
         ExecutionVM(execution_id="示例 · ex-000021", task="（示例）帮我写销售 SQL",
                     agent_id="hermes", status="success", verdict="PASS",
-                    started_at="2026-08-13 10:02", retrieved=4, applied=2,
-                    memory_impact="HIGH",
+                    started_at="2026-08-13 10:02", retrieved=4, injected=3,
+                    applied=2, verified=2,
+                    memory_impact="VERIFIED", verification="PASS",
                     retrieved_memories=[{"id": "示例 · R-SQL-001", "subtype": "rule",
-                                         "why": "关键词命中 rank=1; scope=global (匹配任务范围)"}]),
+                                         "why": "关键词命中 rank=1; scope=global (匹配任务范围)",
+                                         "verified": "PASS"}]),
     ]
     vm.cognitive_health = HealthVM(memory_count=22, retrieval_healthy=True,
                                    conflicts_unresolved=0, index_healthy=True,

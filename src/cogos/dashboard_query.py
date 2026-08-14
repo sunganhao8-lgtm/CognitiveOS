@@ -47,14 +47,21 @@ def _fmt_ts(ts: str) -> str:
 
 @dataclass
 class OverviewVM:
-    learned: int = 0
-    applied: int = 0
-    avoided_errors: int = 0
-    corrected: int = 0
-    reused: int = 0
+    learned: int = 0          # 窗口内真实形成的认知（preference/rule/semantic，非 episodic）
+    retrieved: int = 0        # 窗口内检索命中次数（eligible）
+    applied: int = 0          # 注入 context 并被使用的认知对数
+    verified: int = 0         # 应用且验证 PASS 的认知对数
+    avoided_errors: int = 0   # 完整链：rule 注入 + 对应验证 PASS 的对数
+    corrected: int = 0        # 用户纠正次数
     conflicts_pending: int = 0
     candidates_pending: int = 0
     window_days: int = 7
+    # KPI evidence (§14) — every number can answer "why this number"
+    avoided_errors_evidence: list[dict] = field(default_factory=list)
+    verified_evidence: list[dict] = field(default_factory=list)
+    # conversion funnel (real data; empty when sample too small to show)
+    funnel: dict = field(default_factory=dict)
+    funnel_ok: bool = False
 
 
 @dataclass
@@ -97,10 +104,13 @@ class ExecutionVM:
     status: str
     verdict: str
     started_at: str
-    retrieved: int
-    applied: int
-    memory_impact: str  # HIGH | MEDIUM | LOW
-    retrieved_memories: list[dict] = field(default_factory=list)  # {id, subtype, why}
+    retrieved: int            # eligible hits for this execution
+    injected: int             # len(refs)
+    applied: int              # pref/rule refs count
+    verified: int             # applied & PASS count
+    memory_impact: str        # NONE | RETRIEVED | APPLIED | VERIFIED
+    verification: str         # PASS | FAIL | — (of the applied cognitions)
+    retrieved_memories: list[dict] = field(default_factory=list)  # {id, subtype, why, verified}
 
 
 @dataclass
@@ -267,36 +277,82 @@ class DashboardQuery:
         entities = self._entities()
         executions = self._executions_since(since)
 
-        # --- Overview -------------------------------------------------
+        # --- Overview (Phase 3G impact integrity) ----------------------
+        # learned: real cognition FORMATION — whitelist subtypes, never
+        # episodic (a memory write is not learning)
         learned = 0
         for e in entities:
             created = _parse_ts(e.get("created_at") or "")
-            # "学会" = a cognition was formed in the window (even if later
-            # corrected/superseded — that is still learning, and honest)
             if created and created >= since \
-                    and e.get("subtype") not in ("candidate", "temporary"):
+                    and e.get("subtype") in ("preference", "rule", "semantic"):
                 learned += 1
+
+        # verifications indexed by (execution_id, rule_id) → verdict
+        verif_map: dict[tuple[str, str], str] = {}
+        for v in self._verifications_since(since):
+            verif_map[(v["execution_id"], v["rule_id"])] = v["verdict"]
+
+        retrieved = 0
         applied = 0
-        reused = 0
+        verified = 0
+        avoided = 0
+        avoided_evidence: list[dict] = []
+        verified_evidence: list[dict] = []
         for ex in executions:
-            refs = (ex.get("payload") or {}).get("refs", [])
-            if not refs:
-                continue
-            reused += 1
-            if any(r.get("subtype") in ("preference", "rule") for r in refs) \
-                    and ex.get("verdict") == "PASS":
-                applied += 1
-        avoided = len([v for v in self._verifications_since(since) if v["verdict"] == "PASS"])
+            p = ex.get("payload") or {}
+            refs = p.get("refs", [])
+            r_total = int(p.get("retrieved_total") or len(refs))  # legacy rows: floor = injected
+            retrieved += r_total
+            for r in refs:
+                sub = r.get("subtype", "")
+                if sub not in ("preference", "rule"):
+                    continue
+                applied += 1  # injected into context = applied
+                verdict = verif_map.get((ex["execution_id"], r.get("id", "")))
+                if verdict == "PASS":
+                    verified += 1
+                    verified_evidence.append({
+                        "execution_id": ex["execution_id"], "memory_id": r.get("id", ""),
+                        "subtype": sub, "verdict": "PASS",
+                    })
+                    if sub == "rule":
+                        # full chain: known constraint → injected → verify PASS
+                        avoided += 1
+                        avoided_evidence.append({
+                            "execution_id": ex["execution_id"], "rule_id": r.get("id", ""),
+                            "verdict": "PASS",
+                        })
         corrections = self._events_since(since, "user_corrected")
         conflicts = [e for e in entities if e.get("status") == "conflicted"]
         candidates = [e for e in entities if e.get("subtype") == "candidate"
                       and e.get("status") in ("candidate", "confirmed")]
 
+        # conversion funnel — real data only; hidden when sample too small
+        observations = sum(
+            1 for e in entities
+            if e.get("subtype") == "episodic"
+            and _parse_ts(e.get("created_at") or "") and _parse_ts(e.get("created_at") or "") >= since
+        )
+        cand_formed = sum(
+            1 for e in entities
+            if e.get("subtype") == "candidate"
+            and _parse_ts(e.get("created_at") or "") and _parse_ts(e.get("created_at") or "") >= since
+        )
+        funnel = {
+            "observations": observations, "candidates": cand_formed,
+            "confirmed": learned, "applied": applied, "verified": verified,
+        }
+        funnel_ok = min(funnel.values()) >= 3
+
         vm.overview = OverviewVM(
-            learned=learned, applied=applied, avoided_errors=avoided,
-            corrected=len(corrections), reused=reused,
+            learned=learned, retrieved=retrieved, applied=applied,
+            verified=verified, avoided_errors=avoided,
+            corrected=len(corrections),
             conflicts_pending=len(conflicts), candidates_pending=len(candidates),
             window_days=days,
+            avoided_errors_evidence=avoided_evidence[:20],
+            verified_evidence=verified_evidence[:20],
+            funnel=funnel, funnel_ok=funnel_ok,
         )
 
         # --- recent learning + active cognitions ----------------------
@@ -337,27 +393,45 @@ class DashboardQuery:
                 reason=d.get("reason", ""),
             ))
 
-        # --- executions with memory impact ----------------------------
+        # --- executions with 4-level memory impact (Phase 3G) ---------
         for ex in executions[:10]:
             p = ex.get("payload") or {}
             refs = p.get("refs", [])
-            retrieved = len(refs)
+            retrieved_n = int(p.get("retrieved_total") or len(refs))
+            injected_n = len(refs)
             applied_n = len([r for r in refs if r.get("subtype") in ("preference", "rule")])
-            verdict = ex.get("verdict") or ""
-            if applied_n >= 1 and verdict == "PASS":
-                impact = "HIGH"
-            elif retrieved >= 1:
-                impact = "MEDIUM"
+            verified_n = 0
+            any_fail = False
+            for r in refs:
+                if r.get("subtype") not in ("preference", "rule"):
+                    continue
+                v = verif_map.get((ex["execution_id"], r.get("id", "")))
+                if v == "PASS":
+                    verified_n += 1
+                elif v == "FAIL":
+                    any_fail = True
+            if applied_n > 0 and verified_n > 0:
+                impact = "VERIFIED"
+            elif applied_n > 0:
+                impact = "APPLIED"
+            elif retrieved_n > 0:
+                impact = "RETRIEVED"
             else:
-                impact = "LOW"
+                impact = "NONE"
+            verification = "FAIL" if any_fail else ("PASS" if verified_n > 0 else "—")
             vm.recent_executions.append(ExecutionVM(
                 execution_id=ex["execution_id"], task=ex.get("task", ""),
                 agent_id=ex.get("agent_id") or "", status=ex.get("status", ""),
-                verdict=verdict, started_at=_fmt_ts(ex.get("started_at") or ""),
-                retrieved=retrieved, applied=applied_n, memory_impact=impact,
+                verdict=ex.get("verdict") or "", started_at=_fmt_ts(ex.get("started_at") or ""),
+                retrieved=retrieved_n, injected=injected_n,
+                applied=applied_n, verified=verified_n,
+                memory_impact=impact, verification=verification,
                 retrieved_memories=[
-                    {"id": r.get("id", ""), "subtype": r.get("subtype", ""),
-                     "why": r.get("why", "")}
+                    {
+                        "id": r.get("id", ""), "subtype": r.get("subtype", ""),
+                        "why": r.get("why", ""),
+                        "verified": verif_map.get((ex["execution_id"], r.get("id", "")), ""),
+                    }
                     for r in refs[:6]
                 ],
             ))

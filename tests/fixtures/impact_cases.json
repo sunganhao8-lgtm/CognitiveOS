@@ -1,0 +1,52 @@
+{
+  "_comment": "Phase 3G impact benchmark — each case seeds a synthetic workspace and checks the DEFINED semantics. Every number must be provable from real records (refs + verifications).",
+  "cases": [
+    {
+      "id": "case-no-memory",
+      "scenario": "no memory, verify PASS",
+      "seed": {"refs": [], "retrieved_total": 0, "verifications": []},
+      "expect": {"impact": "NONE", "applied": 0, "verified": 0, "avoided": 0}
+    },
+    {
+      "id": "case-retrieved-not-applied",
+      "scenario": "memory retrieved, NOT injected, verify PASS",
+      "seed": {"refs": [], "retrieved_total": 2, "verifications": [["ex-x", "R-SQL-001", "PASS"]]},
+      "expect": {"impact": "RETRIEVED", "applied": 0, "verified": 0, "avoided": 0}
+    },
+    {
+      "id": "case-applied-rule-pass",
+      "scenario": "rule applied, verify PASS",
+      "seed": {"refs": [["R-SQL-001", "rule"]], "retrieved_total": 1,
+               "verifications": [["ex-x", "R-SQL-001", "PASS"]]},
+      "expect": {"impact": "VERIFIED", "applied": 1, "verified": 1, "avoided": 1}
+    },
+    {
+      "id": "case-applied-rule-fail",
+      "scenario": "rule applied, verify FAIL",
+      "seed": {"refs": [["R-SQL-001", "rule"]], "retrieved_total": 1,
+               "verifications": [["ex-x", "R-SQL-001", "FAIL"]]},
+      "expect": {"impact": "APPLIED", "applied": 1, "verified": 0, "avoided": 0, "verification": "FAIL"}
+    },
+    {
+      "id": "case-applied-preference-pass",
+      "scenario": "preference applied, verify PASS — NOT an avoided error (no executable constraint)",
+      "seed": {"refs": [["P-SQL-002", "preference"]], "retrieved_total": 1,
+               "verifications": [["ex-x", "P-SQL-002", "PASS"]]},
+      "expect": {"impact": "VERIFIED", "applied": 1, "verified": 1, "avoided": 0}
+    },
+    {
+      "id": "case-verify-pass-no-rule",
+      "scenario": "verify PASS but NO cognitive rule involved",
+      "seed": {"refs": [], "retrieved_total": 0,
+               "verifications": [["ex-x", "R-UNKNOWN", "PASS"]]},
+      "expect": {"impact": "NONE", "applied": 0, "verified": 0, "avoided": 0}
+    },
+    {
+      "id": "case-rule-retrieved-not-injected",
+      "scenario": "rule retrieved but excluded from context (cap/scope)",
+      "seed": {"refs": [], "retrieved_total": 1,
+               "verifications": [["ex-x", "R-SQL-001", "PASS"]]},
+      "expect": {"impact": "RETRIEVED", "applied": 0, "verified": 0, "avoided": 0}
+    }
+  ]
+}

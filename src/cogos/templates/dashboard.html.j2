@@ -937,11 +937,23 @@
     <h2>你的 CognitiveOS 最近发生了什么？</h2>
     <p class="sub">全部数字来自真实执行记录（Trace / Cognitive Store），非硬编码。</p>
     <div class="ov-grid">
-      <div class="ov-card"><div class="ov-num">{{ vm.overview.learned }}</div><div class="ov-label">最近 {{ vm.overview.window_days }} 天学会的认知</div></div>
-      <div class="ov-card"><div class="ov-num">{{ vm.overview.applied }}</div><div class="ov-label">自动应用偏好</div></div>
-      <div class="ov-card"><div class="ov-num">{{ vm.overview.avoided_errors }}</div><div class="ov-label">避免已知错误</div></div>
-      <div class="ov-card"><div class="ov-num">{{ vm.overview.reused }}</div><div class="ov-label">复用历史知识</div></div>
-      <div class="ov-card"><div class="ov-num">{{ vm.overview.corrected }}</div><div class="ov-label">被你纠正</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.learned }}</div><div class="ov-label">最近 {{ vm.overview.window_days }} 天形成认知</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.retrieved }}</div><div class="ov-label">检索命中</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.applied }}</div><div class="ov-label">应用你的认知</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.verified }}</div><div class="ov-label">应用且验证通过</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.avoided_errors }}</div><div class="ov-label">避免已知错误
+        {% if vm.overview.avoided_errors_evidence %}
+        <details class="cog-why" style="margin-top:4px"><summary>为什么是这个数</summary>
+          <ul style="margin:4px 0 0; padding-left:16px">
+            {% for ev in vm.overview.avoided_errors_evidence[:8] %}
+            <li>{{ ev.execution_id }} · {{ ev.rule_id }} · {{ ev.verdict }}</li>
+            {% endfor %}
+          </ul>
+          <div style="margin-top:4px">完整证据链：规则注入 Context → 对应验证 PASS。`cogos memory why {{ vm.overview.avoided_errors_evidence[0].rule_id }}`</div>
+        </details>
+        {% endif %}
+      </div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.corrected }}</div><div class="ov-label">被你纠正（认知）</div></div>
       {% if vm.overview.conflicts_pending > 0 %}
       <div class="ov-card ov-warn"><div class="ov-num">⚠ {{ vm.overview.conflicts_pending }}</div><div class="ov-label">认知需要你的裁决</div></div>
       {% endif %}
@@ -949,6 +961,17 @@
       <div class="ov-card ov-warn"><div class="ov-num">{{ vm.overview.candidates_pending }}</div><div class="ov-label">候选等待确认</div></div>
       {% endif %}
     </div>
+
+    {% if vm.overview.funnel_ok %}
+    <h2 style="margin-top:26px">认知转化漏斗（真实数据）</h2>
+    <div class="ov-grid">
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.funnel.observations }}</div><div class="ov-label">观察</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.funnel.candidates }}</div><div class="ov-label">候选</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.funnel.confirmed }}</div><div class="ov-label">确认</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.funnel.applied }}</div><div class="ov-label">应用</div></div>
+      <div class="ov-card"><div class="ov-num">{{ vm.overview.funnel.verified }}</div><div class="ov-label">验证通过</div></div>
+    </div>
+    {% endif %}
 
     {% if vm.recent_learning %}
     <h2 style="margin-top:26px">最近形成的认知</h2>
@@ -1120,10 +1143,11 @@
             {% if e.verdict %}<span class="exec-verdict vd-{{ e.verdict }}">{{ e.verdict }}</span>{% endif %}
             {% if e.agent_id %}<span class="exec-agent">{{ e.agent_id }}</span>{% endif %}
             <span class="exec-time">{{ e.started_at }}</span>
-            <span class="chip chip-{{ 'pass' if e.memory_impact == 'HIGH' else 'amb' if e.memory_impact == 'MEDIUM' else 'fail' }}">Memory Impact: {{ e.memory_impact }}</span>
+            <span class="chip chip-{{ 'pass' if e.memory_impact == 'VERIFIED' else 'amb' if e.memory_impact in ('APPLIED','RETRIEVED') else 'fail' }}">{{ e.memory_impact }}</span>
+            {% if e.verification != '—' %}<span class="chip chip-{{ 'pass' if e.verification == 'PASS' else 'fail' }}">verification {{ e.verification }}</span>{% endif %}
           </div>
           <div class="exec-task">{{ e.task }}</div>
-          <div class="exec-meta">认知影响：Retrieved {{ e.retrieved }} · Applied {{ e.applied }} · Verified {{ e.verdict or '—' }}</div>
+          <div class="exec-meta">认知影响：Retrieved {{ e.retrieved }} · Injected {{ e.injected }} · Applied {{ e.applied }} · Verified {{ e.verified }}</div>
           {% if e.retrieved_memories %}
           <details class="exec-events">
             <summary>本次为什么使用这些记忆（{{ e.retrieved_memories | length }}）</summary>

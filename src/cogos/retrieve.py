@@ -203,7 +203,8 @@ def retrieve_ranked(
     limit: int = 12,
     k: int = RRF_K,
     min_similarity: float = MIN_SIMILARITY,
-) -> list[RetrievedItem]:
+    return_stats: bool = False,
+) -> list[RetrievedItem] | tuple[list[RetrievedItem], dict]:
     """The 3C retrieval engine — eligibility → relevance → priority.
 
     mode:
@@ -221,6 +222,7 @@ def retrieve_ranked(
 
     hits = store.search(request.task_text, types=("memory", "skill"), limit=50)
     eligible = eligibility_filter(store, request, hits)
+    eligible_total = len(eligible)
 
     kw_ranks: dict[str, int] = {}
     if use_kw:
@@ -301,6 +303,8 @@ def retrieve_ranked(
             continue
         capped.append(item)
         used[key] = used.get(key, 0) + 1
+    if return_stats:
+        return capped, {"eligible_total": eligible_total, "injected": len(capped)}
     return capped
 
 
